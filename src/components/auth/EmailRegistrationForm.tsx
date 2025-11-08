@@ -133,9 +133,12 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
         <Input
           id="email"
           type="email"
+          inputMode="email"
+          autoComplete="email"
+          autoCapitalize="none"
           placeholder="your.email@example.com"
           {...register("email")}
-          className={errors.email ? "border-red-500" : ""}
+          className={errors.email ? "border-red-500 min-h-[44px]" : "min-h-[44px]"}
         />
         {errors.email && (
           <p className="text-sm text-red-500 flex items-center gap-1">
@@ -151,9 +154,10 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
         <Input
           id="fullName"
           type="text"
+          autoComplete="name"
           placeholder="John Doe"
           {...register("fullName")}
-          className={errors.fullName ? "border-red-500" : ""}
+          className={errors.fullName ? "border-red-500 min-h-[44px]" : "min-h-[44px]"}
         />
         {errors.fullName && (
           <p className="text-sm text-red-500 flex items-center gap-1">
@@ -170,14 +174,15 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
           <Input
             id="password"
             type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
             placeholder="••••••••"
             {...register("password")}
-            className={errors.password ? "border-red-500 pr-10" : "pr-10"}
+            className={errors.password ? "border-red-500 pr-10 min-h-[44px]" : "pr-10 min-h-[44px]"}
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
@@ -210,14 +215,15 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
           <Input
             id="confirmPassword"
             type={showConfirmPassword ? "text" : "password"}
+            autoComplete="new-password"
             placeholder="••••••••"
             {...register("confirmPassword")}
-            className={errors.confirmPassword ? "border-red-500 pr-10" : "pr-10"}
+            className={errors.confirmPassword ? "border-red-500 pr-10 min-h-[44px]" : "pr-10 min-h-[44px]"}
           />
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
@@ -257,7 +263,7 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
       {/* Submit button */}
       <Button
         type="submit"
-        className="w-full bg-secondary hover:bg-secondary/90 text-primary font-semibold"
+        className="w-full bg-secondary hover:bg-secondary/90 text-primary font-semibold min-h-[44px]"
         disabled={isLoading}
       >
         {isLoading ? (
