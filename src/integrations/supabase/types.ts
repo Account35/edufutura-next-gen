@@ -105,6 +105,10 @@ export type Database = {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"] | null
           city: string | null
+          comm_assessment_reminders: boolean | null
+          comm_content_updates: boolean | null
+          comm_progress_reports: boolean | null
+          comm_study_tips: boolean | null
           created_at: string | null
           date_of_birth: string | null
           district: string | null
@@ -112,14 +116,17 @@ export type Database = {
           email_verified: boolean | null
           full_name: string
           grade_level: number | null
+          guardian_email: string | null
           id: string
           last_login: string | null
           location_lat: number | null
           location_lng: number | null
           onboarding_completed: boolean | null
+          onboarding_completed_at: string | null
           onboarding_step: number | null
           phone_number: string | null
           phone_verified: boolean | null
+          platform_language: string | null
           profile_picture_url: string | null
           province: string | null
           school_id: string | null
@@ -135,6 +142,10 @@ export type Database = {
         Insert: {
           account_type?: Database["public"]["Enums"]["account_type"] | null
           city?: string | null
+          comm_assessment_reminders?: boolean | null
+          comm_content_updates?: boolean | null
+          comm_progress_reports?: boolean | null
+          comm_study_tips?: boolean | null
           created_at?: string | null
           date_of_birth?: string | null
           district?: string | null
@@ -142,14 +153,17 @@ export type Database = {
           email_verified?: boolean | null
           full_name: string
           grade_level?: number | null
+          guardian_email?: string | null
           id: string
           last_login?: string | null
           location_lat?: number | null
           location_lng?: number | null
           onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
           onboarding_step?: number | null
           phone_number?: string | null
           phone_verified?: boolean | null
+          platform_language?: string | null
           profile_picture_url?: string | null
           province?: string | null
           school_id?: string | null
@@ -165,6 +179,10 @@ export type Database = {
         Update: {
           account_type?: Database["public"]["Enums"]["account_type"] | null
           city?: string | null
+          comm_assessment_reminders?: boolean | null
+          comm_content_updates?: boolean | null
+          comm_progress_reports?: boolean | null
+          comm_study_tips?: boolean | null
           created_at?: string | null
           date_of_birth?: string | null
           district?: string | null
@@ -172,14 +190,17 @@ export type Database = {
           email_verified?: boolean | null
           full_name?: string
           grade_level?: number | null
+          guardian_email?: string | null
           id?: string
           last_login?: string | null
           location_lat?: number | null
           location_lng?: number | null
           onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
           onboarding_step?: number | null
           phone_number?: string | null
           phone_verified?: boolean | null
+          platform_language?: string | null
           profile_picture_url?: string | null
           province?: string | null
           school_id?: string | null
