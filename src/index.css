@@ -20,6 +20,7 @@ All colors MUST be HSL.
 
     --primary: 157 46% 12%;  /* Deep Forest Green #1B4332 */
     --primary-foreground: 42 25% 96%;  /* Warm Cream text on primary */
+    --primary-glow: 157 40% 18%;  /* Lighter forest green for gradients */
 
     --secondary: 45 74% 52%;  /* Rich Gold #D4AF37 */
     --secondary-foreground: 157 46% 12%;  /* Forest Green text on gold */
@@ -64,6 +65,7 @@ All colors MUST be HSL.
 
     --primary: 45 74% 52%;  /* Gold becomes primary in dark mode */
     --primary-foreground: 157 46% 12%;
+    --primary-glow: 45 80% 60%;  /* Lighter gold for gradients */
 
     --secondary: 157 35% 20%;
     --secondary-foreground: 42 25% 96%;

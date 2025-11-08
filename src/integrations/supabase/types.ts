@@ -119,11 +119,15 @@ export type Database = {
           guardian_email: string | null
           id: string
           last_login: string | null
+          last_payment_date: string | null
           location_lat: number | null
           location_lng: number | null
+          next_payment_date: string | null
           onboarding_completed: boolean | null
           onboarding_completed_at: string | null
           onboarding_step: number | null
+          payfast_subscription_token: string | null
+          payment_method: string | null
           phone_number: string | null
           phone_verified: boolean | null
           platform_language: string | null
@@ -131,6 +135,8 @@ export type Database = {
           province: string | null
           school_id: string | null
           subjects_studying: Json | null
+          subscription_auto_renew: boolean | null
+          subscription_cancelled_at: string | null
           subscription_end_date: string | null
           subscription_plan: string | null
           subscription_start_date: string | null
@@ -156,11 +162,15 @@ export type Database = {
           guardian_email?: string | null
           id: string
           last_login?: string | null
+          last_payment_date?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          next_payment_date?: string | null
           onboarding_completed?: boolean | null
           onboarding_completed_at?: string | null
           onboarding_step?: number | null
+          payfast_subscription_token?: string | null
+          payment_method?: string | null
           phone_number?: string | null
           phone_verified?: boolean | null
           platform_language?: string | null
@@ -168,6 +178,8 @@ export type Database = {
           province?: string | null
           school_id?: string | null
           subjects_studying?: Json | null
+          subscription_auto_renew?: boolean | null
+          subscription_cancelled_at?: string | null
           subscription_end_date?: string | null
           subscription_plan?: string | null
           subscription_start_date?: string | null
@@ -193,11 +205,15 @@ export type Database = {
           guardian_email?: string | null
           id?: string
           last_login?: string | null
+          last_payment_date?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          next_payment_date?: string | null
           onboarding_completed?: boolean | null
           onboarding_completed_at?: string | null
           onboarding_step?: number | null
+          payfast_subscription_token?: string | null
+          payment_method?: string | null
           phone_number?: string | null
           phone_verified?: boolean | null
           platform_language?: string | null
@@ -205,6 +221,8 @@ export type Database = {
           province?: string | null
           school_id?: string | null
           subjects_studying?: Json | null
+          subscription_auto_renew?: boolean | null
+          subscription_cancelled_at?: string | null
           subscription_end_date?: string | null
           subscription_plan?: string | null
           subscription_start_date?: string | null
@@ -228,6 +246,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_subscription_status: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
