@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -50,9 +50,14 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
     register,
     handleSubmit,
     watch,
+    control,
     formState: { errors }
   } = useForm<RegistrationFormData>({
-    resolver: zodResolver(registrationSchema)
+    resolver: zodResolver(registrationSchema),
+    defaultValues: {
+      acceptTerms: false,
+      marketingEmails: false
+    }
   });
 
   const password = watch("password", "");
@@ -238,10 +243,17 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
 
       {/* Terms checkbox */}
       <div className="flex items-start space-x-2">
-        <Checkbox 
-          id="acceptTerms"
-          {...register("acceptTerms")}
-          className={errors.acceptTerms ? "border-red-500" : ""}
+        <Controller
+          name="acceptTerms"
+          control={control}
+          render={({ field }) => (
+            <Checkbox 
+              id="acceptTerms"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+              className={errors.acceptTerms ? "border-red-500" : ""}
+            />
+          )}
         />
         <label htmlFor="acceptTerms" className="text-sm text-muted-foreground leading-tight">
           I accept the <a href="#" className="text-secondary hover:underline">Terms of Service</a> and{" "}
@@ -254,7 +266,17 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
 
       {/* Marketing checkbox */}
       <div className="flex items-start space-x-2">
-        <Checkbox id="marketingEmails" {...register("marketingEmails")} />
+        <Controller
+          name="marketingEmails"
+          control={control}
+          render={({ field }) => (
+            <Checkbox 
+              id="marketingEmails"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
         <label htmlFor="marketingEmails" className="text-sm text-muted-foreground leading-tight">
           Send me study tips, curriculum updates, and motivational content (optional)
         </label>
