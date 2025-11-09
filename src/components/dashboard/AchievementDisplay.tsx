@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, Award, Star, Target, Zap, Medal } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Trophy, Award, Star, Target, Zap, Crown, CheckCircle, Flame } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -20,17 +21,31 @@ interface AchievementDisplayProps {
 
 const getBadgeIcon = (badgeType: string) => {
   switch (badgeType.toLowerCase()) {
-    case 'subject_mastery':
+    case 'beginner':
+      return Star;
+    case 'intermediate':
+      return Award;
+    case 'advanced':
+      return Crown;
+    case 'expert':
       return Trophy;
     case 'streak':
-      return Zap;
+      return Flame;
+    case 'completion':
+      return CheckCircle;
     case 'milestone':
       return Target;
-    case 'special':
-      return Star;
     default:
-      return Medal;
+      return Trophy;
   }
+};
+
+const isRecentBadge = (earnedAt: string): boolean => {
+  const earnedDate = new Date(earnedAt);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - earnedDate.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays <= 2;
 };
 
 const getBadgeColor = (subjectName: string | null) => {
@@ -71,12 +86,6 @@ export const AchievementDisplay = ({ achievements }: AchievementDisplayProps) =>
     );
   }
 
-  const isRecent = (date: string) => {
-    const earnedDate = new Date(date);
-    const daysSince = (Date.now() - earnedDate.getTime()) / (1000 * 60 * 60 * 24);
-    return daysSince < 7; // Recent if earned within last 7 days
-  };
-
   return (
     <Card className="border border-border">
       <CardHeader>
@@ -86,55 +95,57 @@ export const AchievementDisplay = ({ achievements }: AchievementDisplayProps) =>
         </CardTitle>
         <CardDescription>Your latest badges and milestones</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="relative">
+      <CardContent className="space-y-4">
+        <div className="space-y-0 relative">
           {/* Timeline connector line */}
-          {achievements.length > 1 && (
-            <div className="achievement-timeline absolute inset-0" />
-          )}
+          <div className="absolute left-6 top-0 bottom-0 w-0.5 border-l-2 border-dashed border-secondary" />
           
-          <div className="grid grid-cols-3 gap-4 relative">
-            {achievements.map((achievement) => {
-              const Icon = getBadgeIcon(achievement.badge_type);
-              const recent = isRecent(achievement.earned_at);
-              
-              return (
-                <div
-                  key={achievement.id}
-                  className={cn(
-                    "flex flex-col items-center text-center space-y-2 p-3 rounded-lg",
-                    "hover:bg-muted/30 transition-all duration-200 cursor-pointer group",
-                    recent && "scale-110"
-                  )}
-                >
-                  <div className={cn(
-                    "w-14 h-14 md:w-16 md:h-16 rounded-full shadow-md",
-                    "flex items-center justify-center relative",
-                    "bg-gradient-to-br",
-                    getBadgeColor(achievement.subject_name),
-                    "group-hover:scale-110 transition-transform duration-200",
-                    recent && "pulse-glow"
-                  )}>
-                    <Icon className="h-7 w-7 md:h-8 md:w-8 text-white" />
-                    {recent && (
-                      <div className="absolute -top-1 -right-1">
-                        <Star className="h-4 w-4 text-secondary fill-secondary animate-pulse" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-1 min-h-[3rem]">
-                    <p className="text-xs font-semibold leading-tight line-clamp-2">
-                      {achievement.badge_name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(achievement.earned_at), { addSuffix: true })}
-                    </p>
-                  </div>
+          {achievements.map((achievement, index) => {
+            const Icon = getBadgeIcon(achievement.badge_type);
+            const color = getBadgeColor(achievement.subject_name);
+            const isRecent = isRecentBadge(achievement.earned_at);
+            
+            return (
+              <div 
+                key={achievement.id} 
+                className="flex items-start gap-4 group hover:bg-muted/50 p-3 rounded-lg transition-colors relative"
+              >
+                <div className={cn(
+                  'w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 shadow-md relative z-10',
+                  color,
+                  isRecent && 'pulse-glow animate-pulse'
+                )}>
+                  <Icon className="h-6 w-6 text-white" />
                 </div>
-              );
-            })}
-          </div>
+                
+                <div className="flex-1 min-w-0 pt-1">
+                  <p className="font-semibold text-base text-primary">
+                    {achievement.badge_name}
+                  </p>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                    {achievement.badge_description}
+                  </p>
+                  {achievement.subject_name && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {achievement.subject_name}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Earned {formatDistanceToNow(new Date(achievement.earned_at), { addSuffix: true })}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
         </div>
+        
+        <Button 
+          variant="link" 
+          className="w-full text-secondary hover:underline mt-4"
+          onClick={() => window.location.href = '/achievements'}
+        >
+          View All Achievements
+        </Button>
       </CardContent>
     </Card>
   );

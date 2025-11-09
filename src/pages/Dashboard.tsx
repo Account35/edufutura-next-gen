@@ -24,6 +24,9 @@ export default function Dashboard() {
     achievements: [],
   });
 
+  const [schoolData, setSchoolData] = useState<{ school_name?: string; province?: string }>({});
+  const [overallProgress, setOverallProgress] = useState(0);
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/');
@@ -37,6 +40,7 @@ export default function Dashboard() {
 
     if (user) {
       loadDashboardData();
+      loadSchoolData();
       updateLastDashboardVisit();
     }
   }, [user, userProfile, authLoading, navigate]);
@@ -51,6 +55,14 @@ export default function Dashboard() {
         .order('last_accessed', { ascending: false });
 
       if (progressError) throw progressError;
+
+      // Calculate overall progress
+      if (progressData && progressData.length > 0) {
+        const avgProgress = progressData.reduce((sum, item) => 
+          sum + (Number(item.progress_percentage) || 0), 0
+        ) / progressData.length;
+        setOverallProgress(avgProgress);
+      }
 
       // Load recent activities
       const { data: activityData, error: activityError } = await supabase
@@ -68,7 +80,7 @@ export default function Dashboard() {
         .select('*')
         .eq('user_id', user!.id)
         .order('earned_at', { ascending: false })
-        .limit(6);
+        .limit(10);
 
       if (achievementError) throw achievementError;
 
@@ -80,6 +92,25 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       toast.error('Failed to load dashboard data');
+    }
+  };
+
+  const loadSchoolData = async () => {
+    if (!userProfile?.school_id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('schools')
+        .select('school_name, province')
+        .eq('id', userProfile.school_id)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setSchoolData(data);
+      }
+    } catch (error) {
+      console.error('Error loading school data:', error);
     }
   };
 
@@ -100,14 +131,19 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-20 lg:pb-6">
         {/* Welcome Banner */}
         <WelcomeBanner
           userName={userProfile.full_name}
           gradeLevel={userProfile.grade_level}
-          schoolName={userProfile.school_id ? 'Your School' : undefined}
+          schoolName={schoolData.school_name}
+          province={schoolData.province}
           profilePicture={userProfile.profile_picture_url}
           isPremium={isPremium}
+          totalStudyHours={userProfile.total_study_hours || 0}
+          studyStreakDays={userProfile.study_streak_days || 0}
+          overallProgress={overallProgress}
+          onUpgradeClick={() => setShowUpgradeModal(true)}
         />
 
         {/* Upgrade Banner for Free Users */}
