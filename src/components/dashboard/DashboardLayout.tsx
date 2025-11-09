@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { MobileBottomNav } from './MobileBottomNav';
+import { MobileMoreSheet } from './MobileMoreSheet';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -165,13 +166,16 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                     key={item.name}
                     onClick={() => handleNavigation(item.href, item.comingSoon)}
                     className={cn(
-                      'text-sm font-medium transition-colors duration-200',
+                      'relative text-base font-medium transition-colors duration-200 pb-1',
                       isActive 
                         ? 'text-primary font-semibold' 
-                        : 'text-muted-foreground hover:text-primary'
+                        : 'text-gray-700 hover:text-primary'
                     )}
                   >
                     {item.name}
+                    {isActive && (
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+                    )}
                   </button>
                 );
               })}
@@ -309,62 +313,10 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       <MobileBottomNav onMoreClick={() => setMoreMenuOpen(true)} />
 
       {/* Mobile More Menu */}
-      <Sheet open={moreMenuOpen} onOpenChange={setMoreMenuOpen}>
-        <SheetContent side="bottom" className="h-[400px]">
-          <div className="py-4 space-y-4">
-            <h3 className="font-serif font-bold text-lg text-primary">More Options</h3>
-            <div className="space-y-2">
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => {
-                  navigate('/settings');
-                  setMoreMenuOpen(false);
-                }}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => {
-                  toast.info('Help center coming soon');
-                  setMoreMenuOpen(false);
-                }}
-              >
-                <HelpCircle className="h-4 w-4 mr-2" />
-                Help & Support
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-sm"
-                onClick={() => toast.info('Terms coming soon')}
-              >
-                <FileTextIcon className="h-4 w-4 mr-2" />
-                Terms & Conditions
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-sm"
-                onClick={() => toast.info('Privacy policy coming soon')}
-              >
-                <ShieldIcon className="h-4 w-4 mr-2" />
-                Privacy Policy
-              </Button>
-            </div>
-            <Separator />
-            <Button
-              variant="destructive"
-              className="w-full"
-              onClick={handleSignOut}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <MobileMoreSheet 
+        isOpen={moreMenuOpen} 
+        onClose={() => setMoreMenuOpen(false)} 
+      />
     </div>
   );
 };

@@ -223,6 +223,43 @@
     height: 2px;
     background: hsl(var(--secondary));
   }
+  
+  /* Safe area padding for mobile devices with notches */
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Page Transitions */
+  .page-enter {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  
+  .page-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 300ms ease-out, transform 300ms ease-out;
+  }
+  
+  .page-exit {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .page-exit-active {
+    opacity: 0;
+    transform: translateY(-5px);
+    transition: opacity 200ms ease-out, transform 200ms ease-out;
+  }
+  
+  /* Active scale effect for touch */
+  .active\:scale-95:active {
+    transform: scale(0.95);
+  }
+  
+  .active\:scale-98:active {
+    transform: scale(0.98);
+  }
 }
 
 /* Custom animations */
