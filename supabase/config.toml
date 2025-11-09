@@ -1,1 +1,7 @@
 project_id = "umnpomycamfmsrssjuqn"
+
+[functions]
+enabled = true
+
+[functions.analyze-report]
+verify_jwt = true
