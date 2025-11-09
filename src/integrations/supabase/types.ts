@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          badge_description: string | null
+          badge_id: string
+          badge_name: string
+          badge_type: string
+          created_at: string | null
+          earned_at: string | null
+          icon_url: string | null
+          id: string
+          subject_name: string | null
+          user_id: string
+        }
+        Insert: {
+          badge_description?: string | null
+          badge_id: string
+          badge_name: string
+          badge_type: string
+          created_at?: string | null
+          earned_at?: string | null
+          icon_url?: string | null
+          id?: string
+          subject_name?: string | null
+          user_id: string
+        }
+        Update: {
+          badge_description?: string | null
+          badge_id?: string
+          badge_name?: string
+          badge_type?: string
+          created_at?: string | null
+          earned_at?: string | null
+          icon_url?: string | null
+          id?: string
+          subject_name?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      activity_log: {
+        Row: {
+          activity_description: string
+          activity_type: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          subject_name: string | null
+          timestamp: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_description: string
+          activity_type: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          subject_name?: string | null
+          timestamp?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_description?: string
+          activity_type?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          subject_name?: string | null
+          timestamp?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       schools: {
         Row: {
           created_at: string | null
@@ -50,6 +122,93 @@ export type Database = {
         }
         Relationships: []
       }
+      study_preferences: {
+        Row: {
+          created_at: string | null
+          daily_goal_minutes: number | null
+          id: string
+          learning_style: string | null
+          preferred_study_time: string | null
+          study_pace: string | null
+          study_reminders_enabled: boolean | null
+          updated_at: string | null
+          user_id: string
+          weekly_goal_hours: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          daily_goal_minutes?: number | null
+          id?: string
+          learning_style?: string | null
+          preferred_study_time?: string | null
+          study_pace?: string | null
+          study_reminders_enabled?: boolean | null
+          updated_at?: string | null
+          user_id: string
+          weekly_goal_hours?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          daily_goal_minutes?: number | null
+          id?: string
+          learning_style?: string | null
+          preferred_study_time?: string | null
+          study_pace?: string | null
+          study_reminders_enabled?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+          weekly_goal_hours?: number | null
+        }
+        Relationships: []
+      }
+      subscription_history: {
+        Row: {
+          amount_zar: number | null
+          created_at: string | null
+          currency: string | null
+          id: string
+          payment_method: string | null
+          payment_status: string | null
+          plan_type: string
+          subscription_end_date: string | null
+          subscription_start_date: string | null
+          transaction_date: string | null
+          transaction_id: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          amount_zar?: number | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          payment_method?: string | null
+          payment_status?: string | null
+          plan_type: string
+          subscription_end_date?: string | null
+          subscription_start_date?: string | null
+          transaction_date?: string | null
+          transaction_id?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          amount_zar?: number | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          payment_method?: string | null
+          payment_status?: string | null
+          plan_type?: string
+          subscription_end_date?: string | null
+          subscription_start_date?: string | null
+          transaction_date?: string | null
+          transaction_id?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_audit_log: {
         Row: {
           action_details: Json | null
@@ -77,6 +236,54 @@ export type Database = {
           ip_address?: string | null
           user_agent?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_progress: {
+        Row: {
+          average_quiz_score: number | null
+          chapters_completed: number | null
+          created_at: string | null
+          current_chapter: string | null
+          current_chapter_number: number | null
+          id: string
+          last_accessed: string | null
+          next_topic: string | null
+          progress_percentage: number | null
+          subject_name: string
+          total_chapters: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          average_quiz_score?: number | null
+          chapters_completed?: number | null
+          created_at?: string | null
+          current_chapter?: string | null
+          current_chapter_number?: number | null
+          id?: string
+          last_accessed?: string | null
+          next_topic?: string | null
+          progress_percentage?: number | null
+          subject_name: string
+          total_chapters?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          average_quiz_score?: number | null
+          chapters_completed?: number | null
+          created_at?: string | null
+          current_chapter?: string | null
+          current_chapter_number?: number | null
+          id?: string
+          last_accessed?: string | null
+          next_topic?: string | null
+          progress_percentage?: number | null
+          subject_name?: string
+          total_chapters?: number | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -118,8 +325,10 @@ export type Database = {
           grade_level: number | null
           guardian_email: string | null
           id: string
+          last_dashboard_visit: string | null
           last_login: string | null
           last_payment_date: string | null
+          last_study_date: string | null
           location_lat: number | null
           location_lng: number | null
           next_payment_date: string | null
@@ -134,6 +343,7 @@ export type Database = {
           profile_picture_url: string | null
           province: string | null
           school_id: string | null
+          study_streak_days: number | null
           subjects_studying: Json | null
           subscription_auto_renew: boolean | null
           subscription_cancelled_at: string | null
@@ -143,6 +353,7 @@ export type Database = {
           subscription_status:
             | Database["public"]["Enums"]["subscription_status"]
             | null
+          total_study_hours: number | null
           updated_at: string | null
         }
         Insert: {
@@ -161,8 +372,10 @@ export type Database = {
           grade_level?: number | null
           guardian_email?: string | null
           id: string
+          last_dashboard_visit?: string | null
           last_login?: string | null
           last_payment_date?: string | null
+          last_study_date?: string | null
           location_lat?: number | null
           location_lng?: number | null
           next_payment_date?: string | null
@@ -177,6 +390,7 @@ export type Database = {
           profile_picture_url?: string | null
           province?: string | null
           school_id?: string | null
+          study_streak_days?: number | null
           subjects_studying?: Json | null
           subscription_auto_renew?: boolean | null
           subscription_cancelled_at?: string | null
@@ -186,6 +400,7 @@ export type Database = {
           subscription_status?:
             | Database["public"]["Enums"]["subscription_status"]
             | null
+          total_study_hours?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -204,8 +419,10 @@ export type Database = {
           grade_level?: number | null
           guardian_email?: string | null
           id?: string
+          last_dashboard_visit?: string | null
           last_login?: string | null
           last_payment_date?: string | null
+          last_study_date?: string | null
           location_lat?: number | null
           location_lng?: number | null
           next_payment_date?: string | null
@@ -220,6 +437,7 @@ export type Database = {
           profile_picture_url?: string | null
           province?: string | null
           school_id?: string | null
+          study_streak_days?: number | null
           subjects_studying?: Json | null
           subscription_auto_renew?: boolean | null
           subscription_cancelled_at?: string | null
@@ -229,6 +447,7 @@ export type Database = {
           subscription_status?:
             | Database["public"]["Enums"]["subscription_status"]
             | null
+          total_study_hours?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -240,6 +459,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      year_end_reports: {
+        Row: {
+          academic_year: number
+          ai_analysis: Json | null
+          created_at: string | null
+          file_type: string
+          grade_level: number
+          id: string
+          overall_percentage: number | null
+          pass_status: string | null
+          report_file_url: string
+          subject_grades: Json | null
+          upload_date: string | null
+          user_id: string
+          verified: boolean | null
+          verified_by: string | null
+        }
+        Insert: {
+          academic_year: number
+          ai_analysis?: Json | null
+          created_at?: string | null
+          file_type: string
+          grade_level: number
+          id?: string
+          overall_percentage?: number | null
+          pass_status?: string | null
+          report_file_url: string
+          subject_grades?: Json | null
+          upload_date?: string | null
+          user_id: string
+          verified?: boolean | null
+          verified_by?: string | null
+        }
+        Update: {
+          academic_year?: number
+          ai_analysis?: Json | null
+          created_at?: string | null
+          file_type?: string
+          grade_level?: number
+          id?: string
+          overall_percentage?: number | null
+          pass_status?: string | null
+          report_file_url?: string
+          subject_grades?: Json | null
+          upload_date?: string | null
+          user_id?: string
+          verified?: boolean | null
+          verified_by?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
