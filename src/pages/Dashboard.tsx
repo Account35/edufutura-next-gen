@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { WelcomeBanner } from '@/components/dashboard/WelcomeBanner';
 import { SubjectGrid } from '@/components/dashboard/SubjectGrid';
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
 import { AchievementDisplay } from '@/components/dashboard/AchievementDisplay';
@@ -100,17 +101,14 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Welcome Section */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              Welcome back, {userProfile.full_name}!
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Grade {userProfile.grade_level} • {Array.isArray(userProfile.subjects_studying) ? userProfile.subjects_studying.length : 0} subjects
-            </p>
-          </div>
-        </div>
+        {/* Welcome Banner */}
+        <WelcomeBanner
+          userName={userProfile.full_name}
+          gradeLevel={userProfile.grade_level}
+          schoolName={userProfile.school_id ? 'Your School' : undefined}
+          profilePicture={userProfile.profile_picture_url}
+          isPremium={isPremium}
+        />
 
         {/* Upgrade Banner for Free Users */}
         {!isPremium && (

@@ -2,86 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Academic Traditional Design System for EduFutura
+ * All colors MUST be HSL
+ */
 
 @layer base {
   :root {
-    /* Academic Traditional Color Palette */
-    --background: 42 25% 96%;  /* Warm Cream #FAF6F1 */
-    --foreground: 157 46% 12%;  /* Deep Forest Green #1B4332 */
-
-    --card: 42 25% 98%;
-    --card-foreground: 157 46% 12%;
-
-    --popover: 42 25% 98%;
-    --popover-foreground: 157 46% 12%;
-
-    --primary: 157 46% 12%;  /* Deep Forest Green #1B4332 */
-    --primary-foreground: 42 25% 96%;  /* Warm Cream text on primary */
-    --primary-glow: 157 40% 18%;  /* Lighter forest green for gradients */
-
-    --secondary: 45 74% 52%;  /* Rich Gold #D4AF37 */
-    --secondary-foreground: 157 46% 12%;  /* Forest Green text on gold */
-
-    --accent: 345 100% 25%;  /* Burgundy Red #800020 */
-    --accent-foreground: 42 25% 96%;  /* Warm Cream text on burgundy */
-
-    --muted: 42 20% 90%;
-    --muted-foreground: 157 20% 35%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 42 25% 96%;
-
-    --border: 157 20% 80%;
-    --input: 157 15% 85%;
-    --ring: 45 74% 52%;  /* Gold ring focus */
-
+    /* Deep Forest Green (#1B4332) - Primary */
+    --background: 42 26% 96%;  /* Warm Cream (#FAF6F1) */
+    --foreground: 153 43% 11%;  /* Deep Forest Green for text */
+    --card: 42 33% 99%;  /* Slightly cream tint (#FEFCF8) */
+    --card-foreground: 153 43% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 153 43% 11%;
+    --primary: 153 64% 15%;  /* Deep Forest Green (#1B4332) */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 153 54% 25%;  /* Lighter forest green */
+    --secondary: 43 74% 53%;  /* Rich Gold (#D4AF37) */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 150 10% 95%;
+    --muted-foreground: 153 10% 40%;
+    --accent: 350 100% 25%;  /* Burgundy Red (#800020) */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%;  /* Light gray (#E5E7EB) */
+    --input: 150 10% 90%;
+    --ring: 43 74% 53%;  /* Gold for focus rings */
     --radius: 0.75rem;
-
-    /* Custom gradients for academic elegance */
-    --gradient-primary: linear-gradient(135deg, hsl(157 46% 12%), hsl(157 40% 18%));
-    --gradient-gold: linear-gradient(135deg, hsl(45 74% 52%), hsl(45 80% 60%));
-    --gradient-hero: linear-gradient(180deg, hsl(42 25% 96%), hsl(42 25% 92%));
     
-    /* Shadows */
-    --shadow-elegant: 0 10px 30px -10px hsl(157 46% 12% / 0.15);
-    --shadow-gold: 0 8px 24px -8px hsl(45 74% 52% / 0.25);
+    /* Subject Colors for badges and progress indicators */
+    --subject-math: 217 91% 60%;  /* Blue (#3B82F6) */
+    --subject-physics: 271 81% 56%;  /* Purple (#9333EA) */
+    --subject-biology: 142 71% 45%;  /* Green (#10B981) */
+    --subject-english: 0 84% 60%;  /* Red (#EF4444) */
+    --subject-afrikaans: 25 95% 53%;  /* Orange (#F97316) */
+    --subject-history: 25 83% 29%;  /* Brown (#92400E) */
+    --subject-geography: 173 80% 40%;  /* Teal (#14B8A6) */
+    --subject-business: 43 74% 53%;  /* Gold (#D4AF37) */
+    --subject-accounting: 217 91% 33%;  /* Navy (#1E3A8A) */
+    --subject-economics: 162 93% 35%;  /* Emerald (#059669) */
     
-    /* Transitions */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Chart colors */
+    --chart-1: 153 64% 15%;
+    --chart-2: 43 74% 53%;
+    --chart-3: 350 100% 25%;
+    --chart-4: 153 54% 25%;
+    --chart-5: 150 10% 95%;
   }
 
   .dark {
-    --background: 157 46% 8%;
-    --foreground: 42 25% 96%;
-
-    --card: 157 40% 12%;
-    --card-foreground: 42 25% 96%;
-
-    --popover: 157 40% 12%;
-    --popover-foreground: 42 25% 96%;
-
-    --primary: 45 74% 52%;  /* Gold becomes primary in dark mode */
-    --primary-foreground: 157 46% 12%;
-    --primary-glow: 45 80% 60%;  /* Lighter gold for gradients */
-
-    --secondary: 157 35% 20%;
-    --secondary-foreground: 42 25% 96%;
-
-    --accent: 345 85% 40%;
-    --accent-foreground: 42 25% 96%;
-
-    --muted: 157 30% 18%;
-    --muted-foreground: 42 15% 70%;
-
-    --destructive: 0 62.8% 50%;
-    --destructive-foreground: 42 25% 96%;
-
-    --border: 157 30% 20%;
-    --input: 157 30% 18%;
-    --ring: 45 74% 52%;
+    --background: 153 43% 11%;
+    --foreground: 0 0% 100%;
+    --card: 153 33% 15%;
+    --card-foreground: 0 0% 100%;
+    --popover: 153 33% 15%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 43 74% 53%;
+    --primary-foreground: 153 43% 11%;
+    --primary-glow: 43 64% 63%;
+    --secondary: 153 54% 25%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 153 20% 20%;
+    --muted-foreground: 150 10% 70%;
+    --accent: 350 100% 35%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 153 20% 25%;
+    --input: 153 20% 25%;
+    --ring: 43 74% 53%;
+    --chart-1: 43 74% 53%;
+    --chart-2: 153 54% 25%;
+    --chart-3: 350 100% 35%;
+    --chart-4: 153 64% 15%;
+    --chart-5: 153 20% 20%;
   }
 }
 
@@ -89,14 +84,144 @@ All colors MUST be HSL.
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Open Sans', sans-serif;
   }
-
+  
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Playfair Display', 'Merriweather', serif;
+    font-weight: 700;
+  }
+  
+  .font-mono {
+    font-family: 'Courier New', Consolas, monospace;
+  }
+}
+
+@layer components {
+  /* Interactive Animations */
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-[1.02];
+  }
+  
+  .hover-lift {
+    @apply transition-all duration-200 hover:shadow-xl hover:-translate-y-1;
+  }
+  
+  .hover-border-gold {
+    @apply transition-all duration-200 hover:border-secondary hover:border-2;
+  }
+  
+  /* Loading Shimmer Effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+  
+  /* Pulse Animation for Badges */
+  .pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+  
+  @keyframes pulseGlow {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 20px hsla(var(--secondary), 0.5);
+    }
+    50% {
+      transform: scale(1.1);
+      box-shadow: 0 0 30px hsla(var(--secondary), 0.7);
+    }
+  }
+  
+  /* Subject Card Styles */
+  .subject-card {
+    @apply bg-card border border-border rounded-xl shadow-md;
+    @apply hover-scale hover-lift hover-border-gold;
+    @apply transition-all duration-200;
+  }
+  
+  /* Progress Ring Container */
+  .progress-ring {
+    @apply relative inline-flex items-center justify-center;
+  }
+  
+  .progress-ring-circle {
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+  }
+  
+  .progress-ring-bg {
+    stroke: hsl(var(--border));
+  }
+  
+  .progress-ring-fill {
+    stroke: hsl(var(--secondary));
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s ease-out;
+  }
+  
+  /* Achievement Badge Timeline */
+  .achievement-timeline::before {
+    content: '';
+    position: absolute;
+    top: 32px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      hsl(var(--secondary)) 10%,
+      hsl(var(--secondary)) 90%,
+      transparent 100%
+    );
+    border-top: 2px dashed hsl(var(--secondary));
+    z-index: -1;
+  }
+  
+  /* Welcome Banner */
+  .welcome-banner {
+    @apply bg-primary text-primary-foreground;
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-glow)) 100%);
+    border-bottom: 2px solid hsl(var(--secondary));
+  }
+  
+  /* Mobile Bottom Navigation */
+  .bottom-nav {
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .nav-item-active {
+    @apply text-secondary font-semibold;
+    position: relative;
+  }
+  
+  .nav-item-active::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 2px;
+    background: hsl(var(--secondary));
   }
 }
 
@@ -104,7 +229,7 @@ All colors MUST be HSL.
 @keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -113,9 +238,5 @@ All colors MUST be HSL.
 }
 
 .animate-fade-in {
-  animation: fade-in 0.8s ease-out forwards;
-}
-
-.delay-700 {
-  animation-delay: 0.7s;
+  animation: fade-in 0.3s ease-out forwards;
 }
