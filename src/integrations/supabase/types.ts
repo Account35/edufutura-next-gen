@@ -86,6 +86,231 @@ export type Database = {
         }
         Relationships: []
       }
+      bookmarks: {
+        Row: {
+          chapter_id: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          chapter_id?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmarks_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chapter_prerequisites: {
+        Row: {
+          chapter_id: string | null
+          created_at: string | null
+          id: string
+          prerequisite_chapter_id: string | null
+        }
+        Insert: {
+          chapter_id?: string | null
+          created_at?: string | null
+          id?: string
+          prerequisite_chapter_id?: string | null
+        }
+        Update: {
+          chapter_id?: string | null
+          created_at?: string | null
+          id?: string
+          prerequisite_chapter_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chapter_prerequisites_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chapter_prerequisites_prerequisite_chapter_id_fkey"
+            columns: ["prerequisite_chapter_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curriculum_chapters: {
+        Row: {
+          caps_code: string | null
+          caps_description: string | null
+          chapter_description: string | null
+          chapter_number: number
+          chapter_title: string
+          content_markdown: string | null
+          created_at: string | null
+          difficulty_level: string | null
+          estimated_duration_minutes: number | null
+          id: string
+          is_published: boolean | null
+          learning_outcomes: string[] | null
+          subject_id: string | null
+          thumbnail_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          caps_code?: string | null
+          caps_description?: string | null
+          chapter_description?: string | null
+          chapter_number: number
+          chapter_title: string
+          content_markdown?: string | null
+          created_at?: string | null
+          difficulty_level?: string | null
+          estimated_duration_minutes?: number | null
+          id?: string
+          is_published?: boolean | null
+          learning_outcomes?: string[] | null
+          subject_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          caps_code?: string | null
+          caps_description?: string | null
+          chapter_description?: string | null
+          chapter_number?: number
+          chapter_title?: string
+          content_markdown?: string | null
+          created_at?: string | null
+          difficulty_level?: string | null
+          estimated_duration_minutes?: number | null
+          id?: string
+          is_published?: boolean | null
+          learning_outcomes?: string[] | null
+          subject_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_chapters_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curriculum_subjects: {
+        Row: {
+          caps_aligned: boolean | null
+          color_scheme: string | null
+          created_at: string | null
+          description: string | null
+          estimated_hours: number | null
+          grade_level: number
+          icon_name: string | null
+          id: string
+          is_published: boolean | null
+          learning_objectives: string[] | null
+          subject_code: string | null
+          subject_name: string
+          total_chapters: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          caps_aligned?: boolean | null
+          color_scheme?: string | null
+          created_at?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          grade_level: number
+          icon_name?: string | null
+          id?: string
+          is_published?: boolean | null
+          learning_objectives?: string[] | null
+          subject_code?: string | null
+          subject_name: string
+          total_chapters?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          caps_aligned?: boolean | null
+          color_scheme?: string | null
+          created_at?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          grade_level?: number
+          icon_name?: string | null
+          id?: string
+          is_published?: boolean | null
+          learning_objectives?: string[] | null
+          subject_code?: string | null
+          subject_name?: string
+          total_chapters?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      curriculum_topics: {
+        Row: {
+          chapter_id: string | null
+          content_markdown: string | null
+          created_at: string | null
+          examples: Json | null
+          id: string
+          practice_questions: Json | null
+          topic_number: number
+          topic_title: string
+        }
+        Insert: {
+          chapter_id?: string | null
+          content_markdown?: string | null
+          created_at?: string | null
+          examples?: Json | null
+          id?: string
+          practice_questions?: Json | null
+          topic_number: number
+          topic_title: string
+        }
+        Update: {
+          chapter_id?: string | null
+          content_markdown?: string | null
+          created_at?: string | null
+          examples?: Json | null
+          id?: string
+          practice_questions?: Json | null
+          topic_number?: number
+          topic_title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_topics_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schools: {
         Row: {
           created_at: string | null
@@ -119,6 +344,27 @@ export type Database = {
           school_type?: string
           subjects_per_grade?: Json
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      search_history: {
+        Row: {
+          created_at: string | null
+          id: string
+          query: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          query: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          query?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -238,6 +484,56 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      user_chapter_progress: {
+        Row: {
+          chapter_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          last_accessed: string | null
+          progress_percentage: number | null
+          started_at: string | null
+          status: string | null
+          time_spent_minutes: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          chapter_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          last_accessed?: string | null
+          progress_percentage?: number | null
+          started_at?: string | null
+          status?: string | null
+          time_spent_minutes?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          last_accessed?: string | null
+          progress_percentage?: number | null
+          started_at?: string | null
+          status?: string | null
+          time_spent_minutes?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_chapter_progress_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_progress: {
         Row: {

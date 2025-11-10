@@ -13,6 +13,11 @@ import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
+import SubjectBrowser from "./pages/SubjectBrowser";
+import SubjectLanding from "./pages/SubjectLanding";
+import ChapterContent from "./pages/ChapterContent";
+import SearchResults from "./pages/SearchResults";
+import Bookmarks from "./pages/Bookmarks";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +37,11 @@ const App = () => (
               <Route path="/settings" element={<Settings />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/reports" element={<Reports />} />
+              <Route path="/subjects" element={<SubjectBrowser />} />
+              <Route path="/curriculum/:subjectName" element={<SubjectLanding />} />
+              <Route path="/curriculum/:subjectName/:chapterNumber" element={<ChapterContent />} />
+              <Route path="/search" element={<SearchResults />} />
+              <Route path="/bookmarks" element={<Bookmarks />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
