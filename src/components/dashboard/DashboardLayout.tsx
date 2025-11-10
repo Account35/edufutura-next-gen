@@ -173,35 +173,6 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Desktop Top Navigation */}
-      <header className="hidden lg:flex sticky top-0 z-40 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 py-4 px-6">
-        <div className="flex items-center justify-between w-full max-w-screen-2xl mx-auto">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/dashboard')}>
-            <BookOpen className="h-6 w-6 text-primary" />
-            <span className="font-serif font-bold text-xl text-primary">EduFutura</span>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            {isPremium && (
-              <div className="flex items-center gap-2 bg-secondary/10 text-secondary px-3 py-1 rounded-full">
-                <Crown className="h-4 w-4" />
-                <span className="text-sm font-semibold">Premium</span>
-              </div>
-            )}
-            
-            <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => navigate('/settings')}>
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={userProfile?.profile_picture_url} />
-                <AvatarFallback>
-                  {userProfile?.full_name?.charAt(0) || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-sm font-medium hidden xl:inline">{userProfile?.full_name?.split(' ')[0]}</span>
-            </Button>
-          </div>
-        </div>
-      </header>
-
       {/* Mobile Header */}
       <header className="lg:hidden sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-16 items-center justify-between px-4">
@@ -223,13 +194,13 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       </header>
 
       <div className="flex">
-        {/* Desktop Sidebar - Always visible */}
-        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:w-64 lg:border-r lg:bg-background lg:top-[73px]">
+        {/* Desktop Sidebar - Always visible, full height */}
+        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:w-64 lg:border-r lg:bg-background">
           <SidebarContent />
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 lg:pl-64 lg:pt-[73px] pb-16 lg:pb-0">
+        <main className="flex-1 lg:pl-64 pb-16 lg:pb-0">
           <div className="container mx-auto p-4 md:p-6 lg:p-8">
             {children}
           </div>
