@@ -1,6 +1,5 @@
 import { Home, BookOpen, User, Menu } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
-import { NavLink } from '@/components/NavLink';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -16,6 +15,7 @@ interface MobileBottomNavProps {
 
 export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const navItems: NavItem[] = [
     { id: 'home', icon: Home, label: 'Home', path: '/dashboard' },
@@ -33,16 +33,16 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
           const active = isActive(item.path);
           
           return (
-            <NavLink
+            <button
               key={item.id}
-              to={item.path}
+              onClick={() => navigate(item.path)}
               className={cn(
                 'relative flex flex-col items-center gap-1 px-4 py-2 min-h-[44px] transition-colors duration-200 active:scale-95',
                 active 
                   ? 'text-secondary' 
                   : 'text-gray-600 hover:text-foreground'
               )}
-              activeClassName="text-secondary"
+              aria-label={item.label}
             >
               <div className={cn(
                 'flex flex-col items-center gap-1',
@@ -56,13 +56,14 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
                   {item.label}
                 </span>
               </div>
-            </NavLink>
+            </button>
           );
         })}
         
         <button
           onClick={onMoreClick}
           className="relative flex flex-col items-center gap-1 px-4 py-2 min-h-[44px] text-gray-600 hover:text-foreground transition-colors duration-200 active:scale-95"
+          aria-label="More"
         >
           <Menu className="h-6 w-6" />
           <span className="text-xs font-medium">More</span>
