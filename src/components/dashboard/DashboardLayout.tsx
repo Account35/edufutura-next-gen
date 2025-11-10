@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -117,12 +117,8 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <NavLink
               key={item.name}
               to={item.href}
-              className={cn(
-                'w-full justify-start min-h-[44px] flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground',
-                isLocked && 'opacity-60'
-              )}
+              className="w-full justify-start min-h-[44px] flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
               activeClassName="bg-secondary text-secondary-foreground"
-              onClick={() => setSidebarOpen(false)}
             >
               <Icon className="mr-3 h-5 w-5" />
               {item.name}
@@ -154,7 +150,6 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           to="/settings"
           className="w-full justify-start min-h-[44px] flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
           activeClassName="bg-secondary text-secondary-foreground"
-          onClick={() => setSidebarOpen(false)}
         >
           <Settings className="mr-3 h-5 w-5" />
           Settings
