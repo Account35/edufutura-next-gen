@@ -25,9 +25,9 @@ export const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
               <span>CAPS Curriculum Aligned</span>
             </div>
             
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-primary leading-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-subject-mathematics leading-tight">
               Master Your CAPS Curriculum with{" "}
-              <span className="text-secondary">AI-Powered Learning</span>
+              <span className="text-subject-mathematics">AI-Powered Learning</span>
             </h1>
             
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto lg:mx-0">
