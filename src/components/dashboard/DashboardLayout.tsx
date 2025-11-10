@@ -77,7 +77,13 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="p-6 border-b border-border">
-        <div className="flex items-center gap-2">
+        <div 
+          className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" 
+          onClick={() => {
+            navigate('/dashboard');
+            setSidebarOpen(false);
+          }}
+        >
           <BookOpen className="h-6 w-6 text-primary" />
           <span className="font-serif font-bold text-xl text-primary">EduFutura</span>
         </div>
@@ -119,6 +125,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               to={item.href}
               className="w-full justify-start min-h-[44px] flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
               activeClassName="bg-secondary text-secondary-foreground"
+              onClick={() => setSidebarOpen(false)}
             >
               <Icon className="mr-3 h-5 w-5" />
               {item.name}
@@ -150,6 +157,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           to="/settings"
           className="w-full justify-start min-h-[44px] flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
           activeClassName="bg-secondary text-secondary-foreground"
+          onClick={() => setSidebarOpen(false)}
         >
           <Settings className="mr-3 h-5 w-5" />
           Settings
