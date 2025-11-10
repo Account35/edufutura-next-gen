@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useCurriculumData, Chapter } from '@/hooks/useCurriculumData';
@@ -11,15 +11,19 @@ import { useAuth } from '@/hooks/useAuth';
 import { ChapterHeader } from '@/components/curriculum/ChapterHeader';
 import { ChapterSidebar } from '@/components/curriculum/ChapterSidebar';
 import { ChapterContentRenderer } from '@/components/curriculum/ChapterContentRenderer';
-import { ChapterToolbar } from '@/components/curriculum/ChapterToolbar';
+import { MobileReadingToolbar } from '@/components/curriculum/MobileReadingToolbar';
 import { ChapterNavigation } from '@/components/curriculum/ChapterNavigation';
 import { PrerequisiteModal } from '@/components/curriculum/PrerequisiteModal';
 import { DifficultyBadge } from '@/components/curriculum/DifficultyBadge';
 import { CAPSBadge } from '@/components/curriculum/CAPSBadge';
+import { ProgressSavedIndicator } from '@/components/curriculum/ProgressSavedIndicator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Clock, Target, Bookmark } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Clock, Target, Bookmark, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useReadingPreferences } from '@/hooks/useReadingPreferences';
+import { toast } from 'sonner';
 
 export default function ChapterContent() {
   const { subjectName, chapterNumber } = useParams<{ subjectName: string; chapterNumber: string }>();
@@ -30,10 +34,13 @@ export default function ChapterContent() {
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [allChapters, setAllChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fontSize, setFontSize] = useState('medium');
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [showProgressSaved, setShowProgressSaved] = useState(false);
   const [showPrereqModal, setShowPrereqModal] = useState(false);
+  const [readingTime, setReadingTime] = useState({ total: 0, remaining: 0 });
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  const { fontSize, isDarkMode, updateFontSize, toggleDarkMode, getFontSizeClass } = useReadingPreferences();
 
   const { 
     updateReadingProgress, 
@@ -106,35 +113,57 @@ export default function ChapterContent() {
     };
   }, [chapter?.id, syncSubjectProgress]);
 
-  // Load preferences from localStorage
+  // Calculate reading time
   useEffect(() => {
-    const savedFontSize = localStorage.getItem('fontSize') || 'medium';
-    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-    
-    setFontSize(savedFontSize);
-    setIsDarkMode(savedDarkMode);
-    
-    if (savedDarkMode) {
-      document.documentElement.classList.add('dark');
+    if (chapter?.content_markdown) {
+      const wordCount = chapter.content_markdown.split(/\s+/).length;
+      const totalMinutes = Math.ceil(wordCount / 225); // 225 words per minute
+      const remainingMinutes = Math.ceil(totalMinutes * (1 - scrollProgress / 100));
+      setReadingTime({ total: totalMinutes, remaining: remainingMinutes });
     }
-  }, []);
+  }, [chapter, scrollProgress]);
 
-  const handleFontSizeChange = (size: string) => {
-    setFontSize(size);
-    localStorage.setItem('fontSize', size);
-  };
+  // Scroll tracking for progress and reading position
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!contentRef.current) return;
 
-  const handleDarkModeToggle = () => {
-    const newMode = !isDarkMode;
-    setIsDarkMode(newMode);
-    localStorage.setItem('darkMode', String(newMode));
-    
-    if (newMode) {
+      const scrollTop = window.scrollY;
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = scrollHeight > 0 ? Math.min(100, Math.max(0, (scrollTop / scrollHeight) * 100)) : 0;
+      
+      setScrollProgress(progress);
+
+      // Save reading position
+      sessionStorage.setItem(`reading-position-${chapter?.id}`, String(scrollTop));
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [chapter?.id]);
+
+  // Restore reading position
+  useEffect(() => {
+    const savedPosition = sessionStorage.getItem(`reading-position-${chapter?.id}`);
+    if (savedPosition && chapter?.id) {
+      const position = parseInt(savedPosition);
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: position, behavior: 'instant' as ScrollBehavior });
+      });
+      if (position > 100) {
+        toast.info('Resumed from where you left off', { duration: 2000 });
+      }
+    }
+  }, [chapter?.id]);
+
+  // Apply dark mode
+  useEffect(() => {
+    if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  };
+  }, [isDarkMode]);
 
   const currentIndex = allChapters.findIndex(ch => ch.chapter_number === chapter?.chapter_number);
   const previousChapter = currentIndex > 0 ? {
@@ -153,11 +182,16 @@ export default function ChapterContent() {
     prerequisites: nextPrereqs,
   } : null;
 
-  const fontSizeClasses = {
-    small: 'text-base',
-    medium: 'text-lg',
-    large: 'text-xl',
-    xlarge: 'text-2xl',
+  const handlePreviousChapter = () => {
+    if (previousChapter) navigate(`/curriculum/${subjectName}/${previousChapter.number}`);
+  };
+
+  const handleNextChapter = () => {
+    if (nextChapter && !nextChapter.isLocked) navigate(`/curriculum/${subjectName}/${nextChapter.number}`);
+  };
+
+  const handleBookmarkToggle = () => {
+    toggleBookmark();
   };
 
   if (loading) {
@@ -200,15 +234,33 @@ export default function ChapterContent() {
           prerequisites={prerequisites}
         />
       )}
-      <div className="relative">
+      <div className="relative" ref={contentRef}>
+        {/* Scroll Progress Bar */}
+        <div className="fixed top-0 left-0 right-0 h-1 bg-muted z-30">
+          <div
+            className="h-full bg-secondary transition-all duration-200"
+            style={{ width: `${scrollProgress}%` }}
+          />
+        </div>
+
         <ChapterHeader
           subjectName={subjectName}
           chapterNumber={chapter.chapter_number}
           chapterTitle={chapter.chapter_title}
-          scrollPercentage={scrollPercentage}
+          scrollPercentage={scrollProgress}
         />
 
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 pb-24 lg:pb-8">
+          {/* Reading Time Estimate */}
+          {readingTime.total > 0 && (
+            <div className="mb-4 text-sm text-muted-foreground">
+              {scrollProgress < 95 ? (
+                <>📖 {readingTime.remaining} min remaining</>
+              ) : (
+                <>✅ Chapter completed!</>
+              )}
+            </div>
+          )}
           {/* Chapter metadata */}
           <div className="flex flex-wrap items-center gap-3 mb-6">
             {chapter.difficulty_level && (
@@ -233,29 +285,44 @@ export default function ChapterContent() {
             </Button>
           </div>
 
-          {/* Learning outcomes */}
+          {/* Learning Outcomes - Collapsible on Mobile */}
           {chapter.learning_outcomes && chapter.learning_outcomes.length > 0 && (
-            <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-xl p-6 mb-8">
-              <div className="flex items-center gap-2 mb-3">
-                <Target className="h-5 w-5 text-green-600" />
-                <h3 className="font-semibold text-primary">By the end of this chapter you will be able to:</h3>
+            <Collapsible defaultOpen={true} className="mb-8">
+              <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-xl overflow-hidden">
+                <CollapsibleTrigger className="w-full p-6 pb-3 flex items-center justify-between lg:cursor-default">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-green-600" />
+                    <h3 className="font-semibold text-primary">By the end of this chapter you will be able to:</h3>
+                  </div>
+                  <ChevronDown className="h-4 w-4 lg:hidden transition-transform duration-200 data-[state=open]:rotate-180" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="px-6 pb-6">
+                    <ul className="space-y-2">
+                      {chapter.learning_outcomes.map((outcome, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-green-600 mt-1">✓</span>
+                          <span className="leading-relaxed">{outcome}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </CollapsibleContent>
               </div>
-              <ul className="space-y-2">
-                {chapter.learning_outcomes.map((outcome, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <span className="text-green-600 mt-1">✓</span>
-                    <span>{outcome}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            </Collapsible>
           )}
 
           {/* Main content area with sidebar */}
           <div className="flex gap-8">
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <article className={cn("transition-all duration-200", fontSizeClasses[fontSize as keyof typeof fontSizeClasses])}>
+              <article 
+                className={cn(
+                  "prose max-w-none dark:prose-invert transition-all duration-200",
+                  getFontSizeClass()
+                )}
+                style={{ lineHeight: '1.8' }}
+              >
                 {chapter.content_markdown ? (
                   <ChapterContentRenderer 
                     content={chapter.content_markdown} 
@@ -284,27 +351,22 @@ export default function ChapterContent() {
           </div>
         </div>
 
-        {/* Mobile toolbar */}
-        <ChapterToolbar
+        {/* Mobile Reading Toolbar */}
+        <MobileReadingToolbar
           isBookmarked={isBookmarked}
-          onBookmarkToggle={toggleBookmark}
-          onPrevious={() => previousChapter && navigate(`/curriculum/${subjectName}/${previousChapter.number}`)}
-          onNext={() => nextChapter && !nextChapter.isLocked && navigate(`/curriculum/${subjectName}/${nextChapter.number}`)}
+          onBookmarkToggle={handleBookmarkToggle}
+          onPrevious={handlePreviousChapter}
+          onNext={handleNextChapter}
           hasPrevious={!!previousChapter}
           hasNext={!!nextChapter && !nextChapter.isLocked}
-          onFontSizeChange={handleFontSizeChange}
+          onFontSizeChange={updateFontSize}
           fontSize={fontSize}
-          onDarkModeToggle={handleDarkModeToggle}
+          onDarkModeToggle={toggleDarkMode}
           isDarkMode={isDarkMode}
         />
 
-        {/* Progress saved indicator */}
-        {showProgressSaved && (
-          <div className="fixed bottom-20 lg:bottom-6 right-6 bg-background border border-border shadow-lg rounded-full px-4 py-2 flex items-center gap-2 animate-fade-in z-30">
-            <div className="h-2 w-2 bg-green-500 rounded-full" />
-            <span className="text-sm font-medium">Progress saved</span>
-          </div>
-        )}
+        {/* Progress Saved Indicator */}
+        <ProgressSavedIndicator show={showProgressSaved} />
       </div>
     </DashboardLayout>
   );

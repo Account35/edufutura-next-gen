@@ -14,6 +14,7 @@ import Profile from "./pages/Profile";
 import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 import SubjectBrowser from "./pages/SubjectBrowser";
+import AdminContent from "./pages/AdminContent";
 import SubjectLanding from "./pages/SubjectLanding";
 import ChapterContent from "./pages/ChapterContent";
 import SearchResults from "./pages/SearchResults";
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/profile" element={<Profile />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/subjects" element={<SubjectBrowser />} />
+              <Route path="/admin/content" element={<AdminContent />} />
               <Route path="/curriculum/:subjectName" element={<SubjectLanding />} />
               <Route path="/curriculum/:subjectName/:chapterNumber" element={<ChapterContent />} />
               <Route path="/search" element={<SearchResults />} />

@@ -86,6 +86,117 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_conversations: {
+        Row: {
+          chapter_id: string | null
+          created_at: string | null
+          id: string
+          last_message_at: string | null
+          message_count: number | null
+          started_at: string | null
+          subject_name: string | null
+          user_id: string
+        }
+        Insert: {
+          chapter_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          message_count?: number | null
+          started_at?: string | null
+          subject_name?: string | null
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          message_count?: number | null
+          started_at?: string | null
+          subject_name?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_conversations_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_feedback: {
+        Row: {
+          created_at: string | null
+          feedback_text: string | null
+          id: string
+          message_id: string
+          rating: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          feedback_text?: string | null
+          id?: string
+          message_id: string
+          rating?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          feedback_text?: string | null
+          id?: string
+          message_id?: string
+          rating?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_feedback_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "ai_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_messages: {
+        Row: {
+          conversation_id: string
+          created_at: string | null
+          id: string
+          message_text: string
+          role: string
+          tokens_used: number | null
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          message_text: string
+          role: string
+          tokens_used?: number | null
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          message_text?: string
+          role?: string
+          tokens_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookmarks: {
         Row: {
           chapter_id: string | null
@@ -168,15 +279,21 @@ export type Database = {
           chapter_number: number
           chapter_title: string
           content_markdown: string | null
+          content_type: string | null
+          content_url: string | null
           created_at: string | null
+          created_by: string | null
           difficulty_level: string | null
           estimated_duration_minutes: number | null
+          glossary_terms: Json | null
           id: string
           is_published: boolean | null
+          key_concepts: string[] | null
           learning_outcomes: string[] | null
           subject_id: string | null
           thumbnail_url: string | null
           updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
           caps_code?: string | null
@@ -185,15 +302,21 @@ export type Database = {
           chapter_number: number
           chapter_title: string
           content_markdown?: string | null
+          content_type?: string | null
+          content_url?: string | null
           created_at?: string | null
+          created_by?: string | null
           difficulty_level?: string | null
           estimated_duration_minutes?: number | null
+          glossary_terms?: Json | null
           id?: string
           is_published?: boolean | null
+          key_concepts?: string[] | null
           learning_outcomes?: string[] | null
           subject_id?: string | null
           thumbnail_url?: string | null
           updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
           caps_code?: string | null
@@ -202,15 +325,21 @@ export type Database = {
           chapter_number?: number
           chapter_title?: string
           content_markdown?: string | null
+          content_type?: string | null
+          content_url?: string | null
           created_at?: string | null
+          created_by?: string | null
           difficulty_level?: string | null
           estimated_duration_minutes?: number | null
+          glossary_terms?: Json | null
           id?: string
           is_published?: boolean | null
+          key_concepts?: string[] | null
           learning_outcomes?: string[] | null
           subject_id?: string | null
           thumbnail_url?: string | null
           updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -375,9 +504,11 @@ export type Database = {
         Row: {
           created_at: string | null
           daily_goal_minutes: number | null
+          dark_mode_enabled: boolean | null
           id: string
           learning_style: string | null
           preferred_study_time: string | null
+          reading_font_size: string | null
           study_pace: string | null
           study_reminders_enabled: boolean | null
           updated_at: string | null
@@ -387,9 +518,11 @@ export type Database = {
         Insert: {
           created_at?: string | null
           daily_goal_minutes?: number | null
+          dark_mode_enabled?: boolean | null
           id?: string
           learning_style?: string | null
           preferred_study_time?: string | null
+          reading_font_size?: string | null
           study_pace?: string | null
           study_reminders_enabled?: boolean | null
           updated_at?: string | null
@@ -399,9 +532,11 @@ export type Database = {
         Update: {
           created_at?: string | null
           daily_goal_minutes?: number | null
+          dark_mode_enabled?: boolean | null
           id?: string
           learning_style?: string | null
           preferred_study_time?: string | null
+          reading_font_size?: string | null
           study_pace?: string | null
           study_reminders_enabled?: boolean | null
           updated_at?: string | null
