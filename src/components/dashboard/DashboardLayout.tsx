@@ -79,7 +79,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       <div className="p-6 border-b border-border flex-shrink-0">
         <Button
           variant="ghost"
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity p-0 h-auto"
+          className="flex items-center gap-2 p-0 h-auto hover:bg-transparent hover:text-primary focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
           onClick={() => {
             navigate('/dashboard');
             setSidebarOpen(false);
