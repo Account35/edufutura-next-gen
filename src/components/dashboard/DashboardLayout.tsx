@@ -74,11 +74,12 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navigationItems = navigation;
   
   const SidebarContent = () => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-y-auto">
       {/* Logo */}
-      <div className="p-6 border-b border-border">
-        <div 
-          className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" 
+      <div className="p-6 border-b border-border flex-shrink-0">
+        <Button
+          variant="ghost"
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity p-0 h-auto"
           onClick={() => {
             navigate('/dashboard');
             setSidebarOpen(false);
@@ -86,12 +87,12 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         >
           <BookOpen className="h-6 w-6 text-primary" />
           <span className="font-serif font-bold text-xl text-primary">EduFutura</span>
-        </div>
+        </Button>
         <p className="text-sm text-muted-foreground mt-1">South African Education</p>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {navigation.map((item) => {
           const Icon = item.icon;
           const isLocked = item.premium && !isPremium;
@@ -120,25 +121,30 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           }
           
           return (
-            <NavLink
+            <Button
               key={item.name}
-              to={item.href}
-              className="w-full justify-start min-h-[44px] flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-              activeClassName="bg-secondary text-secondary-foreground"
-              onClick={() => setSidebarOpen(false)}
+              variant="ghost"
+              className={cn(
+                'w-full justify-start min-h-[44px]',
+                location.pathname === item.href && 'bg-secondary text-secondary-foreground'
+              )}
+              onClick={() => {
+                navigate(item.href);
+                setSidebarOpen(false);
+              }}
             >
               <Icon className="mr-3 h-5 w-5" />
               {item.name}
               {item.premium && !isPremium && (
                 <Crown className="ml-auto h-4 w-4 text-secondary" />
               )}
-            </NavLink>
+            </Button>
           );
         })}
       </nav>
 
       {/* User Section */}
-      <div className="p-4 border-t border-border">
+      <div className="p-4 border-t border-border flex-shrink-0">
         <div className="flex items-center gap-3 mb-4">
           <Avatar>
             <AvatarImage src={userProfile?.profile_picture_url} />
@@ -153,18 +159,23 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </p>
           </div>
         </div>
-        <NavLink
-          to="/settings"
-          className="w-full justify-start min-h-[44px] flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-          activeClassName="bg-secondary text-secondary-foreground"
-          onClick={() => setSidebarOpen(false)}
+        <Button
+          variant="ghost"
+          className={cn(
+            'w-full justify-start min-h-[44px]',
+            location.pathname === '/settings' && 'bg-secondary text-secondary-foreground'
+          )}
+          onClick={() => {
+            navigate('/settings');
+            setSidebarOpen(false);
+          }}
         >
           <Settings className="mr-3 h-5 w-5" />
           Settings
-        </NavLink>
+        </Button>
         <Button
           variant="ghost"
-          className="w-full justify-start min-h-[44px] text-destructive hover:text-destructive"
+          className="w-full justify-start min-h-[44px] text-destructive hover:text-destructive hover:bg-destructive/10"
           onClick={handleSignOut}
         >
           <LogOut className="mr-3 h-5 w-5" />
