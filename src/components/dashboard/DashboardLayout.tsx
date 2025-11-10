@@ -197,8 +197,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       </header>
 
       <div className="flex">
-        {/* Desktop Sidebar - Always visible, full height */}
-        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:w-64 lg:border-r lg:bg-background">
+        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:w-64 lg:border-r lg:bg-background lg:z-50 relative pointer-events-auto">
           <SidebarContent />
         </aside>
 
