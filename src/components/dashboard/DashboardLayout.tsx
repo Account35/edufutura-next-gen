@@ -38,9 +38,10 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'My Subjects', href: '/subjects', icon: BookOpen },
   { name: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
-  { name: 'AI Tutor', href: '/tutor', icon: MessageSquare, premium: true, comingSoon: true },
-  { name: 'Certificates', href: '/certificates', icon: Trophy, premium: true, comingSoon: true },
   { name: 'Reports', href: '/reports', icon: FileText },
+  { name: 'Profile', href: '/profile', icon: User },
+  { name: 'AI Tutor', href: '/ai-tutor', icon: MessageSquare, premium: true, comingSoon: true },
+  { name: 'Certificates', href: '/certificates', icon: Trophy, premium: true, comingSoon: true },
 ];
 
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
@@ -149,14 +150,15 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          className="w-full justify-start min-h-[44px]"
-          onClick={() => handleNavigation('/settings')}
+        <NavLink
+          to="/settings"
+          className="w-full justify-start min-h-[44px] flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+          activeClassName="bg-secondary text-secondary-foreground"
+          onClick={() => setSidebarOpen(false)}
         >
           <Settings className="mr-3 h-5 w-5" />
           Settings
-        </Button>
+        </NavLink>
         <Button
           variant="ghost"
           className="w-full justify-start min-h-[44px] text-destructive hover:text-destructive"
@@ -180,30 +182,16 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <span className="font-serif font-bold text-xl text-primary">EduFutura</span>
             </div>
             <nav className="flex items-center gap-6">
-              {navigationItems.slice(0, 3).map((item) => {
-                if (item.comingSoon) {
-                  return (
-                    <button
-                      key={item.name}
-                      onClick={() => toast.info('This feature is coming soon!')}
-                      className="relative text-base font-medium transition-colors duration-200 pb-1 text-gray-700 hover:text-primary opacity-60"
-                    >
-                      {item.name}
-                    </button>
-                  );
-                }
-                
-                return (
-                  <NavLink
-                    key={item.name}
-                    to={item.href}
-                    className="relative text-base font-medium transition-colors duration-200 pb-1 text-gray-700 hover:text-primary"
-                    activeClassName="!text-primary !font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary after:rounded-t-full"
-                  >
-                    {item.name}
-                  </NavLink>
-                );
-              })}
+              {navigationItems.filter(item => !item.comingSoon).slice(0, 4).map((item) => (
+                <NavLink
+                  key={item.name}
+                  to={item.href}
+                  className="relative text-base font-medium transition-colors duration-200 pb-1 text-gray-700 hover:text-primary"
+                  activeClassName="!text-primary !font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary after:rounded-t-full"
+                >
+                  {item.name}
+                </NavLink>
+              ))}
             </nav>
           </div>
           

@@ -1,4 +1,5 @@
 import { BookOpen, Lock, TrendingUp, Clock, Crown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +40,8 @@ const getSubjectColor = (subjectName: string) => {
 };
 
 export const SubjectGrid = ({ subjects, isPremium, onUpgrade }: SubjectGridProps) => {
+  const navigate = useNavigate();
+
   if (subjects.length === 0) {
     return (
       <EmptyState
@@ -47,7 +50,7 @@ export const SubjectGrid = ({ subjects, isPremium, onUpgrade }: SubjectGridProps
         description="Complete your profile to see your subjects here"
         action={{
           label: 'Update Profile',
-          onClick: () => window.location.href = '/settings'
+          onClick: () => navigate('/settings')
         }}
       />
     );
@@ -124,15 +127,14 @@ export const SubjectGrid = ({ subjects, isPremium, onUpgrade }: SubjectGridProps
               <div className="flex gap-2 pt-2">
                 <Button 
                   className="flex-1 bg-primary hover:bg-primary-glow"
-                  disabled
+                  onClick={() => navigate(`/curriculum/${subject.subject_name}`)}
                 >
                   Continue Learning
-                  <span className="ml-2 text-xs opacity-70">Soon</span>
                 </Button>
                 <Button
                   variant="outline"
                   size="icon"
-                  disabled
+                  onClick={() => navigate(`/curriculum/${subject.subject_name}`)}
                   className="min-h-[44px] min-w-[44px] border-primary/20 hover:bg-primary/10"
                 >
                   <TrendingUp className="h-5 w-5" />
