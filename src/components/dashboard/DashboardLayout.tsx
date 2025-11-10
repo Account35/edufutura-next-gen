@@ -1,5 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   Home, 
@@ -85,30 +86,49 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
         {navigation.map((item) => {
-          const isActive = location.pathname === item.href;
           const Icon = item.icon;
           const isLocked = item.premium && !isPremium;
           
+          if (item.comingSoon) {
+            return (
+              <Button
+                key={item.name}
+                variant="ghost"
+                className={cn(
+                  'w-full justify-start min-h-[44px]',
+                  'opacity-60'
+                )}
+                onClick={() => {
+                  toast.info('This feature is coming soon!');
+                }}
+              >
+                <Icon className="mr-3 h-5 w-5" />
+                {item.name}
+                {item.premium && !isPremium && (
+                  <Crown className="ml-auto h-4 w-4 text-secondary" />
+                )}
+                <span className="ml-auto text-xs text-muted-foreground">Soon</span>
+              </Button>
+            );
+          }
+          
           return (
-            <Button
+            <NavLink
               key={item.name}
-              variant={isActive ? 'secondary' : 'ghost'}
+              to={item.href}
               className={cn(
-                'w-full justify-start min-h-[44px]',
-                isActive && 'bg-secondary text-secondary-foreground',
-                (isLocked || item.comingSoon) && 'opacity-60'
+                'w-full justify-start min-h-[44px] flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground',
+                isLocked && 'opacity-60'
               )}
-              onClick={() => handleNavigation(item.href, item.comingSoon)}
+              activeClassName="bg-secondary text-secondary-foreground"
+              onClick={() => setSidebarOpen(false)}
             >
               <Icon className="mr-3 h-5 w-5" />
               {item.name}
               {item.premium && !isPremium && (
                 <Crown className="ml-auto h-4 w-4 text-secondary" />
               )}
-              {item.comingSoon && (
-                <span className="ml-auto text-xs text-muted-foreground">Soon</span>
-              )}
-            </Button>
+            </NavLink>
           );
         })}
       </nav>
@@ -161,24 +181,27 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </div>
             <nav className="flex items-center gap-6">
               {navigationItems.slice(0, 3).map((item) => {
-                const isActive = location.pathname === item.href;
+                if (item.comingSoon) {
+                  return (
+                    <button
+                      key={item.name}
+                      onClick={() => toast.info('This feature is coming soon!')}
+                      className="relative text-base font-medium transition-colors duration-200 pb-1 text-gray-700 hover:text-primary opacity-60"
+                    >
+                      {item.name}
+                    </button>
+                  );
+                }
                 
                 return (
-                  <button
+                  <NavLink
                     key={item.name}
-                    onClick={() => handleNavigation(item.href, item.comingSoon)}
-                    className={cn(
-                      'relative text-base font-medium transition-colors duration-200 pb-1',
-                      isActive 
-                        ? 'text-primary font-semibold' 
-                        : 'text-gray-700 hover:text-primary'
-                    )}
+                    to={item.href}
+                    className="relative text-base font-medium transition-colors duration-200 pb-1 text-gray-700 hover:text-primary"
+                    activeClassName="!text-primary !font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary after:rounded-t-full"
                   >
                     {item.name}
-                    {isActive && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
-                    )}
-                  </button>
+                  </NavLink>
                 );
               })}
             </nav>
