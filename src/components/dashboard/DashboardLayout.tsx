@@ -1,13 +1,13 @@
-import { ReactNode, useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { NavLink } from '@/components/NavLink';
-import { useAuth } from '@/hooks/useAuth';
-import { 
-  Home, 
-  BookOpen, 
-  User, 
-  Trophy, 
-  Settings, 
+import { ReactNode, useState } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import { NavLink } from "@/components/NavLink";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  Home,
+  BookOpen,
+  User,
+  Trophy,
+  Settings,
   LogOut,
   Menu,
   X,
@@ -17,36 +17,36 @@ import {
   HelpCircle,
   FileTextIcon,
   ShieldIcon,
-  Bookmark
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Separator } from '@/components/ui/separator';
-import { MobileBottomNav } from './MobileBottomNav';
-import { MobileMoreSheet } from './MobileMoreSheet';
-import { supabase } from '@/integrations/supabase/client';
-import { cn } from '@/lib/utils';
-import { useSubscription } from '@/hooks/useSubscription';
-import { toast } from 'sonner';
+  Bookmark,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import { MobileBottomNav } from "./MobileBottomNav";
+import { MobileMoreSheet } from "./MobileMoreSheet";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+import { useSubscription } from "@/hooks/useSubscription";
+import { toast } from "sonner";
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'My Subjects', href: '/subjects', icon: BookOpen },
-  { name: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
-  { name: 'Reports', href: '/reports', icon: FileText },
-  { name: 'Profile', href: '/profile', icon: User },
-  { name: 'AI Tutor', href: '/ai-tutor', icon: MessageSquare, premium: true, comingSoon: true },
-  { name: 'Certificates', href: '/certificates', icon: Trophy, premium: true, comingSoon: true },
+  { name: "Dashboard", href: "/dashboard", icon: Home },
+  { name: "My Subjects", href: "/subjects", icon: BookOpen },
+  { name: "Bookmarks", href: "/bookmarks", icon: Bookmark },
+  { name: "Reports", href: "/reports", icon: FileText },
+  { name: "Profile", href: "/profile", icon: User },
+  { name: "AI Tutor", href: "/ai-tutor", icon: MessageSquare, premium: true, comingSoon: true },
+  { name: "Certificates", href: "/certificates", icon: Trophy, premium: true, comingSoon: true },
 ];
 
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, userProfile, signOut } = useAuth();
@@ -54,7 +54,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   const handleNavigation = (href: string, comingSoon?: boolean) => {
     if (comingSoon) {
-      toast.info('This feature is coming soon!');
+      toast.info("This feature is coming soon!");
       return;
     }
     navigate(href);
@@ -64,15 +64,15 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
-      navigate('/');
-      toast.success('Signed out successfully');
+      navigate("/");
+      toast.success("Signed out successfully");
     } catch (error) {
-      toast.error('Error signing out');
+      toast.error("Error signing out");
     }
   };
 
   const navigationItems = navigation;
-  
+
   const SidebarContent = () => (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Logo */}
@@ -81,7 +81,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           variant="ghost"
           className="flex items-center gap-2 p-0 h-auto hover:bg-transparent hover:text-primary focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
           onClick={() => {
-            navigate('/dashboard');
+            navigate("/dashboard");
             setSidebarOpen(false);
           }}
         >
@@ -96,37 +96,32 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         {navigation.map((item) => {
           const Icon = item.icon;
           const isLocked = item.premium && !isPremium;
-          
+
           if (item.comingSoon) {
             return (
               <Button
                 key={item.name}
                 variant="ghost"
-                className={cn(
-                  'w-full justify-start min-h-[44px]',
-                  'opacity-60'
-                )}
+                className={cn("w-full justify-start min-h-[44px]", "opacity-60")}
                 onClick={() => {
-                  toast.info('This feature is coming soon!');
+                  toast.info("This feature is coming soon!");
                 }}
               >
                 <Icon className="mr-3 h-5 w-5" />
                 {item.name}
-                {item.premium && !isPremium && (
-                  <Crown className="ml-auto h-4 w-4 text-secondary" />
-                )}
+                {item.premium && !isPremium && <Crown className="ml-auto h-4 w-4 text-secondary" />}
                 <span className="ml-auto text-xs text-muted-foreground">Soon</span>
               </Button>
             );
           }
-          
+
           return (
             <Button
               key={item.name}
               variant="ghost"
               className={cn(
-                'w-full justify-start min-h-[44px]',
-                location.pathname === item.href && 'bg-secondary text-secondary-foreground'
+                "w-full justify-start min-h-[44px]",
+                location.pathname === item.href && "bg-secondary text-secondary-foreground",
               )}
               onClick={() => {
                 navigate(item.href);
@@ -135,9 +130,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             >
               <Icon className="mr-3 h-5 w-5" />
               {item.name}
-              {item.premium && !isPremium && (
-                <Crown className="ml-auto h-4 w-4 text-secondary" />
-              )}
+              {item.premium && !isPremium && <Crown className="ml-auto h-4 w-4 text-secondary" />}
             </Button>
           );
         })}
@@ -148,25 +141,21 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <div className="flex items-center gap-3 mb-4">
           <Avatar>
             <AvatarImage src={userProfile?.profile_picture_url} />
-            <AvatarFallback>
-              {userProfile?.full_name?.charAt(0) || 'U'}
-            </AvatarFallback>
+            <AvatarFallback>{userProfile?.full_name?.charAt(0) || "U"}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{userProfile?.full_name}</p>
-            <p className="text-xs text-muted-foreground">
-              {isPremium ? '👑 Premium' : 'Free Account'}
-            </p>
+            <p className="text-xs text-muted-foreground">{isPremium ? "👑 Premium" : "Free Account"}</p>
           </div>
         </div>
         <Button
           variant="ghost"
           className={cn(
-            'w-full justify-start min-h-[44px]',
-            location.pathname === '/settings' && 'bg-secondary text-secondary-foreground'
+            "w-full justify-start min-h-[44px]",
+            location.pathname === "/settings" && "bg-secondary text-secondary-foreground",
           )}
           onClick={() => {
-            navigate('/settings');
+            navigate("/settings");
             setSidebarOpen(false);
           }}
         >
@@ -190,7 +179,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Mobile Header */}
       <header className="lg:hidden sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/dashboard')}>
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
             <BookOpen className="h-6 w-6 text-primary" />
             <span className="font-serif font-bold text-xl text-primary">EduFutura</span>
           </div>
@@ -214,14 +203,12 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
         {/* Main Content */}
         <main className="flex-1 lg:pl-64 pb-16 lg:pb-0">
-          <div className="container mx-auto p-4 md:p-6 lg:p-8">
-            {children}
-          </div>
+          <div className="container mx-auto p-4 md:p-6 lg:p-8">{children}</div>
         </main>
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <MobileBottomNav onMoreClick={() => navigate('/settings')} />
+      <MobileBottomNav onMoreClick={() => navigate("/settings")} />
     </div>
   );
 };
