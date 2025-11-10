@@ -6,12 +6,14 @@ import { useProgressTracking } from '@/hooks/useProgressTracking';
 import { useScrollProgress } from '@/hooks/useScrollProgress';
 import { useTimeTracking } from '@/hooks/useTimeTracking';
 import { useBookmark } from '@/hooks/useBookmark';
+import { usePrerequisites } from '@/hooks/usePrerequisites';
 import { useAuth } from '@/hooks/useAuth';
 import { ChapterHeader } from '@/components/curriculum/ChapterHeader';
 import { ChapterSidebar } from '@/components/curriculum/ChapterSidebar';
 import { ChapterContentRenderer } from '@/components/curriculum/ChapterContentRenderer';
 import { ChapterToolbar } from '@/components/curriculum/ChapterToolbar';
 import { ChapterNavigation } from '@/components/curriculum/ChapterNavigation';
+import { PrerequisiteModal } from '@/components/curriculum/PrerequisiteModal';
 import { DifficultyBadge } from '@/components/curriculum/DifficultyBadge';
 import { CAPSBadge } from '@/components/curriculum/CAPSBadge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,6 +33,7 @@ export default function ChapterContent() {
   const [fontSize, setFontSize] = useState('medium');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showProgressSaved, setShowProgressSaved] = useState(false);
+  const [showPrereqModal, setShowPrereqModal] = useState(false);
 
   const { 
     updateReadingProgress, 
@@ -40,6 +43,9 @@ export default function ChapterContent() {
   } = useProgressTracking(chapter?.id || null, subjectName || null, chapter?.chapter_number || null);
 
   const { isBookmarked, toggleBookmark } = useBookmark(chapter?.id || null);
+  
+  // Check prerequisites for current chapter
+  const { isLocked, prerequisites, loading: prereqLoading } = usePrerequisites(chapter?.id || null);
 
   // Scroll progress tracking
   const handleProgressUpdate = useCallback((percentage: number) => {
@@ -83,6 +89,13 @@ export default function ChapterContent() {
 
     loadChapterData();
   }, [subjectName, chapterNumber]);
+
+  // Show prerequisite modal if chapter is locked
+  useEffect(() => {
+    if (isLocked && !prereqLoading && chapter) {
+      setShowPrereqModal(true);
+    }
+  }, [isLocked, prereqLoading, chapter]);
 
   // Sync subject progress when component unmounts
   useEffect(() => {
@@ -129,10 +142,15 @@ export default function ChapterContent() {
     title: allChapters[currentIndex - 1].chapter_title,
   } : null;
   
+  // Check next chapter prerequisites
+  const nextChapterId = currentIndex < allChapters.length - 1 ? allChapters[currentIndex + 1].id : null;
+  const { isLocked: isNextLocked, prerequisites: nextPrereqs } = usePrerequisites(nextChapterId);
+  
   const nextChapter = currentIndex < allChapters.length - 1 ? {
     number: allChapters[currentIndex + 1].chapter_number,
     title: allChapters[currentIndex + 1].chapter_title,
-    isLocked: false, // TODO: Check prerequisites
+    isLocked: isNextLocked,
+    prerequisites: nextPrereqs,
   } : null;
 
   const fontSizeClasses = {
@@ -175,6 +193,13 @@ export default function ChapterContent() {
 
   return (
     <DashboardLayout>
+      {showPrereqModal && prerequisites.length > 0 && (
+        <PrerequisiteModal
+          isOpen={showPrereqModal}
+          onClose={() => setShowPrereqModal(false)}
+          prerequisites={prerequisites}
+        />
+      )}
       <div className="relative">
         <ChapterHeader
           subjectName={subjectName}

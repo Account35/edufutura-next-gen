@@ -126,18 +126,21 @@ export type Database = {
           chapter_id: string | null
           created_at: string | null
           id: string
+          is_required: boolean
           prerequisite_chapter_id: string | null
         }
         Insert: {
           chapter_id?: string | null
           created_at?: string | null
           id?: string
+          is_required?: boolean
           prerequisite_chapter_id?: string | null
         }
         Update: {
           chapter_id?: string | null
           created_at?: string | null
           id?: string
+          is_required?: boolean
           prerequisite_chapter_id?: string | null
         }
         Relationships: [

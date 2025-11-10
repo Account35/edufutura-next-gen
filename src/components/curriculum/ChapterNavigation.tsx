@@ -1,11 +1,29 @@
 import { ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { PrerequisiteModal } from './PrerequisiteModal';
+
+interface Prerequisite {
+  prerequisite_chapter_id: string;
+  chapter: {
+    chapter_title: string;
+    chapter_number: number;
+    id: string;
+  };
+  completed: boolean;
+  is_required: boolean;
+}
 
 interface ChapterNavigationProps {
   subjectName: string;
   previousChapter?: { number: number; title: string } | null;
-  nextChapter?: { number: number; title: string; isLocked?: boolean } | null;
+  nextChapter?: { 
+    number: number; 
+    title: string; 
+    isLocked?: boolean;
+    prerequisites?: Prerequisite[];
+  } | null;
 }
 
 export const ChapterNavigation = ({
@@ -14,8 +32,25 @@ export const ChapterNavigation = ({
   nextChapter,
 }: ChapterNavigationProps) => {
   const navigate = useNavigate();
+  const [showPrereqModal, setShowPrereqModal] = useState(false);
+
+  const handleNextClick = () => {
+    if (nextChapter?.isLocked) {
+      setShowPrereqModal(true);
+    } else if (nextChapter) {
+      navigate(`/curriculum/${subjectName}/${nextChapter.number}`);
+    }
+  };
 
   return (
+    <>
+      {showPrereqModal && nextChapter?.prerequisites && (
+        <PrerequisiteModal
+          isOpen={showPrereqModal}
+          onClose={() => setShowPrereqModal(false)}
+          prerequisites={nextChapter.prerequisites}
+        />
+      )}
     <div className="mt-12 pt-8 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-4">
       {previousChapter ? (
         <Button
@@ -37,13 +72,13 @@ export const ChapterNavigation = ({
         nextChapter.isLocked ? (
           <Button
             variant="outline"
-            className="h-auto py-4 px-6 justify-end opacity-50 cursor-not-allowed"
-            disabled
+            className="h-auto py-4 px-6 justify-end hover:border-accent cursor-pointer"
+            onClick={handleNextClick}
           >
             <div className="text-right">
               <div className="text-xs text-muted-foreground">Next</div>
               <div className="font-medium line-clamp-1 flex items-center gap-2">
-                <Lock className="h-4 w-4" />
+                <Lock className="h-4 w-4 text-accent" />
                 {nextChapter.title}
               </div>
             </div>
@@ -53,7 +88,7 @@ export const ChapterNavigation = ({
           <Button
             variant="outline"
             className="h-auto py-4 px-6 justify-end group hover:border-secondary"
-            onClick={() => navigate(`/curriculum/${subjectName}/${nextChapter.number}`)}
+            onClick={handleNextClick}
           >
             <div className="text-right">
               <div className="text-xs text-muted-foreground">Next</div>
@@ -66,5 +101,6 @@ export const ChapterNavigation = ({
         <div />
       )}
     </div>
+    </>
   );
 };
