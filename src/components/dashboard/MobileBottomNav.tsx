@@ -1,5 +1,6 @@
 import { Home, BookOpen, User, Menu } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { NavLink } from '@/components/NavLink';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -14,7 +15,6 @@ interface MobileBottomNavProps {
 }
 
 export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
-  const navigate = useNavigate();
   const location = useLocation();
 
   const navItems: NavItem[] = [
@@ -33,15 +33,16 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
           const active = isActive(item.path);
           
           return (
-            <button
+            <NavLink
               key={item.id}
-              onClick={() => navigate(item.path)}
+              to={item.path}
               className={cn(
                 'relative flex flex-col items-center gap-1 px-4 py-2 min-h-[44px] transition-colors duration-200 active:scale-95',
                 active 
                   ? 'text-secondary' 
                   : 'text-gray-600 hover:text-foreground'
               )}
+              activeClassName="text-secondary"
             >
               <div className={cn(
                 'flex flex-col items-center gap-1',
@@ -55,7 +56,7 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
                   {item.label}
                 </span>
               </div>
-            </button>
+            </NavLink>
           );
         })}
         
