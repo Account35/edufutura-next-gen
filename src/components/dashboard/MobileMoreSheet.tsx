@@ -61,6 +61,7 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
       label: 'Terms & Conditions',
       action: () => {
         toast.info('Terms coming soon');
+        onClose();
       }
     },
     {
@@ -69,6 +70,7 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
       label: 'Privacy Policy',
       action: () => {
         toast.info('Privacy policy coming soon');
+        onClose();
       }
     },
     {
