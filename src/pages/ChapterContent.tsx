@@ -24,7 +24,6 @@ export default function ChapterContent() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { fetchSubject, fetchChapter, fetchChapters } = useCurriculumData();
-  const { updateReadingProgress } = useProgressTracking(null, subjectName || null, null);
   
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [allChapters, setAllChapters] = useState<Chapter[]>([]);
@@ -32,6 +31,13 @@ export default function ChapterContent() {
   const [fontSize, setFontSize] = useState('medium');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showProgressSaved, setShowProgressSaved] = useState(false);
+
+  const { 
+    updateReadingProgress, 
+    updateTimeSpent, 
+    syncSubjectProgress,
+    markChapterComplete 
+  } = useProgressTracking(chapter?.id || null, subjectName || null, chapter?.chapter_number || null);
 
   const { isBookmarked, toggleBookmark } = useBookmark(chapter?.id || null);
 
@@ -48,11 +54,12 @@ export default function ChapterContent() {
 
   const scrollPercentage = useScrollProgress(handleProgressUpdate);
 
-  // Time tracking
+  // Time tracking - update database every minute
   useTimeTracking(!!chapter, useCallback(() => {
-    // Increment time in database every minute
-    // This is handled by the progress tracking hook
-  }, []));
+    if (chapter?.id) {
+      updateTimeSpent(1); // Add 1 minute
+    }
+  }, [chapter?.id, updateTimeSpent]));
 
   useEffect(() => {
     const loadChapterData = async () => {
@@ -76,6 +83,15 @@ export default function ChapterContent() {
 
     loadChapterData();
   }, [subjectName, chapterNumber]);
+
+  // Sync subject progress when component unmounts
+  useEffect(() => {
+    return () => {
+      if (chapter?.id) {
+        syncSubjectProgress();
+      }
+    };
+  }, [chapter?.id, syncSubjectProgress]);
 
   // Load preferences from localStorage
   useEffect(() => {

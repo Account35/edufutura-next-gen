@@ -15,7 +15,8 @@ import {
   FileText,
   HelpCircle,
   FileTextIcon,
-  ShieldIcon
+  ShieldIcon,
+  Bookmark
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -34,7 +35,8 @@ interface DashboardLayoutProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'My Subjects', href: '/subjects', icon: BookOpen, comingSoon: true },
+  { name: 'My Subjects', href: '/subjects', icon: BookOpen },
+  { name: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
   { name: 'AI Tutor', href: '/tutor', icon: MessageSquare, premium: true, comingSoon: true },
   { name: 'Certificates', href: '/certificates', icon: Trophy, premium: true, comingSoon: true },
   { name: 'Reports', href: '/reports', icon: FileText },
