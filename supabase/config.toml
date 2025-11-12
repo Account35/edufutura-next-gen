@@ -5,3 +5,9 @@ enabled = true
 
 [functions.analyze-report]
 verify_jwt = true
+
+[functions.ai-cerebras]
+verify_jwt = true
+
+[functions.ai-gpt4]
+verify_jwt = true
