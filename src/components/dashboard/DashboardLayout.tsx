@@ -1,5 +1,5 @@
-import { ReactNode, useState } from "react";
-import { useNavigate, useLocation, Link, NavLink } from "react-router-dom";
+import { ReactNode, useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAIChat } from "@/hooks/useAIChat";
 import { AIChatModal } from "@/components/ai/AIChatModal";
@@ -76,23 +76,18 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   const navigationItems = navigation;
 
+  // Helper to check if route is active
+  const isActive = (path: string) => {
+    return location.pathname === path || location.pathname.startsWith(path + "/");
+  };
+
+  // Temporary route change logger
+  useEffect(() => {
+    console.log("[Route] Now at:", location.pathname);
+  }, [location.pathname]);
+
   const SidebarContent = () => (
-    <div 
-      className="flex flex-col h-full overflow-y-auto"
-      onClick={(e) => {
-        const target = e.target as HTMLElement;
-        const link = target.closest('a[href]') as HTMLAnchorElement | null;
-        if (link) {
-          const href = link.getAttribute('href');
-          if (href && href.startsWith('/')) {
-            e.preventDefault();
-            console.log('[Nav Delegate] Navigating to:', href);
-            navigate(href);
-            setSidebarOpen(false);
-          }
-        }
-      }}
-    >
+    <div className="flex flex-col h-full overflow-y-auto">
       {/* Logo */}
       <div className="p-6 border-b border-border flex-shrink-0">
         <Button
@@ -154,25 +149,20 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
           // Regular navigation items
           return (
-            <NavLink
+            <button
               key={item.name}
-              to={item.href}
-              onClick={() => {
-                console.log('[NavLink Debug] Clicked:', item.name, 'to:', item.href, 'from:', window.location.pathname);
-                setSidebarOpen(false);
-                setTimeout(() => console.log('[NavLink Debug] Now at:', window.location.pathname), 0);
-              }}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center w-full justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground",
-                  isActive && "bg-secondary text-secondary-foreground"
-                )
-              }
+              type="button"
+              onClick={() => handleNavigation(item.href, item.comingSoon)}
+              className={cn(
+                "w-full flex items-center justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground",
+                isActive(item.href) && "bg-secondary text-secondary-foreground"
+              )}
+              aria-current={isActive(item.href) ? "page" : undefined}
             >
               <Icon className="mr-3 h-5 w-5" />
               {item.name}
               {item.premium && !isPremium && <Crown className="ml-auto h-4 w-4 text-secondary" />}
-            </NavLink>
+            </button>
           );
         })}
       </nav>
@@ -189,23 +179,18 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <p className="text-xs text-muted-foreground">{isPremium ? "👑 Premium" : "Free Account"}</p>
           </div>
         </div>
-        <NavLink
-          to="/settings"
-          onClick={() => {
-            console.log('[NavLink Debug] Clicked: Settings to: /settings from:', window.location.pathname);
-            setSidebarOpen(false);
-            setTimeout(() => console.log('[NavLink Debug] Now at:', window.location.pathname), 0);
-          }}
-          className={({ isActive }) =>
-            cn(
-              "flex items-center w-full justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground",
-              isActive && "bg-secondary text-secondary-foreground"
-            )
-          }
+        <button
+          type="button"
+          onClick={() => handleNavigation("/settings")}
+          className={cn(
+            "w-full flex items-center justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground",
+            isActive("/settings") && "bg-secondary text-secondary-foreground"
+          )}
+          aria-current={isActive("/settings") ? "page" : undefined}
         >
           <Settings className="mr-3 h-5 w-5" />
           Settings
-        </NavLink>
+        </button>
         <Button
           variant="ghost"
           className="w-full justify-start min-h-[44px] text-destructive hover:text-destructive hover:bg-destructive/10"
