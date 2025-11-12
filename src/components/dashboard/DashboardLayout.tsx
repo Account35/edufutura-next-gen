@@ -77,7 +77,22 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navigationItems = navigation;
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div 
+      className="flex flex-col h-full overflow-y-auto"
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        const link = target.closest('a[href]') as HTMLAnchorElement | null;
+        if (link) {
+          const href = link.getAttribute('href');
+          if (href && href.startsWith('/')) {
+            e.preventDefault();
+            console.log('[Nav Delegate] Navigating to:', href);
+            navigate(href);
+            setSidebarOpen(false);
+          }
+        }
+      }}
+    >
       {/* Logo */}
       <div className="p-6 border-b border-border flex-shrink-0">
         <Button
