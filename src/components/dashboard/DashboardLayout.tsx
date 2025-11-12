@@ -2,6 +2,9 @@ import { ReactNode, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
+import { useAIChat } from "@/hooks/useAIChat";
+import { AIChatModal } from "@/components/ai/AIChatModal";
+import { FloatingAIButton } from "@/components/ai/FloatingAIButton";
 import {
   Home,
   BookOpen,
@@ -40,7 +43,7 @@ const navigation = [
   { name: "Bookmarks", href: "/bookmarks", icon: Bookmark },
   { name: "Reports", href: "/reports", icon: FileText },
   { name: "Profile", href: "/profile", icon: User },
-  { name: "AI Tutor", href: "/ai-tutor", icon: MessageSquare, premium: true, comingSoon: true },
+  { name: "AI Tutor", href: "#", icon: MessageSquare, premium: true, isAITutor: true },
   { name: "Certificates", href: "/certificates", icon: Trophy, premium: true, comingSoon: true },
 ];
 
@@ -51,6 +54,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const location = useLocation();
   const { user, userProfile, signOut } = useAuth();
   const { isPremium } = useSubscription();
+  const { isOpen: isAIChatOpen, openChat: openAIChat, closeChat: closeAIChat } = useAIChat();
 
   const handleNavigation = (href: string, comingSoon?: boolean) => {
     if (comingSoon) {
@@ -111,6 +115,25 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 {item.name}
                 {item.premium && !isPremium && <Crown className="ml-auto h-4 w-4 text-secondary" />}
                 <span className="ml-auto text-xs text-muted-foreground">Soon</span>
+              </Button>
+            );
+          }
+
+          // Special handling for AI Tutor
+          if (item.isAITutor) {
+            return (
+              <Button
+                key={item.name}
+                variant="ghost"
+                className={cn("w-full justify-start min-h-[44px]")}
+                onClick={() => {
+                  openAIChat();
+                  setSidebarOpen(false);
+                }}
+              >
+                <Icon className="mr-3 h-5 w-5" />
+                {item.name}
+                {item.premium && !isPremium && <Crown className="ml-auto h-4 w-4 text-secondary" />}
               </Button>
             );
           }
@@ -209,6 +232,12 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav onMoreClick={() => navigate("/settings")} />
+      
+      {/* Floating AI Button */}
+      <FloatingAIButton onClick={openAIChat} />
+      
+      {/* AI Chat Modal */}
+      <AIChatModal isOpen={isAIChatOpen} onClose={closeAIChat} />
     </div>
   );
 };
