@@ -143,7 +143,10 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <NavLink
               key={item.name}
               to={item.href}
-              onClick={() => setSidebarOpen(false)}
+              onClick={() => {
+                console.log('[NavLink Debug] Clicked:', item.name, 'to:', item.href);
+                setSidebarOpen(false);
+              }}
               className="flex items-center w-full justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
               activeClassName="bg-secondary text-secondary-foreground"
             >
@@ -169,7 +172,10 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
         <NavLink
           to="/settings"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => {
+            console.log('[NavLink Debug] Clicked: Settings to: /settings');
+            setSidebarOpen(false);
+          }}
           className="flex items-center w-full justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
           activeClassName="bg-secondary text-secondary-foreground"
         >
