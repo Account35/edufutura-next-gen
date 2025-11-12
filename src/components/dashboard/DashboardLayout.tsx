@@ -1,6 +1,5 @@
 import { ReactNode, useState } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { NavLink } from "@/components/NavLink";
+import { useNavigate, useLocation, Link, NavLink } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAIChat } from "@/hooks/useAIChat";
 import { AIChatModal } from "@/components/ai/AIChatModal";
@@ -144,11 +143,16 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               key={item.name}
               to={item.href}
               onClick={() => {
-                console.log('[NavLink Debug] Clicked:', item.name, 'to:', item.href);
+                console.log('[NavLink Debug] Clicked:', item.name, 'to:', item.href, 'from:', window.location.pathname);
                 setSidebarOpen(false);
+                setTimeout(() => console.log('[NavLink Debug] Now at:', window.location.pathname), 0);
               }}
-              className="flex items-center w-full justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
-              activeClassName="bg-secondary text-secondary-foreground"
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center w-full justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground",
+                  isActive && "bg-secondary text-secondary-foreground"
+                )
+              }
             >
               <Icon className="mr-3 h-5 w-5" />
               {item.name}
@@ -173,11 +177,16 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <NavLink
           to="/settings"
           onClick={() => {
-            console.log('[NavLink Debug] Clicked: Settings to: /settings');
+            console.log('[NavLink Debug] Clicked: Settings to: /settings from:', window.location.pathname);
             setSidebarOpen(false);
+            setTimeout(() => console.log('[NavLink Debug] Now at:', window.location.pathname), 0);
           }}
-          className="flex items-center w-full justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
-          activeClassName="bg-secondary text-secondary-foreground"
+          className={({ isActive }) =>
+            cn(
+              "flex items-center w-full justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground",
+              isActive && "bg-secondary text-secondary-foreground"
+            )
+          }
         >
           <Settings className="mr-3 h-5 w-5" />
           Settings
