@@ -1,6 +1,7 @@
-import { Home, BookOpen, User, Menu } from 'lucide-react';
+import { Home, BookOpen, User, Menu, Sparkles } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface NavItem {
   id: string;
@@ -11,11 +12,14 @@ interface NavItem {
 
 interface MobileBottomNavProps {
   onMoreClick: () => void;
+  onAIClick: () => void;
+  unreadAISuggestions?: number;
 }
 
-export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
+export const MobileBottomNav = ({ onMoreClick, onAIClick, unreadAISuggestions = 0 }: MobileBottomNavProps) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isPremium } = useSubscription();
 
   const navItems: NavItem[] = [
     { id: 'home', icon: Home, label: 'Home', path: '/dashboard' },
@@ -59,6 +63,29 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
             </button>
           );
         })}
+        
+        <button
+          onClick={onAIClick}
+          className="relative flex flex-col items-center gap-1 px-3 py-2 min-h-[44px] text-gray-600 hover:text-foreground transition-colors duration-200 active:scale-95"
+          aria-label="AI Tutor"
+        >
+          <div className="relative">
+            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+              <Sparkles className="h-5 w-5 text-white" />
+            </div>
+            {!isPremium && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                3
+              </span>
+            )}
+            {unreadAISuggestions > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                {unreadAISuggestions}
+              </span>
+            )}
+          </div>
+          <span className="text-xs font-medium">AI Tutor</span>
+        </button>
         
         <button
           onClick={onMoreClick}

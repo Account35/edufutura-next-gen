@@ -55,6 +55,25 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { isPremium } = useSubscription();
   const { isOpen: isAIChatOpen, openChat: openAIChat, closeChat: closeAIChat } = useAIChat();
 
+  // Track page entry time for AI context
+  useEffect(() => {
+    sessionStorage.setItem('page-entry-time', Date.now().toString());
+  }, [location.pathname]);
+
+  // Keyboard shortcut to open AI chat
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === '/' && !isAIChatOpen && 
+          !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+        e.preventDefault();
+        openAIChat();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [isAIChatOpen, openAIChat]);
+
   const handleNavigation = (href: string, comingSoon?: boolean) => {
     if (comingSoon) {
       toast.info("This feature is coming soon!");
@@ -237,7 +256,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <MobileBottomNav onMoreClick={() => navigate("/settings")} />
+      <MobileBottomNav onMoreClick={() => navigate("/settings")} onAIClick={openAIChat} />
 
       {/* Floating AI Button */}
       <FloatingAIButton onClick={openAIChat} />
