@@ -155,7 +155,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               onClick={() => handleNavigation(item.href, item.comingSoon)}
               className={cn(
                 "w-full flex items-center justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground",
-                isActive(item.href) && "bg-secondary text-secondary-foreground"
+                isActive(item.href) && "bg-secondary text-secondary-foreground",
               )}
               aria-current={isActive(item.href) ? "page" : undefined}
             >
@@ -184,7 +184,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           onClick={() => handleNavigation("/settings")}
           className={cn(
             "w-full flex items-center justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground",
-            isActive("/settings") && "bg-secondary text-secondary-foreground"
+            isActive("/settings") && "bg-secondary text-secondary-foreground",
           )}
           aria-current={isActive("/settings") ? "page" : undefined}
         >
@@ -238,10 +238,10 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav onMoreClick={() => navigate("/settings")} />
-      
+
       {/* Floating AI Button */}
       <FloatingAIButton onClick={openAIChat} />
-      
+
       {/* AI Chat Modal */}
       <AIChatModal isOpen={isAIChatOpen} onClose={closeAIChat} />
     </div>
