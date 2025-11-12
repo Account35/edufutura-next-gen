@@ -89,8 +89,10 @@ export type Database = {
       ai_conversations: {
         Row: {
           chapter_id: string | null
+          conversation_title: string | null
           created_at: string | null
           id: string
+          is_archived: boolean | null
           last_message_at: string | null
           message_count: number | null
           started_at: string | null
@@ -99,8 +101,10 @@ export type Database = {
         }
         Insert: {
           chapter_id?: string | null
+          conversation_title?: string | null
           created_at?: string | null
           id?: string
+          is_archived?: boolean | null
           last_message_at?: string | null
           message_count?: number | null
           started_at?: string | null
@@ -109,8 +113,10 @@ export type Database = {
         }
         Update: {
           chapter_id?: string | null
+          conversation_title?: string | null
           created_at?: string | null
           id?: string
+          is_archived?: boolean | null
           last_message_at?: string | null
           message_count?: number | null
           started_at?: string | null
@@ -164,28 +170,43 @@ export type Database = {
       }
       ai_messages: {
         Row: {
+          ai_model: string | null
+          audio_url: string | null
+          context_data: Json | null
           conversation_id: string
           created_at: string | null
           id: string
           message_text: string
+          response_time_ms: number | null
           role: string
           tokens_used: number | null
+          voice_enabled: boolean | null
         }
         Insert: {
+          ai_model?: string | null
+          audio_url?: string | null
+          context_data?: Json | null
           conversation_id: string
           created_at?: string | null
           id?: string
           message_text: string
+          response_time_ms?: number | null
           role: string
           tokens_used?: number | null
+          voice_enabled?: boolean | null
         }
         Update: {
+          ai_model?: string | null
+          audio_url?: string | null
+          context_data?: Json | null
           conversation_id?: string
           created_at?: string | null
           id?: string
           message_text?: string
+          response_time_ms?: number | null
           role?: string
           tokens_used?: number | null
+          voice_enabled?: boolean | null
         }
         Relationships: [
           {
@@ -193,6 +214,85 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "ai_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_safety_logs: {
+        Row: {
+          ai_response: string | null
+          created_at: string | null
+          flagged_content: string | null
+          id: string
+          incident_type: string
+          reviewed: boolean | null
+          severity: string | null
+          user_id: string
+          user_message: string | null
+        }
+        Insert: {
+          ai_response?: string | null
+          created_at?: string | null
+          flagged_content?: string | null
+          id?: string
+          incident_type: string
+          reviewed?: boolean | null
+          severity?: string | null
+          user_id: string
+          user_message?: string | null
+        }
+        Update: {
+          ai_response?: string | null
+          created_at?: string | null
+          flagged_content?: string | null
+          id?: string
+          incident_type?: string
+          reviewed?: boolean | null
+          severity?: string | null
+          user_id?: string
+          user_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_safety_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_usage_tracking: {
+        Row: {
+          account_type: string | null
+          created_at: string | null
+          id: string
+          questions_asked: number | null
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          account_type?: string | null
+          created_at?: string | null
+          id?: string
+          questions_asked?: number | null
+          usage_date: string
+          user_id: string
+        }
+        Update: {
+          account_type?: string | null
+          created_at?: string | null
+          id?: string
+          questions_asked?: number | null
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -544,6 +644,56 @@ export type Database = {
           weekly_goal_hours?: number | null
         }
         Relationships: []
+      }
+      study_schedules: {
+        Row: {
+          created_at: string | null
+          created_by_ai: boolean | null
+          end_date: string
+          ical_url: string | null
+          id: string
+          is_active: boolean | null
+          schedule_data: Json
+          schedule_title: string
+          start_date: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by_ai?: boolean | null
+          end_date: string
+          ical_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          schedule_data: Json
+          schedule_title: string
+          start_date: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by_ai?: boolean | null
+          end_date?: string
+          ical_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          schedule_data?: Json
+          schedule_title?: string
+          start_date?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_schedules_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscription_history: {
         Row: {
