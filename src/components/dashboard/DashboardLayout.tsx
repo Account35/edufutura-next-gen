@@ -138,23 +138,19 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             );
           }
 
+          // Regular navigation items
           return (
-            <Button
+            <NavLink
               key={item.name}
-              variant="ghost"
-              className={cn(
-                "w-full justify-start min-h-[44px]",
-                location.pathname === item.href && "bg-secondary text-secondary-foreground",
-              )}
-              onClick={() => {
-                navigate(item.href);
-                setSidebarOpen(false);
-              }}
+              to={item.href}
+              onClick={() => setSidebarOpen(false)}
+              className="flex items-center w-full justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
+              activeClassName="bg-secondary text-secondary-foreground"
             >
               <Icon className="mr-3 h-5 w-5" />
               {item.name}
               {item.premium && !isPremium && <Crown className="ml-auto h-4 w-4 text-secondary" />}
-            </Button>
+            </NavLink>
           );
         })}
       </nav>
@@ -171,20 +167,15 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <p className="text-xs text-muted-foreground">{isPremium ? "👑 Premium" : "Free Account"}</p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          className={cn(
-            "w-full justify-start min-h-[44px]",
-            location.pathname === "/settings" && "bg-secondary text-secondary-foreground",
-          )}
-          onClick={() => {
-            navigate("/settings");
-            setSidebarOpen(false);
-          }}
+        <NavLink
+          to="/settings"
+          onClick={() => setSidebarOpen(false)}
+          className="flex items-center w-full justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
+          activeClassName="bg-secondary text-secondary-foreground"
         >
           <Settings className="mr-3 h-5 w-5" />
           Settings
-        </Button>
+        </NavLink>
         <Button
           variant="ghost"
           className="w-full justify-start min-h-[44px] text-destructive hover:text-destructive hover:bg-destructive/10"
