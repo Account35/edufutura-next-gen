@@ -217,7 +217,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       </header>
 
       <div className="flex">
-        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:border-r lg:bg-background lg:z-[60] relative pointer-events-auto">
+        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:border-r lg:bg-background lg:z-[100] relative pointer-events-auto">
           <SidebarContent />
         </aside>
 
