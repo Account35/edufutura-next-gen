@@ -10,6 +10,7 @@ import { ContentUploadForm } from '@/components/admin/ContentUploadForm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Shield } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function AdminContent() {
   const navigate = useNavigate();
@@ -81,9 +82,10 @@ export default function AdminContent() {
         </Alert>
 
         <Tabs defaultValue="upload" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="upload">Upload Content</TabsTrigger>
             <TabsTrigger value="manage">Manage Chapters</TabsTrigger>
+            <TabsTrigger value="quizzes">Manage Quizzes</TabsTrigger>
           </TabsList>
 
           <TabsContent value="upload" className="space-y-4">
@@ -133,6 +135,25 @@ export default function AdminContent() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">Chapter management interface coming soon...</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="quizzes">
+            <Card>
+              <CardHeader>
+                <CardTitle>Quiz Management</CardTitle>
+                <CardDescription>
+                  Create, edit, and manage assessment quizzes
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-muted-foreground">
+                  Manage quizzes for all subjects and chapters. Create new quizzes, edit existing ones, and view analytics.
+                </p>
+                <Button onClick={() => navigate('/admin/quizzes')} size="lg">
+                  Open Quiz Management
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
