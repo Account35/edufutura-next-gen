@@ -4,19 +4,21 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { useQuiz, Quiz } from '@/hooks/useQuiz';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useQuiz } from '@/hooks/useQuiz';
 import { useAuth } from '@/hooks/useAuth';
-import { useSubscription } from '@/hooks/useSubscription';
-import { useToast } from '@/hooks/use-toast';
-import { SubscriptionModal } from '@/components/subscription/SubscriptionModal';
+import { useAttemptManagement } from '@/hooks/useAttemptManagement';
+import { CooldownTimer } from '@/components/quiz/CooldownTimer';
+import { AttemptHistory } from '@/components/quiz/AttemptHistory';
 import { 
-  Clock, 
+  Play, 
   Trophy, 
+  Clock, 
   Target,
+  BookOpen,
   AlertCircle,
-  CheckCircle,
-  PlayCircle,
+  Crown,
+  Lock,
   Sparkles
 } from 'lucide-react';
 
@@ -24,21 +26,18 @@ export const QuizLanding = () => {
   const { quizId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isPremium } = useSubscription();
-  const { toast } = useToast();
-  const {
-    fetchQuiz,
-    checkCooldown,
-    fetchUserAttempts,
-    startQuizAttempt,
-  } = useQuiz();
+  const { fetchQuiz, startQuizAttempt } = useQuiz();
 
-  const [quiz, setQuiz] = useState<Quiz | null>(null);
-  const [attempts, setAttempts] = useState<any[]>([]);
-  const [cooldown, setCooldown] = useState<{ canAttempt: boolean; minutesLeft: number }>({ canAttempt: true, minutesLeft: 0 });
+  const [quiz, setQuiz] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [countdown, setCountdown] = useState<number | null>(null);
+  const { 
+    attempts,
+    stats, 
+    validation, 
+    loading: attemptLoading,
+    accountType,
+    loadAttemptData 
+  } = useAttemptManagement(user?.id, quizId);
 
   useEffect(() => {
     if (quizId && user) {
@@ -46,106 +45,34 @@ export const QuizLanding = () => {
     }
   }, [quizId, user]);
 
-  useEffect(() => {
-    if (cooldown.minutesLeft > 0 && !cooldown.canAttempt) {
-      const seconds = cooldown.minutesLeft * 60;
-      setCountdown(seconds);
-
-      const timer = setInterval(() => {
-        setCountdown(prev => {
-          if (prev === null || prev <= 0) {
-            setCooldown({ canAttempt: true, minutesLeft: 0 });
-            return null;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
-    }
-  }, [cooldown]);
-
   const loadQuizData = async () => {
     if (!quizId || !user) return;
 
-    const quizData = await fetchQuiz(quizId);
-    if (!quizData) {
-      toast({
-        title: "Quiz not found",
-        description: "The quiz you're looking for doesn't exist",
-        variant: "destructive",
-      });
-      navigate('/dashboard');
-      return;
+    try {
+      const quizData = await fetchQuiz(quizId);
+      if (!quizData) {
+        navigate('/dashboard');
+        return;
+      }
+
+      setQuiz(quizData);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading quiz:', error);
+      setLoading(false);
     }
-
-    setQuiz(quizData);
-
-    const attemptsData = await fetchUserAttempts(user.id, quizId);
-    setAttempts(attemptsData);
-
-    const cooldownData = await checkCooldown(user.id, quizId);
-    setCooldown(cooldownData);
-
-    setLoading(false);
   };
 
   const handleStartQuiz = async () => {
-    if (!user || !quiz) return;
+    if (!user || !quizId || !validation?.canAttempt) return;
 
-    // Check authentication
-    if (!user.id) {
-      navigate('/');
-      return;
-    }
-
-    // Check attempt limit for free users
-    if (!isPremium && attempts.length >= 2) {
-      setShowUpgradeModal(true);
-      return;
-    }
-
-    // Check cooldown
-    if (!cooldown.canAttempt) {
-      toast({
-        title: "Please wait",
-        description: `You can attempt this quiz again in ${Math.ceil(cooldown.minutesLeft)} minutes`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const attempt = await startQuizAttempt(user.id, quiz.id);
+    const attempt = await startQuizAttempt(user.id, quizId);
     if (attempt) {
-      navigate(`/quiz/${quiz.id}/attempt/${attempt.id}`);
+      navigate(`/quiz/${quizId}/attempt/${attempt.id}`);
     }
   };
 
-  const getDifficultyColor = (level: string | null) => {
-    switch (level) {
-      case 'Beginner': return 'bg-green-500';
-      case 'Intermediate': return 'bg-orange-500';
-      case 'Advanced': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const formatCountdown = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const bestScore = attempts.reduce((max, att) => 
-    Math.max(max, att.score_percentage || 0), 0
-  );
-  
-  const lastAttempt = attempts[0];
-  const avgScore = attempts.length > 0
-    ? attempts.reduce((sum, att) => sum + (att.score_percentage || 0), 0) / attempts.length
-    : 0;
-
-  if (loading) {
+  if (loading || attemptLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
@@ -167,176 +94,239 @@ export const QuizLanding = () => {
     );
   }
 
-  const estimatedTime = quiz.time_limit_minutes || Math.ceil(quiz.total_questions * 1.5);
-  const remainingAttempts = isPremium ? null : Math.max(0, 2 - attempts.length);
+  const completedAttempts = attempts.filter(a => a.is_completed);
+  const freeUserLimitReached = accountType === 'free' && completedAttempts.length >= 2;
 
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto pb-20 md:pb-0">
         {/* Quiz Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-3" style={{ fontFamily: 'Playfair Display, serif' }}>
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            {quiz.difficulty_level && (
+              <Badge variant={
+                quiz.difficulty_level === 'Beginner' ? 'default' :
+                quiz.difficulty_level === 'Intermediate' ? 'secondary' :
+                'destructive'
+              }>
+                {quiz.difficulty_level}
+              </Badge>
+            )}
+            {accountType === 'premium' && (
+              <Badge variant="default" className="bg-gradient-to-r from-yellow-500 to-yellow-600">
+                <Crown className="h-3 w-3 mr-1" />
+                Premium
+              </Badge>
+            )}
+          </div>
+          <h1 className="text-4xl font-display font-bold text-foreground mb-3">
             {quiz.quiz_title}
           </h1>
-          <p className="text-lg text-muted-foreground leading-relaxed">
-            {quiz.quiz_description || 'Test your knowledge and understanding of this chapter'}
-          </p>
+          {quiz.quiz_description && (
+            <p className="text-lg text-muted-foreground">
+              {quiz.quiz_description}
+            </p>
+          )}
         </div>
 
-        {/* Quiz Metadata */}
+        {/* Attempt Status Alerts */}
+        {validation && !validation.canAttempt && validation.reason === 'attempt_limit' && (
+          <Alert className="mb-6 border-accent bg-accent/5">
+            <Lock className="h-5 w-5 text-accent" />
+            <AlertDescription className="ml-2">
+              <p className="font-semibold mb-2">Free Attempt Limit Reached</p>
+              <p className="text-sm text-muted-foreground mb-3">
+                You've completed both free attempts for this quiz. Your attempts:
+              </p>
+              <div className="flex gap-3 mb-3 text-sm">
+                {completedAttempts.slice(0, 2).map((att) => (
+                  <div key={att.id} className="px-3 py-1 bg-muted rounded">
+                    Attempt {att.attempt_number}: {Math.round(att.score_percentage || 0)}%
+                  </div>
+                ))}
+              </div>
+              <Button 
+                size="sm" 
+                className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700"
+              >
+                <Crown className="mr-2 h-4 w-4" />
+                Upgrade to Premium for Unlimited Attempts
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {validation && !validation.canAttempt && validation.reason === 'cooldown' && validation.nextAvailableTime && (
+          <div className="mb-6">
+            <CooldownTimer 
+              nextAvailableTime={validation.nextAvailableTime}
+              onComplete={loadAttemptData}
+            />
+          </div>
+        )}
+
+        {validation?.reason === 'incomplete_exists' && (
+          <Alert className="mb-6 border-secondary bg-secondary/5">
+            <AlertCircle className="h-5 w-5 text-secondary" />
+            <AlertDescription className="ml-2">
+              <p className="font-semibold mb-1">Incomplete Attempt Found</p>
+              <p className="text-sm text-muted-foreground">
+                You have an incomplete quiz attempt. You can continue where you left off or start a fresh attempt.
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Quiz Info Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <Card className="p-4">
             <div className="flex flex-col items-center text-center">
-              <Target className="h-8 w-8 text-primary mb-2" />
+              <BookOpen className="h-6 w-6 text-primary mb-2" />
               <p className="text-2xl font-bold text-foreground">{quiz.total_questions}</p>
-              <p className="text-sm text-muted-foreground">Questions</p>
+              <p className="text-xs text-muted-foreground">Questions</p>
             </div>
           </Card>
 
           <Card className="p-4">
             <div className="flex flex-col items-center text-center">
-              <Clock className="h-8 w-8 text-secondary mb-2" />
-              <p className="text-2xl font-bold text-foreground">{estimatedTime}</p>
-              <p className="text-sm text-muted-foreground">Minutes</p>
+              <Clock className="h-6 w-6 text-secondary mb-2" />
+              <p className="text-2xl font-bold text-foreground">
+                {quiz.time_limit_minutes || '∞'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {quiz.time_limit_minutes ? 'Minutes' : 'Untimed'}
+              </p>
             </div>
           </Card>
 
           <Card className="p-4">
             <div className="flex flex-col items-center text-center">
-              {quiz.difficulty_level && (
-                <Badge className={`${getDifficultyColor(quiz.difficulty_level)} text-white mb-2`}>
-                  {quiz.difficulty_level}
-                </Badge>
+              <Target className="h-6 w-6 text-accent mb-2" />
+              <p className="text-2xl font-bold text-foreground">
+                {quiz.passing_score_percentage}%
+              </p>
+              <p className="text-xs text-muted-foreground">To Pass</p>
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <div className="flex flex-col items-center text-center">
+              {accountType === 'premium' ? (
+                <>
+                  <Sparkles className="h-6 w-6 text-yellow-600 mb-2" />
+                  <p className="text-2xl font-bold text-foreground">∞</p>
+                  <p className="text-xs text-muted-foreground">Attempts</p>
+                </>
+              ) : (
+                <>
+                  <Trophy className="h-6 w-6 text-primary mb-2" />
+                  <p className="text-2xl font-bold text-foreground">
+                    {2 - completedAttempts.length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Remaining</p>
+                </>
               )}
-              <p className="text-sm text-muted-foreground mt-2">Difficulty</p>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex flex-col items-center text-center">
-              <CheckCircle className="h-8 w-8 text-green-600 mb-2" />
-              <p className="text-2xl font-bold text-foreground">{quiz.passing_score_percentage}%</p>
-              <p className="text-sm text-muted-foreground">To Pass</p>
             </div>
           </Card>
         </div>
 
-        {/* Attempt Information */}
-        <Card className="p-6 mb-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Attempt Information</h3>
+        {/* Attempt History */}
+        {stats && completedAttempts.length > 0 && (
+          <div className="mb-6">
+            <AttemptHistory 
+              attempts={attempts}
+              stats={stats}
+              quizId={quizId!}
+            />
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-4">
+          <Button
+            onClick={handleStartQuiz}
+            disabled={!validation?.canAttempt}
+            size="lg"
+            className="flex-1 md:flex-none min-w-48"
+          >
+            <Play className="mr-2 h-5 w-5" />
+            {validation?.reason === 'incomplete_exists' ? 'Continue Quiz' : 'Start Quiz'}
+          </Button>
           
-          {isPremium ? (
-            <div className="flex items-center gap-2 text-secondary mb-4">
-              <Sparkles className="h-5 w-5" />
-              <span className="font-semibold">Unlimited attempts available</span>
-            </div>
-          ) : (
-            <div className="mb-4">
-              {remainingAttempts! > 0 ? (
-                <p className="text-foreground">
-                  <span className="font-semibold">{remainingAttempts} of 2 attempts remaining</span>
-                  {remainingAttempts === 1 && (
-                    <span className="text-destructive ml-2">(Last attempt!)</span>
-                  )}
+          {quiz.chapter_id && (
+            <Button
+              onClick={() => navigate(`/chapter/${quiz.chapter_id}`)}
+              variant="outline"
+              size="lg"
+              className="flex-1 md:flex-none"
+            >
+              <BookOpen className="mr-2 h-5 w-5" />
+              Review Chapter
+            </Button>
+          )}
+          
+          <Button
+            onClick={() => navigate('/dashboard')}
+            variant="ghost"
+            size="lg"
+            className="flex-1 md:flex-none md:ml-auto"
+          >
+            Back to Dashboard
+          </Button>
+        </div>
+
+        {/* Premium Upsell */}
+        {accountType === 'free' && freeUserLimitReached && (
+          <Card className="p-6 mt-6 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 border-yellow-200 dark:border-yellow-800">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center flex-shrink-0">
+                <Crown className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-foreground mb-2">
+                  Unlock Unlimited Quiz Attempts
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Premium students improve scores 23% faster with unlimited practice opportunities.
                 </p>
-              ) : (
-                <div className="flex items-center gap-2 text-destructive">
-                  <AlertCircle className="h-5 w-5" />
-                  <span className="font-semibold">No attempts remaining</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {!cooldown.canAttempt && countdown !== null && (
-            <div className="bg-accent/10 border border-accent/20 rounded-lg p-4 mb-4">
-              <p className="text-sm text-muted-foreground mb-2">Next attempt available in:</p>
-              <p className="text-2xl font-bold text-accent">{formatCountdown(countdown)}</p>
-            </div>
-          )}
-
-          {attempts.length > 0 && (
-            <div className="space-y-3 pt-4 border-t">
-              <h4 className="text-sm font-semibold text-muted-foreground">Previous Attempts</h4>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="flex items-center gap-3 p-3 bg-secondary/10 rounded-lg">
-                  <Trophy className="h-6 w-6 text-secondary" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Best Score</p>
-                    <p className="text-xl font-bold text-foreground">{Math.round(bestScore)}%</p>
-                  </div>
-                </div>
-
-                {lastAttempt && (
-                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <Clock className="h-6 w-6 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Last Score</p>
-                      <p className="text-xl font-bold text-foreground">{Math.round(lastAttempt.score_percentage || 0)}%</p>
+                <div className="grid md:grid-cols-2 gap-3 mb-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <span className="text-green-600 text-xs">✓</span>
                     </div>
+                    <span>Unlimited quiz attempts</span>
                   </div>
-                )}
-
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                  <Target className="h-6 w-6 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Average</p>
-                    <p className="text-xl font-bold text-foreground">{Math.round(avgScore)}%</p>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <span className="text-green-600 text-xs">✓</span>
+                    </div>
+                    <span>Instant retakes (no cooldown)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <span className="text-green-600 text-xs">✓</span>
+                    </div>
+                    <span>AI-powered feedback</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <span className="text-green-600 text-xs">✓</span>
+                    </div>
+                    <span>Detailed performance analytics</span>
                   </div>
                 </div>
+                <Button 
+                  size="lg"
+                  className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700"
+                >
+                  <Crown className="mr-2 h-5 w-5" />
+                  Upgrade to Premium - R60/month
+                </Button>
               </div>
             </div>
-          )}
-        </Card>
-
-        {/* Start Button */}
-        <Card className="p-6 bg-gradient-to-br from-card to-secondary/5">
-          <div className="flex flex-col items-center text-center space-y-4">
-            {!isPremium && remainingAttempts === 0 ? (
-              <>
-                <AlertCircle className="h-12 w-12 text-destructive" />
-                <div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">No Attempts Remaining</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Upgrade to Premium for unlimited quiz attempts
-                  </p>
-                </div>
-                <Button
-                  onClick={() => setShowUpgradeModal(true)}
-                  className="bg-secondary hover:bg-secondary/90 text-white px-8 py-6 text-lg"
-                  size="lg"
-                >
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  Upgrade to Premium
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  onClick={handleStartQuiz}
-                  disabled={!cooldown.canAttempt}
-                  className="bg-secondary hover:bg-secondary/90 text-white px-8 py-6 text-lg hover:scale-105 transition-transform shadow-lg disabled:hover:scale-100"
-                  size="lg"
-                >
-                  <PlayCircle className="mr-2 h-6 w-6" />
-                  Start Quiz
-                </Button>
-                {quiz.time_limit_minutes && (
-                  <p className="text-sm text-muted-foreground">
-                    This is a timed quiz. You'll have {quiz.time_limit_minutes} minutes to complete it.
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        </Card>
+          </Card>
+        )}
       </div>
-
-      <SubscriptionModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-      />
     </DashboardLayout>
   );
 };
