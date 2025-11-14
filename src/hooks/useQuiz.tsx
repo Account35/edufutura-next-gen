@@ -55,6 +55,7 @@ export const useQuiz = () => {
 
   const fetchQuizzesByChapter = async (chapterId: string) => {
     try {
+      // @ts-ignore - Quiz tables not yet in generated types
       const { data, error } = await supabase
         .from('quizzes')
         .select('*')
@@ -63,7 +64,7 @@ export const useQuiz = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as Quiz[];
+      return (data || []) as unknown as Quiz[];
     } catch (error: any) {
       toast({
         title: "Error loading quizzes",
@@ -76,6 +77,7 @@ export const useQuiz = () => {
 
   const fetchQuiz = async (quizId: string) => {
     try {
+      // @ts-ignore - Quiz tables not yet in generated types
       const { data, error } = await supabase
         .from('quizzes')
         .select('*')
@@ -84,7 +86,7 @@ export const useQuiz = () => {
         .maybeSingle();
 
       if (error) throw error;
-      return data as Quiz | null;
+      return (data || null) as unknown as Quiz | null;
     } catch (error: any) {
       toast({
         title: "Error loading quiz",
@@ -97,6 +99,7 @@ export const useQuiz = () => {
 
   const fetchQuizQuestions = async (quizId: string, shuffle: boolean = false) => {
     try {
+      // @ts-ignore - Quiz tables not yet in generated types
       let query = supabase
         .from('quiz_questions')
         .select('*')
@@ -107,7 +110,7 @@ export const useQuiz = () => {
 
       if (error) throw error;
       
-      let questions = data as QuizQuestion[];
+      let questions = (data || []) as unknown as QuizQuestion[];
       
       if (shuffle) {
         questions = questions.sort(() => Math.random() - 0.5);
@@ -126,6 +129,7 @@ export const useQuiz = () => {
 
   const checkCooldown = async (userId: string, quizId: string) => {
     try {
+      // @ts-ignore - Quiz tables not yet in generated types
       const { data, error } = await supabase
         .from('quiz_cooldowns')
         .select('*')
@@ -136,7 +140,8 @@ export const useQuiz = () => {
       if (error) throw error;
 
       if (data) {
-        const nextAvailable = new Date(data.next_available_at);
+        const cooldownData = data as any;
+        const nextAvailable = new Date(cooldownData.next_available_at);
         const now = new Date();
         
         if (now < nextAvailable) {
@@ -153,6 +158,7 @@ export const useQuiz = () => {
 
   const fetchUserAttempts = async (userId: string, quizId: string) => {
     try {
+      // @ts-ignore - Quiz tables not yet in generated types
       const { data, error } = await supabase
         .from('quiz_attempts')
         .select('*')
@@ -162,7 +168,7 @@ export const useQuiz = () => {
         .order('attempt_number', { ascending: false });
 
       if (error) throw error;
-      return data as QuizAttempt[];
+      return (data || []) as unknown as QuizAttempt[];
     } catch (error: any) {
       return [];
     }
@@ -173,6 +179,7 @@ export const useQuiz = () => {
       const attempts = await fetchUserAttempts(userId, quizId);
       const attemptNumber = attempts.length + 1;
 
+      // @ts-ignore - Quiz tables not yet in generated types
       const { data, error } = await supabase
         .from('quiz_attempts')
         .insert({
@@ -181,12 +188,12 @@ export const useQuiz = () => {
           attempt_number: attemptNumber,
           answers: {},
           is_completed: false,
-        })
+        } as any)
         .select()
         .single();
 
       if (error) throw error;
-      return data as QuizAttempt;
+      return (data || null) as unknown as QuizAttempt | null;
     } catch (error: any) {
       toast({
         title: "Error starting quiz",
@@ -199,9 +206,10 @@ export const useQuiz = () => {
 
   const saveQuizProgress = async (attemptId: string, answers: Record<string, any>) => {
     try {
+      // @ts-ignore - Quiz tables not yet in generated types
       const { error } = await supabase
         .from('quiz_attempts')
-        .update({ answers })
+        .update({ answers: answers as any } as any)
         .eq('id', attemptId);
 
       if (error) throw error;
@@ -223,15 +231,16 @@ export const useQuiz = () => {
     }
   ) => {
     try {
+      // @ts-ignore - Quiz tables not yet in generated types
       const { data, error } = await supabase
         .from('quiz_attempts')
         .update({
-          answers,
+          answers: answers as any,
           submitted_at: new Date().toISOString(),
           time_spent_seconds: timeSpent,
           is_completed: true,
           ...scoreData,
-        })
+        } as any)
         .eq('id', attemptId)
         .select()
         .single();
@@ -239,10 +248,11 @@ export const useQuiz = () => {
       if (error) throw error;
 
       // Set cooldown
-      const attempt = data as QuizAttempt;
+      const attempt = data as any;
       const nextAvailable = new Date();
       nextAvailable.setHours(nextAvailable.getHours() + 1);
 
+      // @ts-ignore - Quiz tables not yet in generated types
       await supabase
         .from('quiz_cooldowns')
         .upsert({
@@ -250,9 +260,9 @@ export const useQuiz = () => {
           quiz_id: attempt.quiz_id,
           last_attempt_at: new Date().toISOString(),
           next_available_at: nextAvailable.toISOString(),
-        });
+        } as any);
 
-      return data as QuizAttempt;
+      return (data || null) as unknown as QuizAttempt | null;
     } catch (error: any) {
       toast({
         title: "Error submitting quiz",

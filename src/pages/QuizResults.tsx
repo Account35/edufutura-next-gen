@@ -71,6 +71,7 @@ export const QuizResults = () => {
   const loadResults = async () => {
     try {
       // Fetch attempt
+      // @ts-ignore - Quiz tables not yet in generated types
       const { data: attemptData, error: attemptError } = await supabase
         .from('quiz_attempts')
         .select('*')
@@ -79,27 +80,30 @@ export const QuizResults = () => {
         .single();
 
       if (attemptError) throw attemptError;
-      setAttempt(attemptData as QuizAttempt);
+      const attempt = attemptData as unknown as QuizAttempt;
+      setAttempt(attempt);
 
       // Fetch quiz
+      // @ts-ignore - Quiz tables not yet in generated types
       const { data: quizData, error: quizError } = await supabase
         .from('quizzes')
         .select('*')
-        .eq('id', attemptData.quiz_id)
+        .eq('id', attempt.quiz_id)
         .single();
 
       if (quizError) throw quizError;
-      setQuiz(quizData);
+      setQuiz(quizData as unknown as Quiz);
 
       // Fetch questions
+      // @ts-ignore - Quiz tables not yet in generated types
       const { data: questionsData, error: questionsError } = await supabase
         .from('quiz_questions')
         .select('*')
-        .eq('quiz_id', attemptData.quiz_id)
+        .eq('quiz_id', attempt.quiz_id)
         .order('question_number');
 
       if (questionsError) throw questionsError;
-      setQuestions(questionsData as QuizQuestion[]);
+      setQuestions(questionsData as unknown as QuizQuestion[]);
 
       setLoading(false);
     } catch (error: any) {
