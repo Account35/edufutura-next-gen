@@ -22,6 +22,7 @@ import Bookmarks from "./pages/Bookmarks";
 import { QuizLanding } from "./pages/QuizLanding";
 import { QuizTaking } from "./pages/QuizTaking";
 import { QuizResults } from "./pages/QuizResults";
+import Analytics from "./pages/Analytics";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,8 @@ const App = () => (
               <Route path="/quiz/:quizId" element={<QuizLanding />} />
               <Route path="/quiz/:quizId/attempt/:attemptId" element={<QuizTaking />} />
               <Route path="/quiz/:quizId/results/:attemptId" element={<QuizResults />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/analytics/:subject" element={<Analytics />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
