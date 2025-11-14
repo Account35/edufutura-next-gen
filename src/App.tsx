@@ -19,6 +19,7 @@ import SubjectLanding from "./pages/SubjectLanding";
 import ChapterContent from "./pages/ChapterContent";
 import SearchResults from "./pages/SearchResults";
 import Bookmarks from "./pages/Bookmarks";
+import { QuizLanding } from "./pages/QuizLanding";
 import { QuizTaking } from "./pages/QuizTaking";
 import { QuizResults } from "./pages/QuizResults";
 
@@ -46,7 +47,8 @@ const App = () => (
               <Route path="/curriculum/:subjectName/:chapterNumber" element={<ChapterContent />} />
               <Route path="/search" element={<SearchResults />} />
               <Route path="/bookmarks" element={<Bookmarks />} />
-              <Route path="/quiz/:quizId" element={<QuizTaking />} />
+              <Route path="/quiz/:quizId" element={<QuizLanding />} />
+              <Route path="/quiz/:quizId/attempt/:attemptId" element={<QuizTaking />} />
               <Route path="/quiz/:quizId/results/:attemptId" element={<QuizResults />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
