@@ -143,42 +143,95 @@ export const QuizTaking = () => {
   const handleSubmit = async () => {
     if (!attemptId || !quiz || isSubmitting) return;
 
-    setIsSubmitting(true);
-    
-    const timeSpent = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
-    
-    let totalCorrect = 0;
-    const totalQuestions = questions.length;
+    try {
+      setIsSubmitting(true);
+      const timeSpent = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
 
-    // Auto-grade MC and TF questions
-    questions.forEach(q => {
-      if (answers[q.id]) {
-        if (q.question_type === 'multiple_choice' || q.question_type === 'true_false') {
-          const userAnswer = answers[q.id].answer;
-          const isCorrect = userAnswer === q.correct_answer;
+      toast({
+        title: "Grading your quiz...",
+        description: "Please wait while we evaluate your answers.",
+      });
+
+      // Import grading function
+      const { gradeQuiz } = await import('@/utils/quiz-grading');
+
+      // Grade the quiz
+      const gradingResult = await gradeQuiz(
+        questions,
+        answers,
+        quiz.passing_score_percentage || 75
+      );
+
+      // Build graded answers object with full details
+      const gradedAnswers: Record<string, any> = {};
+      gradingResult.graded_answers.forEach((result) => {
+        gradedAnswers[result.questionId] = {
+          answer: result.student_answer,
+          is_correct: result.is_correct,
+          points_earned: result.points_earned,
+          ai_feedback: result.ai_feedback,
+          ai_confidence: result.ai_confidence,
+          graded_by: result.graded_by,
+        };
+      });
+
+      const submitResult = await submitQuiz(attemptId, gradedAnswers, timeSpent, {
+        score_percentage: gradingResult.score_percentage,
+        total_correct: gradingResult.total_correct,
+        total_questions: gradingResult.total_questions,
+        passed: gradingResult.passed,
+      });
+
+      if (submitResult) {
+        toast({
+          title: gradingResult.passed ? "Quiz Passed! 🎉" : "Quiz Completed",
+          description: `You scored ${Math.round(gradingResult.score_percentage)}%`,
+          variant: gradingResult.passed ? "default" : "destructive",
+        });
+
+        // Update chapter progress if quiz linked to chapter
+        if (quiz.chapter_id && user) {
+          const { supabase } = await import('@/integrations/supabase/client');
           
-          answers[q.id].is_correct = isCorrect;
-          answers[q.id].points_earned = isCorrect ? q.points : 0;
-          
-          if (isCorrect) totalCorrect++;
+          await (supabase as any)
+            .from('user_chapter_progress')
+            .upsert({
+              user_id: user.id,
+              chapter_id: quiz.chapter_id,
+              quiz_passed: gradingResult.passed,
+              quiz_score: gradingResult.score_percentage,
+              last_quiz_attempt: new Date().toISOString(),
+              status: gradingResult.passed ? 'completed' : 'in_progress',
+            });
+
+          // Log activity
+          await (supabase as any)
+            .from('activity_log')
+            .insert({
+              user_id: user.id,
+              activity_type: 'quiz_completed',
+              activity_description: `Scored ${Math.round(gradingResult.score_percentage)}% on ${quiz.quiz_title}`,
+              subject_name: quiz.subject_name,
+              metadata: {
+                score: gradingResult.score_percentage,
+                passed: gradingResult.passed,
+                attempt_number: submitResult.attempt_number,
+              },
+            });
         }
+
+        navigate(`/quiz/${quizId}/results/${attemptId}`);
       }
-    });
-
-    const scorePercentage = (totalCorrect / totalQuestions) * 100;
-    const passed = scorePercentage >= (quiz.passing_score_percentage || 75);
-
-    const result = await submitQuiz(attemptId, answers, timeSpent, {
-      score_percentage: scorePercentage,
-      total_correct: totalCorrect,
-      total_questions: totalQuestions,
-      passed,
-    });
-
-    setIsSubmitting(false);
-
-    if (result) {
-      navigate(`/quiz/${quizId}/results/${result.id}`);
+    } catch (error: any) {
+      console.error('Submission error:', error);
+      toast({
+        title: "Submission Error",
+        description: error.message || "Failed to submit quiz. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+      setShowSubmitDialog(false);
     }
   };
 
