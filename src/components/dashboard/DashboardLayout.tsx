@@ -256,7 +256,8 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <MobileBottomNav onMoreClick={() => navigate("/settings")} onAIClick={openAIChat} />
+      <MobileBottomNav onMoreClick={() => setMoreMenuOpen(true)} onAIClick={openAIChat} />
+      <MobileMoreSheet isOpen={moreMenuOpen} onClose={() => setMoreMenuOpen(false)} />
 
       {/* Floating AI Button */}
       <FloatingAIButton onClick={openAIChat} />
