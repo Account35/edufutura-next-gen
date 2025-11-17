@@ -1,4 +1,4 @@
-import { Home, BookOpen, User, Menu, Sparkles, Bookmark, FileText } from 'lucide-react';
+import { Home, BookOpen, User, Menu, Bookmark, FileText, Trophy } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -12,20 +12,18 @@ interface NavItem {
 
 interface MobileBottomNavProps {
   onMoreClick: () => void;
-  onAIClick: () => void;
-  unreadAISuggestions?: number;
 }
 
-export const MobileBottomNav = ({ onMoreClick, onAIClick, unreadAISuggestions = 0 }: MobileBottomNavProps) => {
+export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isPremium } = useSubscription();
 
   const navItems: NavItem[] = [
     { id: 'home', icon: Home, label: 'Home', path: '/dashboard' },
     { id: 'subjects', icon: BookOpen, label: 'Subjects', path: '/subjects' },
     { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', path: '/bookmarks' },
     { id: 'reports', icon: FileText, label: 'Reports', path: '/reports' },
+    { id: 'certificates', icon: Trophy, label: 'Certificates', path: '/certificates' },
     { id: 'profile', icon: User, label: 'Profile', path: '/profile' },
   ];
 
@@ -61,24 +59,6 @@ export const MobileBottomNav = ({ onMoreClick, onAIClick, unreadAISuggestions = 
             </button>
           );
         })}
-        
-        <button
-          onClick={onAIClick}
-          className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[60px] min-w-[60px] text-gray-600 hover:bg-gray-100 hover:text-foreground transition-all duration-200 relative"
-          aria-label="AI Tutor"
-        >
-          <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
-            {!isPremium && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
-                3
-              </span>
-            )}
-          </div>
-          <span className="text-xs font-medium text-center">AI Tutor</span>
-        </button>
         
         <button
           onClick={onMoreClick}
@@ -124,24 +104,6 @@ export const MobileBottomNav = ({ onMoreClick, onAIClick, unreadAISuggestions = 
               </button>
             );
           })}
-          
-          <button
-            onClick={onAIClick}
-            className="relative flex flex-col items-center gap-1 px-3 py-2 min-h-[44px] text-gray-600 hover:text-foreground transition-colors duration-200 active:scale-95"
-            aria-label="AI Tutor"
-          >
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                <Sparkles className="h-5 w-5 text-white" />
-              </div>
-              {!isPremium && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
-                  3
-                </span>
-              )}
-            </div>
-            <span className="text-xs font-medium">AI Tutor</span>
-          </button>
           
           <button
             onClick={onMoreClick}

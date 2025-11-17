@@ -21,7 +21,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       </main>
 
       {/* Navigation (side on desktop, bottom on mobile) */}
-      <MobileBottomNav onMoreClick={() => setMoreMenuOpen(true)} onAIClick={openAIChat} />
+      <MobileBottomNav onMoreClick={() => setMoreMenuOpen(true)} />
       <MobileMoreSheet isOpen={moreMenuOpen} onClose={() => setMoreMenuOpen(false)} />
 
       {/* Floating AI Button */}

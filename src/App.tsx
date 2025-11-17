@@ -11,7 +11,10 @@ import Dashboard from "./pages/Dashboard";
 import Onboarding from "./pages/Onboarding";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
+import ProfileCertificates from "./pages/ProfileCertificates";
 import Reports from "./pages/Reports";
+import VerifyCertificate from "./pages/VerifyCertificate";
+import Certificates from "./pages/Certificates";
 import NotFound from "./pages/NotFound";
 import SubjectBrowser from "./pages/SubjectBrowser";
 import AdminContent from "./pages/AdminContent";
@@ -43,7 +46,11 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/certificates" element={<ProfileCertificates />} />
+              <Route path="/verify" element={<VerifyCertificate />} />
+              <Route path="/verify/:code" element={<VerifyCertificate />} />
               <Route path="/reports" element={<Reports />} />
+              <Route path="/certificates" element={<Certificates />} />
               <Route path="/subjects" element={<SubjectBrowser />} />
               <Route path="/admin/content" element={<AdminContent />} />
               <Route path="/curriculum/:subjectName" element={<SubjectLanding />} />

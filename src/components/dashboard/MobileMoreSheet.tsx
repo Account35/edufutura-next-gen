@@ -50,7 +50,7 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
     { id: 'reports', icon: FileText, label: 'Reports', action: () => { navigate('/reports'); onClose(); } },
     { id: 'profile', icon: User, label: 'Profile', action: () => { navigate('/profile'); onClose(); } },
     { id: 'ai-tutor', icon: Sparkles, label: 'AI Tutor', badge: !isPremium ? '3 free' : 'Premium', action: () => { toast.info('Open AI Tutor from the floating button'); onClose(); } },
-    { id: 'certificates', icon: Trophy, label: 'Certificates', badge: 'Coming Soon', comingSoon: true, action: () => { toast.info('Certificates coming soon'); onClose(); } },
+    { id: 'certificates', icon: Trophy, label: 'Certificates', action: () => { navigate('/certificates'); onClose(); } },
   ];
 
   // Additional menu items (shown on both desktop and mobile)
@@ -170,7 +170,8 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
                       item.id === 'subjects' ? '/subjects' :
                       item.id === 'bookmarks' ? '/bookmarks' :
                       item.id === 'reports' ? '/reports' :
-                      item.id === 'profile' ? '/profile' : ''
+                      item.id === 'profile' ? '/profile' :
+                      item.id === 'certificates' ? '/certificates' : ''
                     );
                     return (
                       <button
