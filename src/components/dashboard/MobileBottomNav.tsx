@@ -1,4 +1,4 @@
-import { Home, BookOpen, User, Menu, Sparkles } from 'lucide-react';
+import { Home, BookOpen, User, Menu, Sparkles, Bookmark, FileText } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -24,6 +24,8 @@ export const MobileBottomNav = ({ onMoreClick, onAIClick, unreadAISuggestions = 
   const navItems: NavItem[] = [
     { id: 'home', icon: Home, label: 'Home', path: '/dashboard' },
     { id: 'subjects', icon: BookOpen, label: 'Subjects', path: '/subjects' },
+    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', path: '/bookmarks' },
+    { id: 'reports', icon: FileText, label: 'Reports', path: '/reports' },
     { id: 'profile', icon: User, label: 'Profile', path: '/profile' },
   ];
 
