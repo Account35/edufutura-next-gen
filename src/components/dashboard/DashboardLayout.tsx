@@ -36,9 +36,10 @@ interface DashboardLayoutProps {
   children: ReactNode;
 }
 
+// Shared navigation config matching bottom nav
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "My Subjects", href: "/subjects", icon: BookOpen },
+  { name: "Home", href: "/dashboard", icon: Home },
+  { name: "Subjects", href: "/subjects", icon: BookOpen },
   { name: "Bookmarks", href: "/bookmarks", icon: Bookmark },
   { name: "Reports", href: "/reports", icon: FileText },
   { name: "Profile", href: "/profile", icon: User },
@@ -74,15 +75,6 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [isAIChatOpen, openAIChat]);
 
-  const handleNavigation = (href: string, comingSoon?: boolean) => {
-    if (comingSoon) {
-      toast.info("This feature is coming soon!");
-      return;
-    }
-    navigate(href);
-    setSidebarOpen(false);
-  };
-
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -92,8 +84,6 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       toast.error("Error signing out");
     }
   };
-
-  const navigationItems = navigation;
 
   // Helper to check if route is active
   const isActive = (path: string) => {
@@ -127,33 +117,34 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {navigation.map((item) => {
           const Icon = item.icon;
-          const isLocked = item.premium && !isPremium;
 
+          // Coming Soon items
           if (item.comingSoon) {
             return (
-              <Button
+              <button
                 key={item.name}
-                variant="ghost"
-                className={cn("w-full justify-start min-h-[44px]", "opacity-60")}
+                type="button"
+                className="w-full flex items-center justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors opacity-60 hover:bg-accent hover:text-accent-foreground"
                 onClick={() => {
                   toast.info("This feature is coming soon!");
+                  setSidebarOpen(false);
                 }}
               >
                 <Icon className="mr-3 h-5 w-5" />
                 {item.name}
                 {item.premium && !isPremium && <Crown className="ml-auto h-4 w-4 text-secondary" />}
                 <span className="ml-auto text-xs text-muted-foreground">Soon</span>
-              </Button>
+              </button>
             );
           }
 
-          // Special handling for AI Tutor
+          // AI Tutor button
           if (item.isAITutor) {
             return (
-              <Button
+              <button
                 key={item.name}
-                variant="ghost"
-                className={cn("w-full justify-start min-h-[44px]")}
+                type="button"
+                className="w-full flex items-center justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
                 onClick={() => {
                   openAIChat();
                   setSidebarOpen(false);
@@ -162,16 +153,19 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 <Icon className="mr-3 h-5 w-5" />
                 {item.name}
                 {item.premium && !isPremium && <Crown className="ml-auto h-4 w-4 text-secondary" />}
-              </Button>
+              </button>
             );
           }
 
-          // Regular navigation items
+          // Regular navigation - simplified like bottom nav
           return (
             <button
               key={item.name}
               type="button"
-              onClick={() => handleNavigation(item.href, item.comingSoon)}
+              onClick={() => {
+                navigate(item.href);
+                setSidebarOpen(false);
+              }}
               className={cn(
                 "w-full flex items-center justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground",
                 isActive(item.href) && "bg-secondary text-secondary-foreground",
@@ -200,7 +194,10 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
         <button
           type="button"
-          onClick={() => handleNavigation("/settings")}
+          onClick={() => {
+            navigate("/settings");
+            setSidebarOpen(false);
+          }}
           className={cn(
             "w-full flex items-center justify-start min-h-[44px] px-4 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground",
             isActive("/settings") && "bg-secondary text-secondary-foreground",
