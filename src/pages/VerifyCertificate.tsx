@@ -72,32 +72,10 @@ const VerifyCertificate = () => {
     setCertificate(null);
 
     try {
-      const { data, error } = await supabase
-        .from("certificates")
-        .select(
-          "id, certificate_type, subject_name, achievement_title, issue_date, verification_code, certificate_pdf_url, status, metadata, student_name, student_grade, school_name",
-        )
-        .eq("verification_code", code)
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Verification lookup error", error);
-        setVerificationState("invalid");
-      } else if (!data) {
-        setVerificationState("invalid");
-      } else {
-        const status = (data.status || "active") as VerificationState;
-        if (status === "revoked") {
-          setVerificationState("revoked");
-        } else if (status === "expired") {
-          setVerificationState("expired");
-        } else {
-          setVerificationState("valid");
-        }
-        setCertificate(data as CertificateVerificationRecord);
-      }
-
+      // Phase 6 not implemented yet - certificates table doesn't exist
+      // Always show invalid for now
+      setVerificationState("invalid");
+      
       setSearchParams((prev) => {
         const params = new URLSearchParams(prev);
         params.set("code", code);
