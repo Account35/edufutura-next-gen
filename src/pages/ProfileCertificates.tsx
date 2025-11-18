@@ -67,25 +67,8 @@ const ProfileCertificates = () => {
       if (!user) return;
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from("certificates")
-        .select(
-          "id, certificate_type, subject_name, achievement_title, achievement_description, issue_date, verification_code, qr_code_url, certificate_pdf_url, status",
-        )
-        .eq("user_id", user.id)
-        .order("issue_date", { ascending: false });
-
-      if (error) {
-        console.error("Error fetching certificates", error);
-        toast({
-          title: "Unable to load certificates",
-          description: "Please try again in a moment.",
-          variant: "destructive",
-        });
-      } else {
-        setCertificates((data as CertificateRecord[]) || []);
-      }
-
+      // Phase 6 not implemented yet - using placeholder empty array
+      setCertificates([]);
       setLoading(false);
     };
 
@@ -282,7 +265,7 @@ const ProfileCertificates = () => {
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant="ghost"
-                  size="xs"
+                  size="sm"
                   className="h-6 px-1.5 text-[11px]"
                   onClick={() => handleCopyLink(certificate)}
                 >
@@ -291,7 +274,7 @@ const ProfileCertificates = () => {
                 </Button>
                 <Button
                   variant="ghost"
-                  size="xs"
+                  size="sm"
                   className="h-6 px-1.5 text-[11px]"
                   onClick={() => navigate(`/verify/${certificate.verification_code}`)}
                 >
