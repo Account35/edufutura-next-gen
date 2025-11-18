@@ -332,6 +332,140 @@ export type Database = {
           },
         ]
       }
+      career_assessments: {
+        Row: {
+          assessment_data: Json | null
+          assessment_type: string
+          completed_at: string | null
+          id: string
+          results: Json | null
+          user_id: string
+          validity_period: string | null
+        }
+        Insert: {
+          assessment_data?: Json | null
+          assessment_type: string
+          completed_at?: string | null
+          id?: string
+          results?: Json | null
+          user_id: string
+          validity_period?: string | null
+        }
+        Update: {
+          assessment_data?: Json | null
+          assessment_type?: string
+          completed_at?: string | null
+          id?: string
+          results?: Json | null
+          user_id?: string
+          validity_period?: string | null
+        }
+        Relationships: []
+      }
+      career_paths: {
+        Row: {
+          average_salary_zar: number | null
+          career_category: string
+          career_description: string | null
+          career_name: string
+          career_progression: string | null
+          created_at: string | null
+          education_level: string | null
+          growth_rate: number | null
+          id: string
+          job_outlook: string | null
+          related_careers: string[] | null
+          sa_specific_info: Json | null
+          skills_required: string[] | null
+          subjects_alignment: Json | null
+          typical_workplaces: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          average_salary_zar?: number | null
+          career_category: string
+          career_description?: string | null
+          career_name: string
+          career_progression?: string | null
+          created_at?: string | null
+          education_level?: string | null
+          growth_rate?: number | null
+          id?: string
+          job_outlook?: string | null
+          related_careers?: string[] | null
+          sa_specific_info?: Json | null
+          skills_required?: string[] | null
+          subjects_alignment?: Json | null
+          typical_workplaces?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          average_salary_zar?: number | null
+          career_category?: string
+          career_description?: string | null
+          career_name?: string
+          career_progression?: string | null
+          created_at?: string | null
+          education_level?: string | null
+          growth_rate?: number | null
+          id?: string
+          job_outlook?: string | null
+          related_careers?: string[] | null
+          sa_specific_info?: Json | null
+          skills_required?: string[] | null
+          subjects_alignment?: Json | null
+          typical_workplaces?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      career_recommendations: {
+        Row: {
+          based_on: Json | null
+          career_path_id: string | null
+          generated_at: string | null
+          id: string
+          interested: boolean | null
+          notes: string | null
+          recommendation_reason: string | null
+          recommendation_score: number | null
+          user_id: string
+          viewed: boolean | null
+        }
+        Insert: {
+          based_on?: Json | null
+          career_path_id?: string | null
+          generated_at?: string | null
+          id?: string
+          interested?: boolean | null
+          notes?: string | null
+          recommendation_reason?: string | null
+          recommendation_score?: number | null
+          user_id: string
+          viewed?: boolean | null
+        }
+        Update: {
+          based_on?: Json | null
+          career_path_id?: string | null
+          generated_at?: string | null
+          id?: string
+          interested?: boolean | null
+          notes?: string | null
+          recommendation_reason?: string | null
+          recommendation_score?: number | null
+          user_id?: string
+          viewed?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_recommendations_career_path_id_fkey"
+            columns: ["career_path_id"]
+            isOneToOne: false
+            referencedRelation: "career_paths"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chapter_prerequisites: {
         Row: {
           chapter_id: string | null
@@ -539,6 +673,59 @@ export type Database = {
             columns: ["chapter_id"]
             isOneToOne: false
             referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      institution_recommendations: {
+        Row: {
+          admission_probability: string | null
+          application_status: string | null
+          created_at: string | null
+          id: string
+          institution_id: string | null
+          match_factors: Json | null
+          match_score: number | null
+          notes: string | null
+          program_name: string | null
+          saved: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          admission_probability?: string | null
+          application_status?: string | null
+          created_at?: string | null
+          id?: string
+          institution_id?: string | null
+          match_factors?: Json | null
+          match_score?: number | null
+          notes?: string | null
+          program_name?: string | null
+          saved?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          admission_probability?: string | null
+          application_status?: string | null
+          created_at?: string | null
+          id?: string
+          institution_id?: string | null
+          match_factors?: Json | null
+          match_score?: number | null
+          notes?: string | null
+          program_name?: string | null
+          saved?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_recommendations_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "tertiary_institutions"
             referencedColumns: ["id"]
           },
         ]
@@ -1021,6 +1208,66 @@ export type Database = {
           transaction_id?: string | null
           transaction_type?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      tertiary_institutions: {
+        Row: {
+          accreditation: string | null
+          admission_requirements: Json | null
+          application_deadlines: Json | null
+          campus_facilities: string[] | null
+          city: string | null
+          contact_info: Json | null
+          courses_offered: Json | null
+          created_at: string | null
+          fees_info: Json | null
+          id: string
+          institution_logo_url: string | null
+          institution_name: string
+          institution_type: string
+          province: string
+          rankings: Json | null
+          student_support: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          accreditation?: string | null
+          admission_requirements?: Json | null
+          application_deadlines?: Json | null
+          campus_facilities?: string[] | null
+          city?: string | null
+          contact_info?: Json | null
+          courses_offered?: Json | null
+          created_at?: string | null
+          fees_info?: Json | null
+          id?: string
+          institution_logo_url?: string | null
+          institution_name: string
+          institution_type: string
+          province: string
+          rankings?: Json | null
+          student_support?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          accreditation?: string | null
+          admission_requirements?: Json | null
+          application_deadlines?: Json | null
+          campus_facilities?: string[] | null
+          city?: string | null
+          contact_info?: Json | null
+          courses_offered?: Json | null
+          created_at?: string | null
+          fees_info?: Json | null
+          id?: string
+          institution_logo_url?: string | null
+          institution_name?: string
+          institution_type?: string
+          province?: string
+          rankings?: Json | null
+          student_support?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
