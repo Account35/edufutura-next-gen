@@ -115,7 +115,7 @@ export const QuickActionsPanel = ({
       label: 'Career Guidance',
       description: 'Plan your future',
       isPremium: false,
-      isComingSoon: true,
+      isComingSoon: false,
       onClick: onCareerGuidance,
     },
   ];
