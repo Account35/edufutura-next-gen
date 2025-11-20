@@ -9,6 +9,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
+import { useCareerContext } from '@/hooks/useCareerContext';
 
 interface AIChatModalProps {
   isOpen: boolean;
@@ -42,6 +43,8 @@ export const AIChatModal = ({ isOpen, onClose, context }: AIChatModalProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const { data: careerContext } = useCareerContext(user?.id);
 
   const DAILY_FREE_LIMIT = 3;
 
@@ -249,7 +252,12 @@ export const AIChatModal = ({ isOpen, onClose, context }: AIChatModalProps) => {
   const callCerebras = async (query: string, systemPrompt: string): Promise<string> => {
     // This will be implemented via edge function
     const { data, error } = await supabase.functions.invoke('ai-cerebras', {
-      body: { query, systemPrompt, userId: user?.id }
+      body: { 
+        query, 
+        systemPrompt, 
+        userId: user?.id,
+        careerContext: careerContext || null
+      }
     });
 
     if (error) throw error;
@@ -259,7 +267,12 @@ export const AIChatModal = ({ isOpen, onClose, context }: AIChatModalProps) => {
   const callGPT4 = async (query: string, systemPrompt: string): Promise<string> => {
     // This will be implemented via edge function
     const { data, error } = await supabase.functions.invoke('ai-gpt4', {
-      body: { query, systemPrompt, userId: user?.id }
+      body: { 
+        query, 
+        systemPrompt, 
+        userId: user?.id,
+        careerContext: careerContext || null
+      }
     });
 
     if (error) throw error;
