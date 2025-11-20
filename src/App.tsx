@@ -33,6 +33,7 @@ import InstitutionDetail from "./pages/InstitutionDetail";
 import CareerQuiz from "./pages/CareerQuiz";
 import SalaryCalculator from "./pages/SalaryCalculator";
 import CareerResources from "./pages/CareerResources";
+import CareerFAQ from "./pages/CareerFAQ";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,7 @@ const App = () => (
               <Route path="/career-guidance/quiz" element={<CareerQuiz />} />
               <Route path="/career-guidance/salary-calculator" element={<SalaryCalculator />} />
               <Route path="/career-guidance/resources" element={<CareerResources />} />
+              <Route path="/career-guidance/faq" element={<CareerFAQ />} />
               <Route path="/institutions/:institutionName" element={<InstitutionDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
