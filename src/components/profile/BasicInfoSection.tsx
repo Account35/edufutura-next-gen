@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Camera, Loader2, Eye, EyeOff } from 'lucide-react';
 import { DateOfBirthPicker } from './DateOfBirthPicker';
@@ -17,6 +18,7 @@ interface BasicInfoSectionProps {
 }
 
 export const BasicInfoSection = ({ userProfile }: BasicInfoSectionProps) => {
+  const { refreshProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [fullName, setFullName] = useState(userProfile.full_name || '');
@@ -104,7 +106,7 @@ export const BasicInfoSection = ({ userProfile }: BasicInfoSectionProps) => {
           if (updateError) throw updateError;
 
           toast.success('Profile picture updated!');
-          window.location.reload();
+          await refreshProfile();
         }, 'image/jpeg', 0.9);
       };
 
@@ -133,6 +135,7 @@ export const BasicInfoSection = ({ userProfile }: BasicInfoSectionProps) => {
       if (error) throw error;
 
       toast.success('Profile updated successfully!');
+      await refreshProfile();
     } catch (error) {
       console.error('Error updating profile:', error);
       toast.error('Failed to update profile');
