@@ -5,9 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   ArrowLeft,
   Building2,
@@ -48,6 +50,7 @@ export default function InstitutionDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const [institution, setInstitution] = useState<Institution | null>(null);
   const [isSaved, setIsSaved] = useState(false);
@@ -241,14 +244,142 @@ export default function InstitutionDetail() {
           </CardContent>
         </Card>
 
-        {/* Detailed Information Tabs */}
-        <Tabs defaultValue="programs" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
-            <TabsTrigger value="programs">Programs</TabsTrigger>
-            <TabsTrigger value="admission">Admission</TabsTrigger>
-            <TabsTrigger value="fees">Fees & Funding</TabsTrigger>
-            <TabsTrigger value="campus">Campus Life</TabsTrigger>
-          </TabsList>
+        {/* Detailed Information - Mobile Accordion / Desktop Tabs */}
+        {isMobile ? (
+          <Accordion type="single" collapsible className="space-y-2">
+            <AccordionItem value="programs" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">Programs</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4">
+                {coursesOffered.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Program information coming soon. Visit the institution website for details.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {coursesOffered.map((course: any, index: number) => (
+                      <div key={index} className="border rounded-lg p-3 bg-background">
+                        <h4 className="font-semibold text-sm mb-1">{course.course_name}</h4>
+                        <div className="flex gap-2 flex-wrap text-xs">
+                          {course.faculty && <Badge variant="outline" className="text-xs">{course.faculty}</Badge>}
+                          {course.qualification_type && <Badge variant="secondary" className="text-xs">{course.qualification_type}</Badge>}
+                          {course.duration_years && <span className="text-muted-foreground">{course.duration_years} years</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="admission" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <div className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">Admission</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4 space-y-4">
+                {admissionReqs.aps_scores && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-2">APS Score Requirements</h4>
+                    <p className="text-sm text-muted-foreground">{admissionReqs.aps_scores}</p>
+                  </div>
+                )}
+                {admissionReqs.subject_requirements && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-2">Subject Requirements</h4>
+                    <p className="text-sm text-muted-foreground">{admissionReqs.subject_requirements}</p>
+                  </div>
+                )}
+                {deadlines.application_opens && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-2">Application Dates</h4>
+                    <div className="text-sm space-y-1">
+                      <div><span className="font-medium">Opens:</span> {deadlines.application_opens}</div>
+                      {deadlines.application_closes && (
+                        <div><span className="font-medium">Closes:</span> {deadlines.application_closes}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="fees" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">Fees & Funding</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4 space-y-4">
+                {fees.tuition && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">Tuition Fees</h4>
+                    <p className="text-sm text-muted-foreground">{fees.tuition}</p>
+                  </div>
+                )}
+                {fees.accommodation && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">Accommodation</h4>
+                    <p className="text-sm text-muted-foreground">{fees.accommodation}</p>
+                  </div>
+                )}
+                <div>
+                  <h4 className="font-semibold text-sm mb-2">NSFAS Eligible</h4>
+                  <p className="text-sm text-muted-foreground">
+                    This institution accepts NSFAS funding. Visit{' '}
+                    <a href="https://www.nsfas.org.za" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      www.nsfas.org.za
+                    </a>{' '}
+                    to apply.
+                  </p>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="campus" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">Campus Life</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4 space-y-4">
+                {institution.campus_facilities && institution.campus_facilities.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-2">Campus Facilities</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {institution.campus_facilities.map((facility: string, index: number) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {facility}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {institution.student_support && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-2">Student Support Services</h4>
+                    <p className="text-sm text-muted-foreground">{institution.student_support}</p>
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        ) : (
+          <Tabs defaultValue="programs" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+              <TabsTrigger value="programs">Programs</TabsTrigger>
+              <TabsTrigger value="admission">Admission</TabsTrigger>
+              <TabsTrigger value="fees">Fees & Funding</TabsTrigger>
+              <TabsTrigger value="campus">Campus Life</TabsTrigger>
+            </TabsList>
 
           <TabsContent value="programs" className="space-y-4">
             <Card>
@@ -409,7 +540,8 @@ export default function InstitutionDetail() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+          </Tabs>
+        )}
       </div>
     </DashboardLayout>
   );
