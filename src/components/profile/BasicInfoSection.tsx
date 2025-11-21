@@ -39,82 +39,204 @@ export const BasicInfoSection = ({ userProfile }: BasicInfoSectionProps) => {
   };
 
   const handleProfilePictureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const uploadSteps: string[] = [];
+    
     try {
       setUploading(true);
+      uploadSteps.push('Starting upload process...');
       
       if (!event.target.files || event.target.files.length === 0) {
+        toast.error('No file selected');
         return;
       }
 
       const file = event.target.files[0];
+      uploadSteps.push(`File selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
       
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file (JPG, PNG, or WebP)');
+        toast.error(`Invalid file type: ${file.type}. Please select JPG, PNG, or WebP`);
+        console.error('Upload validation failed:', { 
+          fileName: file.name, 
+          fileType: file.type, 
+          steps: uploadSteps 
+        });
         return;
       }
+      uploadSteps.push(`✓ File type validated: ${file.type}`);
 
       // Validate file size (5MB)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB');
+        toast.error(`File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Maximum is 5MB`);
+        console.error('Upload validation failed:', { 
+          fileName: file.name, 
+          fileSize: file.size, 
+          steps: uploadSteps 
+        });
+        return;
+      }
+      uploadSteps.push(`✓ File size validated: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+
+      // Test storage bucket connection
+      uploadSteps.push('Testing storage bucket connection...');
+      try {
+        const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
+        if (bucketError) {
+          toast.error(`Storage connection failed: ${bucketError.message}`);
+          console.error('Bucket connection test failed:', { error: bucketError, steps: uploadSteps });
+          return;
+        }
+        
+        const profileBucket = buckets?.find(b => b.name === 'profile-pictures');
+        if (!profileBucket) {
+          toast.error('Profile pictures bucket not found. Please contact support.');
+          console.error('Bucket not found:', { availableBuckets: buckets?.map(b => b.name), steps: uploadSteps });
+          return;
+        }
+        uploadSteps.push(`✓ Storage bucket connected: ${profileBucket.name}`);
+      } catch (bucketTestError) {
+        toast.error('Failed to connect to storage. Check your internet connection.');
+        console.error('Storage connection error:', { error: bucketTestError, steps: uploadSteps });
         return;
       }
 
+      uploadSteps.push('Processing image...');
+      
       // Create a canvas to resize the image
       const img = new Image();
       const reader = new FileReader();
 
+      reader.onerror = () => {
+        toast.error('Failed to read image file');
+        console.error('FileReader error:', { steps: uploadSteps });
+        setUploading(false);
+      };
+
       reader.onload = (e) => {
         img.src = e.target?.result as string;
+        uploadSteps.push('✓ Image file read successfully');
+      };
+
+      img.onerror = () => {
+        toast.error('Failed to process image. File may be corrupted.');
+        console.error('Image processing error:', { steps: uploadSteps });
+        setUploading(false);
       };
 
       img.onload = async () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d')!;
-        
-        // Resize to 400x400 with center crop
-        const size = 400;
-        canvas.width = size;
-        canvas.height = size;
-        
-        const scale = Math.max(size / img.width, size / img.height);
-        const x = (size - img.width * scale) / 2;
-        const y = (size - img.height * scale) / 2;
-        
-        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-        
-        canvas.toBlob(async (blob) => {
-          if (!blob) return;
+        try {
+          uploadSteps.push(`✓ Image loaded: ${img.width}x${img.height}px`);
           
-          const fileName = `${userProfile.id}-${Date.now()}.jpg`;
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
           
-          const { error: uploadError } = await supabase.storage
-            .from('profile-pictures')
-            .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+          if (!ctx) {
+            toast.error('Canvas rendering failed. Browser may not support image processing.');
+            console.error('Canvas context error:', { steps: uploadSteps });
+            setUploading(false);
+            return;
+          }
+          
+          // Resize to 400x400 with center crop
+          const size = 400;
+          canvas.width = size;
+          canvas.height = size;
+          
+          const scale = Math.max(size / img.width, size / img.height);
+          const x = (size - img.width * scale) / 2;
+          const y = (size - img.height * scale) / 2;
+          
+          ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+          uploadSteps.push(`✓ Image resized to ${size}x${size}px`);
+          
+          canvas.toBlob(async (blob) => {
+            if (!blob) {
+              toast.error('Failed to convert image to upload format');
+              console.error('Blob conversion error:', { steps: uploadSteps });
+              setUploading(false);
+              return;
+            }
+            
+            uploadSteps.push(`✓ Image converted: ${(blob.size / 1024).toFixed(2)}KB`);
+            
+            try {
+              const fileName = `${userProfile.id}-${Date.now()}.jpg`;
+              uploadSteps.push(`Uploading to storage: ${fileName}...`);
+              
+              const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('profile-pictures')
+                .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
 
-          if (uploadError) throw uploadError;
+              if (uploadError) {
+                toast.error(`Upload failed: ${uploadError.message}`);
+                console.error('Storage upload error:', { 
+                  error: uploadError, 
+                  fileName, 
+                  blobSize: blob.size,
+                  steps: uploadSteps 
+                });
+                setUploading(false);
+                return;
+              }
+              
+              uploadSteps.push(`✓ File uploaded: ${uploadData?.path}`);
 
-          const { data: urlData } = supabase.storage
-            .from('profile-pictures')
-            .getPublicUrl(fileName);
+              const { data: urlData } = supabase.storage
+                .from('profile-pictures')
+                .getPublicUrl(fileName);
+              
+              uploadSteps.push(`✓ Public URL generated: ${urlData.publicUrl}`);
 
-          const { error: updateError } = await supabase
-            .from('users')
-            .update({ profile_picture_url: urlData.publicUrl })
-            .eq('id', userProfile.id);
+              uploadSteps.push('Updating user profile...');
+              const { error: updateError } = await supabase
+                .from('users')
+                .update({ profile_picture_url: urlData.publicUrl })
+                .eq('id', userProfile.id);
 
-          if (updateError) throw updateError;
+              if (updateError) {
+                toast.error(`Database update failed: ${updateError.message}`);
+                console.error('Database update error:', { 
+                  error: updateError, 
+                  userId: userProfile.id,
+                  publicUrl: urlData.publicUrl,
+                  steps: uploadSteps 
+                });
+                setUploading(false);
+                return;
+              }
 
-          toast.success('Profile picture updated!');
-          await refreshProfile();
-        }, 'image/jpeg', 0.9);
+              uploadSteps.push('✓ Database updated successfully');
+              console.log('Upload completed successfully:', { steps: uploadSteps });
+              
+              toast.success('Profile picture updated!');
+              await refreshProfile();
+            } catch (uploadProcessError) {
+              toast.error('Upload process failed. Please try again.');
+              console.error('Upload process error:', { 
+                error: uploadProcessError, 
+                steps: uploadSteps 
+              });
+            } finally {
+              setUploading(false);
+            }
+          }, 'image/jpeg', 0.9);
+        } catch (canvasError) {
+          toast.error('Image processing failed');
+          console.error('Canvas processing error:', { error: canvasError, steps: uploadSteps });
+          setUploading(false);
+        }
       };
 
       reader.readAsDataURL(file);
     } catch (error) {
-      console.error('Error uploading picture:', error);
-      toast.error('Failed to upload profile picture');
-    } finally {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Upload failed: ${errorMessage}`);
+      console.error('Profile picture upload error:', { 
+        error, 
+        errorMessage,
+        steps: uploadSteps,
+        userId: userProfile.id
+      });
       setUploading(false);
     }
   };
