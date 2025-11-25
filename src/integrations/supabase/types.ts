@@ -332,6 +332,47 @@ export type Database = {
           },
         ]
       }
+      buddy_chat_messages: {
+        Row: {
+          buddy_connection_id: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message_content: string
+          moderation_status: string | null
+          read_at: string | null
+          sender_id: string
+        }
+        Insert: {
+          buddy_connection_id: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message_content: string
+          moderation_status?: string | null
+          read_at?: string | null
+          sender_id: string
+        }
+        Update: {
+          buddy_connection_id?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message_content?: string
+          moderation_status?: string | null
+          read_at?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buddy_chat_messages_buddy_connection_id_fkey"
+            columns: ["buddy_connection_id"]
+            isOneToOne: false
+            referencedRelation: "study_buddies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       career_assessments: {
         Row: {
           assessment_data: Json | null
@@ -505,6 +546,51 @@ export type Database = {
           },
         ]
       }
+      community_reports: {
+        Row: {
+          action_taken: string | null
+          created_at: string | null
+          id: string
+          report_description: string | null
+          report_reason: string
+          reported_content_id: string
+          reported_content_type: string
+          reporter_id: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+        }
+        Insert: {
+          action_taken?: string | null
+          created_at?: string | null
+          id?: string
+          report_description?: string | null
+          report_reason: string
+          reported_content_id: string
+          reported_content_type: string
+          reporter_id: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+        }
+        Update: {
+          action_taken?: string | null
+          created_at?: string | null
+          id?: string
+          report_description?: string | null
+          report_reason?: string
+          reported_content_id?: string
+          reported_content_type?: string
+          reporter_id?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       curriculum_chapters: {
         Row: {
           caps_code: string | null
@@ -677,6 +763,268 @@ export type Database = {
           },
         ]
       }
+      forum_posts: {
+        Row: {
+          chapter_id: string | null
+          created_at: string | null
+          flagged_reason: string | null
+          forum_id: string
+          id: string
+          is_locked: boolean | null
+          is_pinned: boolean | null
+          last_activity: string | null
+          moderation_status: string | null
+          post_content: string
+          post_title: string
+          reply_count: number | null
+          tags: string[] | null
+          updated_at: string | null
+          user_id: string
+          view_count: number | null
+        }
+        Insert: {
+          chapter_id?: string | null
+          created_at?: string | null
+          flagged_reason?: string | null
+          forum_id: string
+          id?: string
+          is_locked?: boolean | null
+          is_pinned?: boolean | null
+          last_activity?: string | null
+          moderation_status?: string | null
+          post_content: string
+          post_title: string
+          reply_count?: number | null
+          tags?: string[] | null
+          updated_at?: string | null
+          user_id: string
+          view_count?: number | null
+        }
+        Update: {
+          chapter_id?: string | null
+          created_at?: string | null
+          flagged_reason?: string | null
+          forum_id?: string
+          id?: string
+          is_locked?: boolean | null
+          is_pinned?: boolean | null
+          last_activity?: string | null
+          moderation_status?: string | null
+          post_content?: string
+          post_title?: string
+          reply_count?: number | null
+          tags?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_posts_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_posts_forum_id_fkey"
+            columns: ["forum_id"]
+            isOneToOne: false
+            referencedRelation: "forums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forums: {
+        Row: {
+          color_theme: string | null
+          created_at: string | null
+          created_by: string | null
+          forum_description: string | null
+          forum_rules: string | null
+          forum_title: string
+          icon_name: string | null
+          id: string
+          is_active: boolean | null
+          member_count: number | null
+          moderators: string[] | null
+          post_count: number | null
+          subject_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          color_theme?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          forum_description?: string | null
+          forum_rules?: string | null
+          forum_title: string
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          member_count?: number | null
+          moderators?: string[] | null
+          post_count?: number | null
+          subject_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          color_theme?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          forum_description?: string | null
+          forum_rules?: string | null
+          forum_title?: string
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          member_count?: number | null
+          moderators?: string[] | null
+          post_count?: number | null
+          subject_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      group_chat_messages: {
+        Row: {
+          attachment_url: string | null
+          created_at: string | null
+          edited_at: string | null
+          group_id: string
+          id: string
+          is_edited: boolean | null
+          message_content: string
+          message_type: string | null
+          moderation_status: string | null
+          read_by: string[] | null
+          user_id: string
+        }
+        Insert: {
+          attachment_url?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          group_id: string
+          id?: string
+          is_edited?: boolean | null
+          message_content: string
+          message_type?: string | null
+          moderation_status?: string | null
+          read_by?: string[] | null
+          user_id: string
+        }
+        Update: {
+          attachment_url?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          group_id?: string
+          id?: string
+          is_edited?: boolean | null
+          message_content?: string
+          message_type?: string | null
+          moderation_status?: string | null
+          read_by?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_chat_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string | null
+          last_active: string | null
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string | null
+          last_active?: string | null
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string | null
+          last_active?: string | null
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_quiz_attempts: {
+        Row: {
+          average_score: number | null
+          completed_at: string | null
+          created_at: string | null
+          group_id: string
+          id: string
+          individual_scores: Json | null
+          initiated_by: string | null
+          participant_ids: string[] | null
+          quiz_id: string
+          started_at: string | null
+        }
+        Insert: {
+          average_score?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          group_id: string
+          id?: string
+          individual_scores?: Json | null
+          initiated_by?: string | null
+          participant_ids?: string[] | null
+          quiz_id: string
+          started_at?: string | null
+        }
+        Update: {
+          average_score?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          group_id?: string
+          id?: string
+          individual_scores?: Json | null
+          initiated_by?: string | null
+          participant_ids?: string[] | null
+          quiz_id?: string
+          started_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_quiz_attempts_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_quiz_attempts_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       institution_recommendations: {
         Row: {
           admission_probability: string | null
@@ -726,6 +1074,66 @@ export type Database = {
             columns: ["institution_id"]
             isOneToOne: false
             referencedRelation: "tertiary_institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_replies: {
+        Row: {
+          created_at: string | null
+          depth_level: number | null
+          edited_at: string | null
+          id: string
+          is_edited: boolean | null
+          is_solution: boolean | null
+          moderation_status: string | null
+          parent_reply_id: string | null
+          post_id: string
+          reply_content: string
+          upvotes: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          depth_level?: number | null
+          edited_at?: string | null
+          id?: string
+          is_edited?: boolean | null
+          is_solution?: boolean | null
+          moderation_status?: string | null
+          parent_reply_id?: string | null
+          post_id: string
+          reply_content: string
+          upvotes?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          depth_level?: number | null
+          edited_at?: string | null
+          id?: string
+          is_edited?: boolean | null
+          is_solution?: boolean | null
+          moderation_status?: string | null
+          parent_reply_id?: string | null
+          post_id?: string
+          reply_content?: string
+          upvotes?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_replies_parent_reply_id_fkey"
+            columns: ["parent_reply_id"]
+            isOneToOne: false
+            referencedRelation: "post_replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_replies_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
             referencedColumns: ["id"]
           },
         ]
@@ -1011,6 +1419,73 @@ export type Database = {
           },
         ]
       }
+      reply_upvotes: {
+        Row: {
+          created_at: string | null
+          id: string
+          reply_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reply_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reply_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reply_upvotes_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "post_replies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resource_ratings: {
+        Row: {
+          created_at: string | null
+          helpful_count: number | null
+          id: string
+          rating: number
+          resource_id: string
+          review_text: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          helpful_count?: number | null
+          id?: string
+          rating: number
+          resource_id: string
+          review_text?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          helpful_count?: number | null
+          id?: string
+          rating?: number
+          resource_id?: string
+          review_text?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_ratings_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "shared_resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schools: {
         Row: {
           created_at: string | null
@@ -1065,6 +1540,161 @@ export type Database = {
           id?: string
           query?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      shared_resources: {
+        Row: {
+          chapter_id: string | null
+          created_at: string | null
+          download_count: number | null
+          file_size_mb: number | null
+          file_type: string
+          file_url: string
+          id: string
+          moderation_status: string | null
+          rating_average: number | null
+          rating_count: number | null
+          resource_description: string | null
+          resource_title: string
+          resource_type: string
+          subject_name: string
+          tags: string[] | null
+          upload_date: string | null
+          user_id: string
+        }
+        Insert: {
+          chapter_id?: string | null
+          created_at?: string | null
+          download_count?: number | null
+          file_size_mb?: number | null
+          file_type: string
+          file_url: string
+          id?: string
+          moderation_status?: string | null
+          rating_average?: number | null
+          rating_count?: number | null
+          resource_description?: string | null
+          resource_title: string
+          resource_type: string
+          subject_name: string
+          tags?: string[] | null
+          upload_date?: string | null
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string | null
+          created_at?: string | null
+          download_count?: number | null
+          file_size_mb?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          moderation_status?: string | null
+          rating_average?: number | null
+          rating_count?: number | null
+          resource_description?: string | null
+          resource_title?: string
+          resource_type?: string
+          subject_name?: string
+          tags?: string[] | null
+          upload_date?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_resources_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      study_buddies: {
+        Row: {
+          common_subjects: string[] | null
+          created_at: string | null
+          id: string
+          match_score: number | null
+          message: string | null
+          recipient_id: string
+          requester_id: string
+          responded_at: string | null
+          status: string | null
+        }
+        Insert: {
+          common_subjects?: string[] | null
+          created_at?: string | null
+          id?: string
+          match_score?: number | null
+          message?: string | null
+          recipient_id: string
+          requester_id: string
+          responded_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          common_subjects?: string[] | null
+          created_at?: string | null
+          id?: string
+          match_score?: number | null
+          message?: string | null
+          recipient_id?: string
+          requester_id?: string
+          responded_at?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      study_groups: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          grade_level: number | null
+          group_avatar_url: string | null
+          group_description: string | null
+          group_name: string
+          id: string
+          is_active: boolean | null
+          max_members: number | null
+          meeting_schedule: Json | null
+          member_count: number | null
+          privacy_level: string | null
+          subject_names: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          grade_level?: number | null
+          group_avatar_url?: string | null
+          group_description?: string | null
+          group_name: string
+          id?: string
+          is_active?: boolean | null
+          max_members?: number | null
+          meeting_schedule?: Json | null
+          member_count?: number | null
+          privacy_level?: string | null
+          subject_names?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          grade_level?: number | null
+          group_avatar_url?: string | null
+          group_description?: string | null
+          group_name?: string
+          id?: string
+          is_active?: boolean | null
+          max_members?: number | null
+          meeting_schedule?: Json | null
+          member_count?: number | null
+          privacy_level?: string | null
+          subject_names?: string[] | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1408,6 +2038,42 @@ export type Database = {
           total_chapters?: number | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_reputation: {
+        Row: {
+          helpful_posts: number | null
+          id: string
+          positive_ratings: number | null
+          quality_resources: number | null
+          reputation_level: string | null
+          reputation_score: number | null
+          updated_at: string | null
+          user_id: string
+          warnings_received: number | null
+        }
+        Insert: {
+          helpful_posts?: number | null
+          id?: string
+          positive_ratings?: number | null
+          quality_resources?: number | null
+          reputation_level?: string | null
+          reputation_score?: number | null
+          updated_at?: string | null
+          user_id: string
+          warnings_received?: number | null
+        }
+        Update: {
+          helpful_posts?: number | null
+          id?: string
+          positive_ratings?: number | null
+          quality_resources?: number | null
+          reputation_level?: string | null
+          reputation_score?: number | null
+          updated_at?: string | null
+          user_id?: string
+          warnings_received?: number | null
         }
         Relationships: []
       }
