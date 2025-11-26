@@ -1,4 +1,4 @@
-import { Home, BookOpen, User, Menu, Bookmark, FileText, Trophy } from 'lucide-react';
+import { Home, BookOpen, User, Menu, Bookmark, FileText, Trophy, MessageSquare } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -21,6 +21,7 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
   const navItems: NavItem[] = [
     { id: 'home', icon: Home, label: 'Home', path: '/dashboard' },
     { id: 'subjects', icon: BookOpen, label: 'Subjects', path: '/subjects' },
+    { id: 'forums', icon: MessageSquare, label: 'Forums', path: '/community/forums' },
     { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', path: '/bookmarks' },
     { id: 'reports', icon: FileText, label: 'Reports', path: '/reports' },
     { id: 'certificates', icon: Trophy, label: 'Certificates', path: '/certificates' },

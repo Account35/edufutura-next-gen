@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Settings, HelpCircle, FileText, Shield, LogOut, ChevronRight, Home, BookOpen, Bookmark, User, Sparkles, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Settings, HelpCircle, FileText, Shield, LogOut, ChevronRight, Home, BookOpen, Bookmark, User, Sparkles, Trophy, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,6 +46,7 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
   const mobileNavItems: MenuItem[] = [
     { id: 'home', icon: Home, label: 'Home', action: () => { navigate('/dashboard'); onClose(); } },
     { id: 'subjects', icon: BookOpen, label: 'Subjects', action: () => { navigate('/subjects'); onClose(); } },
+    { id: 'forums', icon: MessageSquare, label: 'Forums', action: () => { navigate('/community/forums'); onClose(); } },
     { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', action: () => { navigate('/bookmarks'); onClose(); } },
     { id: 'reports', icon: FileText, label: 'Reports', action: () => { navigate('/reports'); onClose(); } },
     { id: 'profile', icon: User, label: 'Profile', action: () => { navigate('/profile'); onClose(); } },
@@ -168,6 +169,7 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
                     const isActive = location.pathname === (
                       item.id === 'home' ? '/dashboard' :
                       item.id === 'subjects' ? '/subjects' :
+                      item.id === 'forums' ? '/community/forums' :
                       item.id === 'bookmarks' ? '/bookmarks' :
                       item.id === 'reports' ? '/reports' :
                       item.id === 'profile' ? '/profile' :
