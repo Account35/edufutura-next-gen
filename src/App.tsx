@@ -34,6 +34,9 @@ import CareerQuiz from "./pages/CareerQuiz";
 import SalaryCalculator from "./pages/SalaryCalculator";
 import CareerResources from "./pages/CareerResources";
 import CareerFAQ from "./pages/CareerFAQ";
+import Forums from "./pages/Forums";
+import ForumDetail from "./pages/ForumDetail";
+import PostDetail from "./pages/PostDetail";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +79,9 @@ const App = () => (
               <Route path="/career-guidance/resources" element={<CareerResources />} />
               <Route path="/career-guidance/faq" element={<CareerFAQ />} />
               <Route path="/institutions/:institutionName" element={<InstitutionDetail />} />
+              <Route path="/community/forums" element={<Forums />} />
+              <Route path="/community/forums/:subject" element={<ForumDetail />} />
+              <Route path="/community/forums/:subject/post/:postId" element={<PostDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
