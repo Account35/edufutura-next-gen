@@ -763,6 +763,38 @@ export type Database = {
           },
         ]
       }
+      event_attendees: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_attendees_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "group_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forum_posts: {
         Row: {
           chapter_id: string | null
@@ -929,6 +961,100 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "group_chat_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_events: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          duration_minutes: number
+          group_id: string
+          id: string
+          meeting_link: string | null
+          recurrence_pattern: string | null
+          recurring: boolean | null
+          scheduled_at: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          duration_minutes?: number
+          group_id: string
+          id?: string
+          meeting_link?: string | null
+          recurrence_pattern?: string | null
+          recurring?: boolean | null
+          scheduled_at: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          duration_minutes?: number
+          group_id?: string
+          id?: string
+          meeting_link?: string | null
+          recurrence_pattern?: string | null
+          recurring?: boolean | null
+          scheduled_at?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_events_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_invitations: {
+        Row: {
+          created_at: string | null
+          group_id: string
+          id: string
+          invitee_id: string
+          inviter_id: string
+          message: string | null
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          group_id: string
+          id?: string
+          invitee_id: string
+          inviter_id: string
+          message?: string | null
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          group_id?: string
+          id?: string
+          invitee_id?: string
+          inviter_id?: string
+          message?: string | null
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_invitations_group_id_fkey"
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "study_groups"
