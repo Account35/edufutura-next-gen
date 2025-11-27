@@ -14,10 +14,10 @@ import { toast } from 'sonner';
 interface LeaderboardUser {
   user_id: string;
   reputation_score: number;
-  current_level: string;
+  reputation_level: string;
   helpful_posts: number;
   quality_resources: number;
-  solutions_marked: number;
+  solutions_marked?: number;
   users: {
     full_name: string;
     profile_picture_url: string | null;
@@ -41,41 +41,51 @@ export default function Leaderboard() {
     try {
       setLoading(true);
 
-      // Build query
-      let query = supabase
+      // Fetch reputation data
+      const { data: repData, error: repError } = await supabase
         .from('user_reputation')
-        .select(`
-          user_id,
-          reputation_score,
-          current_level,
-          helpful_posts,
-          quality_resources,
-          solutions_marked,
-          users!inner (
-            full_name,
-            profile_picture_url,
-            grade_level
-          )
-        `)
+        .select('user_id, reputation_score, reputation_level, helpful_posts, quality_resources')
         .order('reputation_score', { ascending: false })
         .limit(100);
 
-      // Apply grade filter
-      if (gradeFilter !== 'all') {
-        query = query.eq('users.grade_level', gradeFilter);
+      if (repError) throw repError;
+
+      if (!repData || repData.length === 0) {
+        setLeaderboard([]);
+        setLoading(false);
+        return;
       }
 
-      const { data, error } = await query;
+      // Fetch user data for all users in leaderboard
+      const userIds = repData.map(rep => rep.user_id);
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('id, full_name, profile_picture_url, grade_level')
+        .in('id', userIds);
 
-      if (error) throw error;
-      setLeaderboard(data || []);
+      if (usersError) throw usersError;
+
+      // Combine reputation and user data
+      const combined = repData.map(rep => {
+        const userData = usersData?.find(u => u.id === rep.user_id);
+        return {
+          ...rep,
+          users: {
+            full_name: userData?.full_name || 'Unknown',
+            profile_picture_url: userData?.profile_picture_url || null,
+            grade_level: userData?.grade_level || 0,
+          }
+        };
+      });
+
+      setLeaderboard(combined);
 
       // Fetch user's rank if logged in
-      if (user) {
+      if (user && repData[0]) {
         const { count } = await supabase
           .from('user_reputation')
           .select('*', { count: 'exact', head: true })
-          .gt('reputation_score', data?.[0]?.reputation_score || 0);
+          .gt('reputation_score', repData[0].reputation_score);
 
         const { count: totalCount } = await supabase
           .from('user_reputation')
@@ -206,7 +216,7 @@ export default function Leaderboard() {
                       {member.users.full_name}
                     </h3>
                     <ReputationBadge
-                      level={member.current_level}
+                      level={member.reputation_level}
                       score={member.reputation_score}
                       size="sm"
                     />
@@ -233,7 +243,7 @@ export default function Leaderboard() {
                   </div>
                   <div className="text-center">
                     <p className="text-lg font-semibold text-foreground">
-                      {member.solutions_marked}
+                      {member.solutions_marked || 0}
                     </p>
                     <p className="text-xs text-muted-foreground">Solutions</p>
                   </div>
