@@ -1,7 +1,9 @@
-import { Home, BookOpen, User, Menu, Bookmark, FileText, Trophy, MessageSquare } from 'lucide-react';
+import { Home, BookOpen, User, Menu, Bookmark, FileText, Trophy, MessageSquare, LogOut } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface NavItem {
   id: string;
@@ -17,6 +19,16 @@ interface MobileBottomNavProps {
 export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate('/');
+      toast.success('Signed out successfully');
+    } catch (error) {
+      toast.error('Error signing out');
+    }
+  };
 
   const navItems: NavItem[] = [
     { id: 'home', icon: Home, label: 'Home', path: '/dashboard' },
@@ -63,11 +75,21 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
         
         <button
           onClick={onMoreClick}
-          className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[60px] min-w-[60px] text-gray-600 hover:bg-gray-100 hover:text-foreground transition-all duration-200 mt-auto"
+          className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[60px] min-w-[60px] text-gray-600 hover:bg-gray-100 hover:text-foreground transition-all duration-200"
           aria-label="More"
         >
           <Menu className="h-6 w-6" />
           <span className="text-xs font-medium">More</span>
+        </button>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleSignOut}
+          className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[60px] min-w-[60px] text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 mt-auto"
+          aria-label="Logout"
+        >
+          <LogOut className="h-6 w-6" />
+          <span className="text-xs font-medium">Logout</span>
         </button>
       </nav>
 
@@ -113,6 +135,16 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
           >
             <Menu className="h-6 w-6" />
             <span className="text-xs font-medium">More</span>
+          </button>
+
+          {/* Logout Button */}
+          <button
+            onClick={handleSignOut}
+            className="relative flex flex-col items-center gap-1 px-4 py-2 min-h-[44px] text-red-600 hover:text-red-700 transition-colors duration-200 active:scale-95"
+            aria-label="Logout"
+          >
+            <LogOut className="h-6 w-6" />
+            <span className="text-xs font-medium">Logout</span>
           </button>
         </div>
       </nav>
