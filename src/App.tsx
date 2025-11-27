@@ -38,6 +38,8 @@ import Forums from "./pages/Forums";
 import ForumDetail from "./pages/ForumDetail";
 import PostDetail from "./pages/PostDetail";
 import Resources from "./pages/Resources";
+import StudyBuddyFinder from "./pages/StudyBuddyFinder";
+import ModerationDashboard from "./pages/ModerationDashboard";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +86,8 @@ const App = () => (
           <Route path="/community/forums/:subject" element={<ForumDetail />} />
           <Route path="/community/forums/:subject/post/:postId" element={<PostDetail />} />
           <Route path="/community/resources" element={<Resources />} />
+          <Route path="/community/study-buddies" element={<StudyBuddyFinder />} />
+          <Route path="/admin/moderation" element={<ModerationDashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
