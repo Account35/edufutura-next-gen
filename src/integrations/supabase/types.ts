@@ -373,6 +373,53 @@ export type Database = {
           },
         ]
       }
+      buddy_study_sessions: {
+        Row: {
+          buddy_connection_id: string
+          created_at: string | null
+          created_by: string
+          duration_minutes: number
+          id: string
+          location: string | null
+          notes: string | null
+          scheduled_at: string
+          subject_name: string
+          title: string
+        }
+        Insert: {
+          buddy_connection_id: string
+          created_at?: string | null
+          created_by: string
+          duration_minutes?: number
+          id?: string
+          location?: string | null
+          notes?: string | null
+          scheduled_at: string
+          subject_name: string
+          title: string
+        }
+        Update: {
+          buddy_connection_id?: string
+          created_at?: string | null
+          created_by?: string
+          duration_minutes?: number
+          id?: string
+          location?: string | null
+          notes?: string | null
+          scheduled_at?: string
+          subject_name?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buddy_study_sessions_buddy_connection_id_fkey"
+            columns: ["buddy_connection_id"]
+            isOneToOne: false
+            referencedRelation: "study_buddies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       career_assessments: {
         Row: {
           assessment_data: Json | null
@@ -588,6 +635,48 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string | null
+        }
+        Relationships: []
+      }
+      content_moderation_log: {
+        Row: {
+          ai_confidence: number | null
+          content_id: string
+          content_type: string
+          created_at: string | null
+          id: string
+          issues_detected: string[] | null
+          moderation_decision: string
+          reviewed: boolean | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_confidence?: number | null
+          content_id: string
+          content_type: string
+          created_at?: string | null
+          id?: string
+          issues_detected?: string[] | null
+          moderation_decision: string
+          reviewed?: boolean | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_confidence?: number | null
+          content_id?: string
+          content_type?: string
+          created_at?: string | null
+          id?: string
+          issues_detected?: string[] | null
+          moderation_decision?: string
+          reviewed?: boolean | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -2057,6 +2146,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_bans: {
+        Row: {
+          appeal_status: string | null
+          appeal_text: string | null
+          ban_duration_days: number
+          ban_reason: string
+          banned_by: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          appeal_status?: string | null
+          appeal_text?: string | null
+          ban_duration_days: number
+          ban_reason: string
+          banned_by: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          appeal_status?: string | null
+          appeal_text?: string | null
+          ban_duration_days?: number
+          ban_reason?: string
+          banned_by?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_chapter_progress: {
         Row: {
           chapter_id: string | null
@@ -2221,6 +2349,36 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_warnings: {
+        Row: {
+          content_id: string
+          content_type: string
+          created_at: string | null
+          id: string
+          user_id: string
+          warned_by: string
+          warning_reason: string
+        }
+        Insert: {
+          content_id: string
+          content_type: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+          warned_by: string
+          warning_reason: string
+        }
+        Update: {
+          content_id?: string
+          content_type?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+          warned_by?: string
+          warning_reason?: string
         }
         Relationships: []
       }
