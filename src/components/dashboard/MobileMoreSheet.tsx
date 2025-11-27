@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Settings, HelpCircle, FileText, Shield, LogOut, ChevronRight, Home, BookOpen, Bookmark, User, Sparkles, Trophy, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Home, BookOpen, Bookmark, User, Sparkles, Trophy, FileText, MessageSquare } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSubscription } from '@/hooks/useSubscription';
 
@@ -31,17 +30,6 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
   const sheetRef = useRef<HTMLDivElement>(null);
   const startYRef = useRef(0);
 
-  const handleSignOut = async () => {
-    try {
-      await supabase.auth.signOut();
-      navigate('/');
-      toast.success('Signed out successfully');
-      onClose();
-    } catch (error) {
-      toast.error('Error signing out');
-    }
-  };
-
   // Mobile: Show all navigation items
   const mobileNavItems: MenuItem[] = [
     { id: 'home', icon: Home, label: 'Home', action: () => { navigate('/dashboard'); onClose(); } },
@@ -54,14 +42,8 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
     { id: 'certificates', icon: Trophy, label: 'Certificates', action: () => { navigate('/certificates'); onClose(); } },
   ];
 
-  // Additional menu items (shown on both desktop and mobile)
-  const additionalItems: MenuItem[] = [
-    { id: 'settings', icon: Settings, label: 'Settings', action: () => { navigate('/settings'); onClose(); } },
-    { id: 'help', icon: HelpCircle, label: 'Help & Support', action: () => { toast.info('Help center coming soon'); onClose(); } },
-    { id: 'terms', icon: FileText, label: 'Terms & Conditions', action: () => { toast.info('Terms coming soon'); onClose(); } },
-    { id: 'privacy', icon: Shield, label: 'Privacy Policy', action: () => { toast.info('Privacy policy coming soon'); onClose(); } },
-    { id: 'logout', icon: LogOut, label: 'Logout', action: handleSignOut, destructive: true }
-  ];
+  // Additional menu items removed - only navigation items remain
+  // Logout moved to sidebar for better visibility
 
   const handleTouchStart = (e: React.TouchEvent) => {
     startYRef.current = e.touches[0].clientY;
@@ -202,28 +184,9 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
             <div className="mx-4 my-2 border-t border-gray-200" />
           </div>
 
-          {/* Additional Menu Items (both mobile and desktop) */}
-          <div className="px-4 py-2">
-            {additionalItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={item.action}
-                  className={cn(
-                    'w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-200',
-                    'hover:bg-gray-50 active:scale-98',
-                    item.destructive 
-                      ? 'text-red-600 hover:bg-red-50' 
-                      : 'text-gray-700 hover:text-primary'
-                  )}
-                >
-                  <Icon className="h-5 w-5 flex-shrink-0" />
-                  <span className="flex-1 text-left font-medium">{item.label}</span>
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
-                </button>
-              );
-            })}
+          {/* Empty state - all items moved to sidebar */}
+          <div className="px-4 py-8 text-center text-gray-500 text-sm">
+            <p>All menu items are now in the main navigation</p>
           </div>
         </div>
       </div>
