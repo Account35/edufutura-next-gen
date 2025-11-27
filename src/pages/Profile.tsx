@@ -7,6 +7,7 @@ import { BasicInfoSection } from '@/components/profile/BasicInfoSection';
 import { AcademicInfoSection } from '@/components/profile/AcademicInfoSection';
 import { AccountSettingsSection } from '@/components/profile/AccountSettingsSection';
 import { SubscriptionManagement } from '@/components/profile/SubscriptionManagement';
+import { ReputationDisplay } from '@/components/profile/ReputationDisplay';
 import { FullPageLoader } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -38,12 +39,13 @@ export default function Profile() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
             <TabsTrigger value="basic" className="min-h-[44px]">Basic Info</TabsTrigger>
             <TabsTrigger value="academic" className="min-h-[44px]">Academic Info</TabsTrigger>
             <TabsTrigger value="account" className="min-h-[44px]">Account Settings</TabsTrigger>
             <TabsTrigger value="subscription" className="min-h-[44px]">Subscription</TabsTrigger>
-          <TabsTrigger value="analytics" className="min-h-[44px]">Analytics</TabsTrigger>
+            <TabsTrigger value="reputation" className="min-h-[44px]">Reputation</TabsTrigger>
+            <TabsTrigger value="analytics" className="min-h-[44px]">Analytics</TabsTrigger>
           </TabsList>
 
           <TabsContent value="basic">
@@ -60,6 +62,10 @@ export default function Profile() {
 
           <TabsContent value="subscription">
             <SubscriptionManagement userId={user!.id} />
+          </TabsContent>
+
+          <TabsContent value="reputation">
+            <ReputationDisplay userId={user!.id} />
           </TabsContent>
 
           <TabsContent value="analytics">

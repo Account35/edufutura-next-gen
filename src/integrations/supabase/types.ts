@@ -1663,6 +1663,33 @@ export type Database = {
           },
         ]
       }
+      reputation_changes: {
+        Row: {
+          change_type: string
+          created_at: string | null
+          description: string
+          id: string
+          points_change: number
+          user_id: string
+        }
+        Insert: {
+          change_type: string
+          created_at?: string | null
+          description: string
+          id?: string
+          points_change: number
+          user_id: string
+        }
+        Update: {
+          change_type?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          points_change?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       resource_ratings: {
         Row: {
           created_at: string | null
@@ -2590,6 +2617,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_reputation_level: { Args: { score: number }; Returns: string }
       check_subscription_status: { Args: never; Returns: undefined }
       has_role: {
         Args: {
@@ -2597,6 +2625,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      update_user_reputation: {
+        Args: {
+          p_change_type: string
+          p_description: string
+          p_points_change: number
+          p_user_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
