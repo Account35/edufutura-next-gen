@@ -9,11 +9,11 @@ import { formatDistanceToNow } from 'date-fns';
 
 interface ReputationData {
   reputation_score: number;
-  current_level: string;
+  reputation_level: string;
   helpful_posts: number;
   quality_resources: number;
   positive_ratings: number;
-  solutions_marked: number;
+  solutions_marked?: number;
   warnings_received: number;
 }
 
@@ -91,7 +91,7 @@ export function ReputationDisplay({ userId }: ReputationDisplayProps) {
     return <Card className="p-6">Loading reputation...</Card>;
   }
 
-  const currentLevel = reputation.current_level as keyof typeof levelThresholds;
+  const currentLevel = reputation.reputation_level as keyof typeof levelThresholds;
   const currentIndex = levelNames.indexOf(currentLevel);
   const nextLevel = levelNames[currentIndex + 1];
   const currentThreshold = levelThresholds[currentLevel];
@@ -103,7 +103,7 @@ export function ReputationDisplay({ userId }: ReputationDisplayProps) {
   const contributionBreakdown = [
     { label: 'Helpful Posts', value: reputation.helpful_posts, icon: MessageSquare, color: 'text-blue-600' },
     { label: 'Quality Resources', value: reputation.quality_resources, icon: FileText, color: 'text-green-600' },
-    { label: 'Solutions Marked', value: reputation.solutions_marked, icon: Shield, color: 'text-primary' },
+    { label: 'Solutions Marked', value: reputation.solutions_marked || 0, icon: Shield, color: 'text-primary' },
     { label: 'Positive Ratings', value: reputation.positive_ratings, icon: Star, color: 'text-secondary' },
   ];
 
@@ -117,7 +117,7 @@ export function ReputationDisplay({ userId }: ReputationDisplayProps) {
             <p className="text-4xl font-bold text-primary">{reputation.reputation_score}</p>
           </div>
           <ReputationBadge
-            level={reputation.current_level}
+            level={reputation.reputation_level}
             score={reputation.reputation_score}
             size="lg"
           />
