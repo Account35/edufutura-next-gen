@@ -30,7 +30,16 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
     }
   };
 
-  const navItems: NavItem[] = [
+  // Primary nav items (shown in bottom bar on mobile)
+  const primaryNavItems: NavItem[] = [
+    { id: 'home', icon: Home, label: 'Home', path: '/dashboard' },
+    { id: 'subjects', icon: BookOpen, label: 'Subjects', path: '/subjects' },
+    { id: 'forums', icon: MessageSquare, label: 'Forums', path: '/community/forums' },
+    { id: 'profile', icon: User, label: 'Profile', path: '/profile' },
+  ];
+
+  // All nav items (shown in desktop sidebar)
+  const allNavItems: NavItem[] = [
     { id: 'home', icon: Home, label: 'Home', path: '/dashboard' },
     { id: 'subjects', icon: BookOpen, label: 'Subjects', path: '/subjects' },
     { id: 'forums', icon: MessageSquare, label: 'Forums', path: '/community/forums' },
@@ -46,7 +55,7 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
     <>
       {/* Desktop Side Navigation */}
       <nav className="hidden lg:flex fixed left-0 top-0 bottom-0 w-20 bg-white border-r border-border z-50 flex-col items-center py-6 gap-6">
-        {navItems.map((item) => {
+        {allNavItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
           
@@ -72,17 +81,8 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
             </button>
           );
         })}
-        
-        <button
-          onClick={onMoreClick}
-          className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[60px] min-w-[60px] text-gray-600 hover:bg-gray-100 hover:text-foreground transition-all duration-200"
-          aria-label="More"
-        >
-          <Menu className="h-6 w-6" />
-          <span className="text-xs font-medium">More</span>
-        </button>
 
-        {/* Logout Button */}
+        {/* Logout Button at bottom */}
         <button
           onClick={handleSignOut}
           className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[60px] min-w-[60px] text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 mt-auto"
@@ -96,7 +96,7 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
       {/* Mobile Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-border z-50 lg:hidden bottom-nav safe-area-pb">
         <div className="flex items-center justify-around py-2">
-          {navItems.map((item) => {
+          {primaryNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             
@@ -128,6 +128,7 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
             );
           })}
           
+          {/* Hamburger Menu for mobile */}
           <button
             onClick={onMoreClick}
             className="relative flex flex-col items-center gap-1 px-4 py-2 min-h-[44px] text-gray-600 hover:text-foreground transition-colors duration-200 active:scale-95"
@@ -135,16 +136,6 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
           >
             <Menu className="h-6 w-6" />
             <span className="text-xs font-medium">More</span>
-          </button>
-
-          {/* Logout Button */}
-          <button
-            onClick={handleSignOut}
-            className="relative flex flex-col items-center gap-1 px-4 py-2 min-h-[44px] text-red-600 hover:text-red-700 transition-colors duration-200 active:scale-95"
-            aria-label="Logout"
-          >
-            <LogOut className="h-6 w-6" />
-            <span className="text-xs font-medium">Logout</span>
           </button>
         </div>
       </nav>
