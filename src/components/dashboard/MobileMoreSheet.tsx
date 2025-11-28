@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, ChevronDown, ChevronUp, Home, BookOpen, Bookmark, User, Sparkles, Trophy, FileText, MessageSquare } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { X, Bookmark, Trophy, FileText, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useSubscription } from '@/hooks/useSubscription';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MobileMoreSheetProps {
   isOpen: boolean;
@@ -22,28 +22,28 @@ interface MenuItem {
 
 export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { isPremium } = useSubscription();
   const [isDragging, setIsDragging] = useState(false);
   const [dragY, setDragY] = useState(0);
-  const [showAllNav, setShowAllNav] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   const startYRef = useRef(0);
 
-  // Mobile: Show all navigation items
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate('/');
+      toast.success('Signed out successfully');
+    } catch (error) {
+      toast.error('Error signing out');
+    }
+  };
+
+  // Secondary navigation items for mobile hamburger menu
   const mobileNavItems: MenuItem[] = [
-    { id: 'home', icon: Home, label: 'Home', action: () => { navigate('/dashboard'); onClose(); } },
-    { id: 'subjects', icon: BookOpen, label: 'Subjects', action: () => { navigate('/subjects'); onClose(); } },
-    { id: 'forums', icon: MessageSquare, label: 'Forums', action: () => { navigate('/community/forums'); onClose(); } },
     { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', action: () => { navigate('/bookmarks'); onClose(); } },
     { id: 'reports', icon: FileText, label: 'Reports', action: () => { navigate('/reports'); onClose(); } },
-    { id: 'profile', icon: User, label: 'Profile', action: () => { navigate('/profile'); onClose(); } },
-    { id: 'ai-tutor', icon: Sparkles, label: 'AI Tutor', badge: !isPremium ? '3 free' : 'Premium', action: () => { toast.info('Open AI Tutor from the floating button'); onClose(); } },
     { id: 'certificates', icon: Trophy, label: 'Certificates', action: () => { navigate('/certificates'); onClose(); } },
+    { id: 'logout', icon: LogOut, label: 'Logout', action: handleSignOut, destructive: true },
   ];
-
-  // Additional menu items removed - only navigation items remain
-  // Logout moved to sidebar for better visibility
 
   const handleTouchStart = (e: React.TouchEvent) => {
     startYRef.current = e.touches[0].clientY;
@@ -132,61 +132,26 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
         </div>
 
         {/* Content - scrollable */}
-        <div className="overflow-y-auto flex-1">
-          {/* Mobile Navigation Items (mobile only) */}
-          <div className="lg:hidden">
-            <div className="px-4 py-2">
-              <button
-                onClick={() => setShowAllNav(!showAllNav)}
-                className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-lg"
-              >
-                <span>Navigation</span>
-                {showAllNav ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </button>
-              
-              {showAllNav && (
-                <div className="mt-2 space-y-1">
-                  {mobileNavItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = location.pathname === (
-                      item.id === 'home' ? '/dashboard' :
-                      item.id === 'subjects' ? '/subjects' :
-                      item.id === 'forums' ? '/community/forums' :
-                      item.id === 'bookmarks' ? '/bookmarks' :
-                      item.id === 'reports' ? '/reports' :
-                      item.id === 'profile' ? '/profile' :
-                      item.id === 'certificates' ? '/certificates' : ''
-                    );
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={item.action}
-                        disabled={item.comingSoon}
-                        className={cn(
-                          'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
-                          isActive ? 'bg-secondary/10 text-secondary' : 'hover:bg-gray-50 text-gray-700',
-                          item.comingSoon && 'opacity-50 cursor-not-allowed'
-                        )}
-                      >
-                        <Icon className="h-5 w-5 flex-shrink-0" />
-                        <span className="flex-1 text-left font-medium">{item.label}</span>
-                        {item.badge && (
-                          <span className="text-xs px-2 py-0.5 bg-secondary/20 text-secondary rounded-full">
-                            {item.badge}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            <div className="mx-4 my-2 border-t border-gray-200" />
-          </div>
-
-          {/* Empty state - all items moved to sidebar */}
-          <div className="px-4 py-8 text-center text-gray-500 text-sm">
-            <p>All menu items are now in the main navigation</p>
+        <div className="overflow-y-auto flex-1 px-4 py-4">
+          <div className="space-y-2">
+            {mobileNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={item.action}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
+                    item.destructive 
+                      ? 'hover:bg-red-50 text-red-600' 
+                      : 'hover:bg-gray-50 text-gray-700'
+                  )}
+                >
+                  <Icon className="h-5 w-5 flex-shrink-0" />
+                  <span className="flex-1 text-left font-medium">{item.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
