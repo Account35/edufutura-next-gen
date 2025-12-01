@@ -7,11 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MessageSquare, ExternalLink, Star } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { StudyGroupWidget } from './StudyGroupWidget';
+import { GetHelpCard } from './GetHelpCard';
 
 interface ChapterDiscussionSectionProps {
   chapterId: string;
   subjectName: string;
   chapterTitle: string;
+  timeSpent?: number;
+  progressPercentage?: number;
+  estimatedMinutes?: number;
 }
 
 interface ForumPost {
@@ -32,7 +37,10 @@ interface SharedResource {
 export const ChapterDiscussionSection = ({ 
   chapterId, 
   subjectName,
-  chapterTitle 
+  chapterTitle,
+  timeSpent = 0,
+  progressPercentage = 0,
+  estimatedMinutes = 30
 }: ChapterDiscussionSectionProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -82,8 +90,19 @@ export const ChapterDiscussionSection = ({
 
   if (loading) return null;
 
+  // Detect if student is struggling
+  const isStruggling = timeSpent > estimatedMinutes * 2 || 
+                       (progressPercentage < 50 && timeSpent > estimatedMinutes);
+
   return (
     <div className="space-y-6 mt-8">
+      {/* Get Help Card */}
+      <GetHelpCard
+        subjectName={subjectName}
+        chapterId={chapterId}
+        chapterTitle={chapterTitle}
+        isStruggling={isStruggling}
+      />
       {/* Discussions */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -176,6 +195,9 @@ export const ChapterDiscussionSection = ({
           </CardContent>
         </Card>
       )}
+
+      {/* Study Group Discovery */}
+      <StudyGroupWidget subjectName={subjectName} chapterId={chapterId} />
     </div>
   );
 };
