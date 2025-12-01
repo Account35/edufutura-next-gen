@@ -11,3 +11,24 @@ verify_jwt = true
 
 [functions.ai-gpt4]
 verify_jwt = true
+
+[functions.generate-quiz]
+verify_jwt = true
+
+[functions.grade-short-answer]
+verify_jwt = true
+
+[functions.generate-certificate]
+verify_jwt = true
+
+[functions.match-study-buddies]
+verify_jwt = true
+
+[functions.send-notifications]
+verify_jwt = false
+
+[functions.payfast-webhook]
+verify_jwt = false
+
+[functions.moderate-content]
+verify_jwt = true
