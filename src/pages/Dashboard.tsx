@@ -8,6 +8,7 @@ import { WelcomeBanner } from '@/components/dashboard/WelcomeBanner';
 import { SubjectGrid } from '@/components/dashboard/SubjectGrid';
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
 import { AchievementDisplay } from '@/components/dashboard/AchievementDisplay';
+import { CommunityActivityWidget } from '@/components/community/CommunityActivityWidget';
 import { UpgradeBanner } from '@/components/subscription/UpgradeBanner';
 import { SubscriptionModal } from '@/components/subscription/SubscriptionModal';
 import { FullPageLoader } from '@/components/ui/loading';
@@ -164,6 +165,9 @@ export default function Dashboard() {
 
           {/* Sidebar - Takes 1 column on large screens */}
           <div className="space-y-6">
+            {/* Community Activity Widget */}
+            <CommunityActivityWidget />
+
             {/* Recent Achievements */}
             <AchievementDisplay achievements={dashboardData.achievements} />
 
