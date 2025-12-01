@@ -96,10 +96,10 @@ export const QuickActionsPanel = ({
     {
       id: 'study-group',
       icon: Users,
-      label: 'Study Group',
+      label: 'Study Groups',
       description: 'Learn together',
-      isPremium: true,
-      onClick: onStudyGroup,
+      isPremium: false,
+      onClick: () => window.location.href = '/community/groups',
     },
     {
       id: 'assessment',

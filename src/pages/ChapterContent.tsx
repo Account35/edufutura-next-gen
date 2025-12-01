@@ -13,6 +13,7 @@ import { ChapterSidebar } from '@/components/curriculum/ChapterSidebar';
 import { ChapterContentRenderer } from '@/components/curriculum/ChapterContentRenderer';
 import { MobileReadingToolbar } from '@/components/curriculum/MobileReadingToolbar';
 import { ChapterNavigation } from '@/components/curriculum/ChapterNavigation';
+import { ChapterDiscussionSection } from '@/components/curriculum/ChapterDiscussionSection';
 import { PrerequisiteModal } from '@/components/curriculum/PrerequisiteModal';
 import { DifficultyBadge } from '@/components/curriculum/DifficultyBadge';
 import { CAPSBadge } from '@/components/curriculum/CAPSBadge';
@@ -341,6 +342,13 @@ export default function ChapterContent() {
                 subjectName={subjectName}
                 previousChapter={previousChapter}
                 nextChapter={nextChapter}
+              />
+
+              {/* Community Integration */}
+              <ChapterDiscussionSection
+                chapterId={chapter.id}
+                subjectName={subjectName}
+                chapterTitle={chapter.chapter_title}
               />
             </div>
 
