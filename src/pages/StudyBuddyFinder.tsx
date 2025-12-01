@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { CareerBuddySection } from '@/components/community/CareerBuddySection';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -197,7 +198,12 @@ export default function StudyBuddyFinder() {
             <p className="text-muted-foreground">Try adjusting your filters or check back later</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <>
+            {/* Career Application Buddies */}
+            <CareerBuddySection />
+
+            <h2 className="text-2xl font-semibold text-primary mb-4 mt-8">Study Buddies</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMatches.map((match) => (
               <Card key={match.id} className="p-6 hover:shadow-lg transition-shadow">
                 <div className="flex items-center justify-between mb-4">
@@ -256,6 +262,7 @@ export default function StudyBuddyFinder() {
               </Card>
             ))}
           </div>
+          </>
         )}
       </div>
     </DashboardLayout>

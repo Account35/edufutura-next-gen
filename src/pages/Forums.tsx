@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { ForumCard } from '@/components/community/ForumCard';
+import { CareerForumCard } from '@/components/community/CareerForumCard';
+import { MobileForumActions } from '@/components/community/MobileForumActions';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface Forum {
   id: string;
@@ -19,6 +22,7 @@ interface Forum {
 }
 
 export default function Forums() {
+  const navigate = useNavigate();
   const [forums, setForums] = useState<Forum[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -87,12 +91,22 @@ export default function Forums() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredForums.map((forum) => (
-              <ForumCard key={forum.id} forum={forum} />
-            ))}
-          </div>
+          <>
+            {/* Featured Career Forum */}
+            <div className="mb-6">
+              <CareerForumCard />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredForums.map((forum) => (
+                <ForumCard key={forum.id} forum={forum} />
+              ))}
+            </div>
+          </>
         )}
+
+        {/* Mobile FAB for new discussion */}
+        <MobileForumActions onNewDiscussion={() => navigate('/community/forums')} />
       </div>
     </DashboardLayout>
   );
