@@ -94,6 +94,14 @@ export const QuickActionsPanel = ({
       onClick: onCertificates,
     },
     {
+      id: 'community',
+      icon: Users,
+      label: 'Explore Community',
+      description: 'Connect with students',
+      isPremium: false,
+      onClick: () => window.location.href = '/community/forums',
+    },
+    {
       id: 'study-group',
       icon: Users,
       label: 'Study Groups',

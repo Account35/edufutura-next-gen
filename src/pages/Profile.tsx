@@ -8,6 +8,7 @@ import { AcademicInfoSection } from '@/components/profile/AcademicInfoSection';
 import { AccountSettingsSection } from '@/components/profile/AccountSettingsSection';
 import { SubscriptionManagement } from '@/components/profile/SubscriptionManagement';
 import { ReputationDisplay } from '@/components/profile/ReputationDisplay';
+import { CommunityStatsSection } from '@/components/profile/CommunityStatsSection';
 import { FullPageLoader } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -37,6 +38,9 @@ export default function Profile() {
             Manage your personal information, academic settings, and preferences
           </p>
         </div>
+
+        {/* Community Stats */}
+        <CommunityStatsSection userId={user!.id} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
