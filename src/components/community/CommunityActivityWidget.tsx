@@ -5,8 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Users, UserPlus, FileText } from 'lucide-react';
+import { MessageSquare, Users, UserPlus, FileText, CheckCheck } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 interface CommunityActivity {
   unreadMessages: number;
@@ -28,6 +29,61 @@ export const CommunityActivityWidget = () => {
   useEffect(() => {
     if (!user) return;
     loadCommunityActivity();
+
+    // Set up real-time subscriptions
+    const channel = supabase
+      .channel('dashboard-activity')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'group_chat_messages',
+        },
+        (payload: any) => {
+          setActivity((prev) => ({
+            ...prev,
+            unreadMessages: prev.unreadMessages + 1,
+          }));
+          toast.info('New message in study group', {
+            description: 'You have unread messages',
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'study_buddies',
+          filter: `recipient_id=eq.${user.id}`,
+        },
+        () => {
+          setActivity((prev) => ({
+            ...prev,
+            buddyRequests: prev.buddyRequests + 1,
+          }));
+          toast.info('New study buddy request!', {
+            description: 'Someone wants to study with you',
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'forum_posts',
+        },
+        () => {
+          loadCommunityActivity(); // Reload to get latest mentions
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const loadCommunityActivity = async () => {
@@ -73,6 +129,26 @@ export const CommunityActivityWidget = () => {
     }
   };
 
+  const handleMarkAllRead = async () => {
+    try {
+      await supabase
+        .from('users')
+        .update({ last_dashboard_visit: new Date().toISOString() })
+        .eq('id', user!.id);
+      
+      setActivity({
+        unreadMessages: 0,
+        forumMentions: [],
+        buddyRequests: 0,
+        newResources: 0,
+      });
+      
+      toast.success('All notifications marked as read');
+    } catch (error) {
+      console.error('Error marking as read:', error);
+    }
+  };
+
   const totalActivity = activity.unreadMessages + activity.buddyRequests + activity.forumMentions.length;
 
   if (totalActivity === 0) return null;
@@ -81,7 +157,22 @@ export const CommunityActivityWidget = () => {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-lg font-semibold">Community Activity</CardTitle>
-        <Badge variant="secondary">{totalActivity}</Badge>
+        <div className="flex items-center gap-2">
+          {totalActivity > 0 && (
+            <>
+              <Badge variant="secondary" className="animate-pulse">{totalActivity}</Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleMarkAllRead}
+                className="h-8 text-xs"
+              >
+                <CheckCheck className="h-3 w-3 mr-1" />
+                Mark all read
+              </Button>
+            </>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {activity.unreadMessages > 0 && (
