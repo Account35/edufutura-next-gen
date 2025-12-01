@@ -51,14 +51,22 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
 
       if (error) throw error;
 
+      // Reset the subscription plan since payment isn't available yet
+      await supabase
+        .from('users')
+        .update({ subscription_plan: null })
+        .eq('id', user.id);
+
       toast({
-        title: "Plan Selected",
-        description: "Redirecting to payment...",
+        title: "Payment Integration Coming Soon",
+        description: "Payment processing will be available in Phase 10. We've saved your plan preference for when it launches!",
+        variant: "default",
       });
 
-      // TODO: Integrate with PayFast payment gateway
-      // This is a placeholder for future PayFast integration
-      console.log('Selected plan:', selectedPlan);
+      // Close modal after showing message
+      setTimeout(() => {
+        onClose();
+      }, 2000);
       
     } catch (error) {
       console.error('Error selecting plan:', error);
