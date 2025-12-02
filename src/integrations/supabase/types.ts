@@ -297,6 +297,42 @@ export type Database = {
           },
         ]
       }
+      api_usage_log: {
+        Row: {
+          created_at: string | null
+          fallback_used: boolean | null
+          id: string
+          model_version: string
+          response_time_ms: number
+          service: string
+          success: boolean
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          fallback_used?: boolean | null
+          id?: string
+          model_version: string
+          response_time_ms: number
+          service: string
+          success: boolean
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          fallback_used?: boolean | null
+          id?: string
+          model_version?: string
+          response_time_ms?: number
+          service?: string
+          success?: boolean
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       bookmarks: {
         Row: {
           chapter_id: string | null
@@ -1007,6 +1043,39 @@ export type Database = {
         }
         Relationships: []
       }
+      grading_log: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          id: string
+          is_correct: boolean
+          question_text: string
+          score: number
+          student_answer: string
+          user_id: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          is_correct: boolean
+          question_text: string
+          score: number
+          student_answer: string
+          user_id?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          is_correct?: boolean
+          question_text?: string
+          score?: number
+          student_answer?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       group_chat_messages: {
         Row: {
           attachment_url: string | null
@@ -1633,6 +1702,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rate_limit_log: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          id: string
+          limit_hit: number
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          id?: string
+          limit_hit: number
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          limit_hit?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      rate_limits: {
+        Row: {
+          action_type: string
+          count: number
+          created_at: string | null
+          id: string
+          reset_time: string
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          count?: number
+          created_at?: string | null
+          id?: string
+          reset_time: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          count?: number
+          created_at?: string | null
+          id?: string
+          reset_time?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       reply_upvotes: {
         Row: {

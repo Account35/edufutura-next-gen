@@ -185,7 +185,7 @@ async function logApiUsage(metrics: ResponseMetrics) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    await supabase.from('api_usage_log').insert({
+    await (supabase as any).from('api_usage_log').insert({
       user_id: user.id,
       service: metrics.fallback_used ? 'openai' : 'cerebras',
       model_version: metrics.model_version,
@@ -200,7 +200,7 @@ async function logApiUsage(metrics: ResponseMetrics) {
 }
 
 export async function getUsageStats(): Promise<{
-  totalCost: number;
+  totalCost: string;
   cerebrasCount: number;
   openaiCount: number;
   avgResponseTime: number;
@@ -208,7 +208,7 @@ export async function getUsageStats(): Promise<{
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('api_usage_log')
     .select('*')
     .eq('user_id', user.id)
@@ -216,11 +216,11 @@ export async function getUsageStats(): Promise<{
 
   if (error) throw error;
 
-  const stats = data.reduce((acc, log) => {
+  const stats = (data || []).reduce((acc: any, log: any) => {
     if (log.service === 'cerebras') acc.cerebrasCount++;
     if (log.service === 'openai') acc.openaiCount++;
-    acc.totalResponseTime += log.response_time_ms;
-    acc.totalTokens += log.tokens_used;
+    acc.totalResponseTime += log.response_time_ms || 0;
+    acc.totalTokens += log.tokens_used || 0;
     return acc;
   }, {
     cerebrasCount: 0,
@@ -230,7 +230,7 @@ export async function getUsageStats(): Promise<{
   });
 
   return {
-    totalCost: (stats.totalTokens * 0.0001).toFixed(2), // Estimated cost
+    totalCost: (stats.totalTokens * 0.0001).toFixed(2),
     cerebrasCount: stats.cerebrasCount,
     openaiCount: stats.openaiCount,
     avgResponseTime: Math.round(stats.totalResponseTime / (data.length || 1)),
