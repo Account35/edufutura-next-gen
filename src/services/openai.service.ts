@@ -109,7 +109,7 @@ export async function gradeShortAnswer(
 
   // Log grading decision for analytics
   try {
-    await supabase.from('grading_log').insert({
+    await (supabase as any).from('grading_log').insert({
       question_text: questionText,
       student_answer: studentAnswer,
       score: result.score,

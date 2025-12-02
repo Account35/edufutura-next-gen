@@ -49,7 +49,7 @@ export async function checkRateLimit(
 
     // Get current usage
     const resetTime = getResetTime();
-    const { data: usageData, error: usageError } = await supabase
+    const { data: usageData, error: usageError } = await (supabase as any)
       .from('rate_limits')
       .select('*')
       .eq('user_id', userId)
@@ -63,7 +63,7 @@ export async function checkRateLimit(
 
     if (!usageData) {
       // Create new rate limit record
-      await supabase.from('rate_limits').insert({
+      await (supabase as any).from('rate_limits').insert({
         user_id: userId,
         action_type: actionType,
         count: 0,
@@ -71,7 +71,7 @@ export async function checkRateLimit(
       });
     } else if (new Date(usageData.reset_time) < new Date()) {
       // Reset expired limit
-      await supabase
+      await (supabase as any)
         .from('rate_limits')
         .update({
           count: 0,
@@ -117,7 +117,7 @@ export async function incrementRateLimit(
   actionType: keyof RateLimitConfig
 ): Promise<void> {
   try {
-    const { data: usageData } = await supabase
+    const { data: usageData } = await (supabase as any)
       .from('rate_limits')
       .select('*')
       .eq('user_id', userId)
@@ -126,7 +126,7 @@ export async function incrementRateLimit(
       .single();
 
     if (usageData) {
-      await supabase
+      await (supabase as any)
         .from('rate_limits')
         .update({ count: usageData.count + 1 })
         .eq('id', usageData.id);
@@ -154,7 +154,7 @@ async function logRateLimitViolation(
   limit: number
 ): Promise<void> {
   try {
-    await supabase.from('rate_limit_log').insert({
+    await (supabase as any).from('rate_limit_log').insert({
       user_id: userId,
       action_type: actionType,
       limit_hit: limit,
