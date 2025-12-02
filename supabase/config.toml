@@ -32,3 +32,12 @@ verify_jwt = false
 
 [functions.moderate-content]
 verify_jwt = true
+
+[functions.process-background-jobs]
+verify_jwt = false
+
+[functions.aggregate-daily-stats]
+verify_jwt = false
+
+[functions.recalculate-reputation]
+verify_jwt = false

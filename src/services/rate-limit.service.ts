@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { RateLimitError } from '@/lib/errors';
 
 export interface RateLimitConfig {
   quiz_generation: { free: number; premium: number };
@@ -88,12 +89,7 @@ export async function checkRateLimit(
       // Log violation
       await logRateLimitViolation(userId, actionType, limit);
 
-      return {
-        allowed: false,
-        remaining: 0,
-        resetTime,
-        message: `Daily limit reached (${limit}/${limit})`,
-      };
+      throw new RateLimitError(actionType, limit, resetTime);
     }
 
     return {

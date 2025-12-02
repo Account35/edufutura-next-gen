@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { ExternalServiceError } from '@/lib/errors';
 
 export interface QuickResponseOptions {
   prompt: string;
@@ -180,7 +181,7 @@ export async function* streamResponse(
   }
 }
 
-async function logApiUsage(metrics: ResponseMetrics) {
+export async function logApiUsage(metrics: ResponseMetrics) {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
