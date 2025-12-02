@@ -1,4 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
+import { ExternalServiceError } from '@/lib/errors';
+import { logApiUsage } from './cerebras.service';
 
 export interface QuizQuestion {
   question_number: number;
