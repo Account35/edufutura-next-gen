@@ -2614,7 +2614,59 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      community_activity_summary: {
+        Row: {
+          active_users: number | null
+          activity_date: string | null
+          messages_sent: number | null
+          posts_created: number | null
+          resources_shared: number | null
+        }
+        Relationships: []
+      }
+      quiz_statistics: {
+        Row: {
+          average_score: number | null
+          fastest_completion: number | null
+          last_attempted: string | null
+          median_score: number | null
+          pass_count: number | null
+          quiz_id: string | null
+          slowest_completion: number | null
+          total_attempts: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_performance_summary: {
+        Row: {
+          average_score: number | null
+          best_score: number | null
+          first_attempt: string | null
+          last_attempt: string | null
+          quiz_id: string | null
+          quizzes_passed: number | null
+          quizzes_taken: number | null
+          total_study_time: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_reputation_level: { Args: { score: number }; Returns: string }
@@ -2626,6 +2678,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      refresh_materialized_views: { Args: never; Returns: undefined }
       update_user_reputation: {
         Args: {
           p_change_type: string
