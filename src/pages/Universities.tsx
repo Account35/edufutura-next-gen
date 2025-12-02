@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Building2, MapPin, Search, BookmarkPlus, Bookmark, Wifi, WifiOff } from 'lucide-react';
+import { Building2, MapPin, Search, BookmarkPlus, Bookmark, Wifi, WifiOff, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { MobileInstitutionFilters } from '@/components/career/MobileInstitutionFilters';
 import { SwipeableCard } from '@/components/career/SwipeableCard';
@@ -276,6 +276,15 @@ export default function Universities() {
   return (
     <DashboardLayout>
       <div className="space-y-4 md:space-y-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+
         {/* Offline Indicator */}
         {!isOnline && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center gap-2">

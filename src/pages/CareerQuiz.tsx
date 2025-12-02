@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Sparkles, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Sparkles, ArrowRight, ArrowLeft, CheckCircle, Home } from 'lucide-react';
 
 interface QuizQuestion {
   id: number;
@@ -141,6 +141,15 @@ export default function CareerQuiz() {
     return (
       <div className="min-h-screen bg-background p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/dashboard')}
+            className="mb-4"
+          >
+            <Home className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+
           <Card>
             <CardHeader className="text-center">
               <div className="mx-auto w-16 h-16 bg-secondary/20 rounded-full flex items-center justify-center mb-4">
@@ -213,6 +222,15 @@ export default function CareerQuiz() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-2xl mx-auto">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3 mb-4">

@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, TrendingUp, MapPin, Calculator } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DollarSign, TrendingUp, MapPin, Calculator, ArrowLeft } from 'lucide-react';
 
 const provinces = [
   { name: 'Gauteng', costOfLiving: 1.0 },
@@ -48,6 +50,7 @@ const calculateTax = (annualSalary: number): number => {
 };
 
 export default function SalaryCalculator() {
+  const navigate = useNavigate();
   const [baseSalary, setBaseSalary] = useState<number>(300000);
   const [experienceLevel, setExperienceLevel] = useState<number>(0);
   const [province, setProvince] = useState<string>('Gauteng');
@@ -66,6 +69,15 @@ export default function SalaryCalculator() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+
         <div>
           <h1 className="text-4xl font-serif font-bold text-primary mb-2">Salary Calculator</h1>
           <p className="text-muted-foreground">

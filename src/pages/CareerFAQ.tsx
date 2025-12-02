@@ -1,7 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
-import { HelpCircle, GraduationCap, Briefcase, DollarSign, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { HelpCircle, GraduationCap, Briefcase, DollarSign, MapPin, ArrowLeft } from 'lucide-react';
 
 const faqs = [
   {
@@ -71,9 +73,20 @@ const faqs = [
 ];
 
 export default function CareerFAQ() {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+
         <div>
           <h1 className="text-4xl font-serif font-bold text-primary mb-2">Career Guidance FAQ</h1>
           <p className="text-muted-foreground">
