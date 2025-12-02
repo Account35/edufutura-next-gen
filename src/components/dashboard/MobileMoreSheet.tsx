@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Bookmark, Trophy, FileText, LogOut } from 'lucide-react';
+import { X, Bookmark, Trophy, FileText, LogOut, Compass, GraduationCap, HelpCircle, DollarSign, Building2, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -42,7 +42,14 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
     { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', action: () => { navigate('/bookmarks'); onClose(); } },
     { id: 'reports', icon: FileText, label: 'Reports', action: () => { navigate('/reports'); onClose(); } },
     { id: 'certificates', icon: Trophy, label: 'Certificates', action: () => { navigate('/certificates'); onClose(); } },
-    { id: 'logout', icon: LogOut, label: 'Logout', action: handleSignOut, destructive: true },
+  ];
+
+  const careerGuidanceItems: MenuItem[] = [
+    { id: 'career-quiz', icon: Sparkles, label: 'Career Quiz', action: () => { navigate('/career-guidance/quiz'); onClose(); } },
+    { id: 'universities', icon: Building2, label: 'Universities', action: () => { navigate('/career-guidance/universities'); onClose(); } },
+    { id: 'salary-calculator', icon: DollarSign, label: 'Salary Calculator', action: () => { navigate('/career-guidance/salary-calculator'); onClose(); } },
+    { id: 'career-resources', icon: Compass, label: 'Career Resources', action: () => { navigate('/career-guidance/resources'); onClose(); } },
+    { id: 'career-faq', icon: HelpCircle, label: 'Career FAQ', action: () => { navigate('/career-guidance/faq'); onClose(); } },
   ];
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -133,25 +140,54 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
 
         {/* Content - scrollable */}
         <div className="overflow-y-auto flex-1 px-4 py-4">
-          <div className="space-y-2">
+          {/* Main Navigation */}
+          <div className="space-y-2 mb-6">
             {mobileNavItems.map((item) => {
               const Icon = item.icon;
               return (
                 <button
                   key={item.id}
                   onClick={item.action}
-                  className={cn(
-                    'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
-                    item.destructive 
-                      ? 'hover:bg-red-50 text-red-600' 
-                      : 'hover:bg-gray-50 text-gray-700'
-                  )}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-gray-50 text-gray-700"
                 >
                   <Icon className="h-5 w-5 flex-shrink-0" />
                   <span className="flex-1 text-left font-medium">{item.label}</span>
                 </button>
               );
             })}
+          </div>
+
+          {/* Career Guidance Section */}
+          <div className="mb-6">
+            <h3 className="px-4 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Career Guidance
+            </h3>
+            <div className="space-y-2">
+              {careerGuidanceItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={item.action}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-secondary/10 text-gray-700"
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="flex-1 text-left font-medium">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Logout at bottom */}
+          <div className="pt-4 border-t border-gray-100">
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-red-50 text-red-600"
+            >
+              <LogOut className="h-5 w-5 flex-shrink-0" />
+              <span className="flex-1 text-left font-medium">Logout</span>
+            </button>
           </div>
         </div>
       </div>

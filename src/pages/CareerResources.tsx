@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ExternalLink, BookOpen, Video, FileText, GraduationCap, Search } from 'lucide-react';
+import { ExternalLink, BookOpen, Video, FileText, GraduationCap, Search, ArrowLeft } from 'lucide-react';
 
 const resources = [
   {
@@ -96,6 +97,7 @@ const categoryLabels = {
 };
 
 export default function CareerResources() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
 
@@ -113,6 +115,15 @@ export default function CareerResources() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+
         <div>
           <h1 className="text-4xl font-serif font-bold text-primary mb-2">Career Resources</h1>
           <p className="text-muted-foreground">
