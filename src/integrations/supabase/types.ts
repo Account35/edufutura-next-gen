@@ -297,6 +297,42 @@ export type Database = {
           },
         ]
       }
+      api_call_log: {
+        Row: {
+          duration_ms: number
+          endpoint: string
+          error_message: string | null
+          id: string
+          method: string
+          parameters: Json | null
+          status: number
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          duration_ms: number
+          endpoint: string
+          error_message?: string | null
+          id?: string
+          method: string
+          parameters?: Json | null
+          status: number
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          duration_ms?: number
+          endpoint?: string
+          error_message?: string | null
+          id?: string
+          method?: string
+          parameters?: Json | null
+          status?: number
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       api_usage_log: {
         Row: {
           created_at: string | null
@@ -330,6 +366,51 @@ export type Database = {
           success?: boolean
           tokens_used?: number | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      background_jobs: {
+        Row: {
+          attempts_count: number
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          job_type: string
+          max_attempts: number
+          payload: Json | null
+          scheduled_at: string
+          started_at: string | null
+          status: string
+          worker_id: string | null
+        }
+        Insert: {
+          attempts_count?: number
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_type: string
+          max_attempts?: number
+          payload?: Json | null
+          scheduled_at?: string
+          started_at?: string | null
+          status?: string
+          worker_id?: string | null
+        }
+        Update: {
+          attempts_count?: number
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          max_attempts?: number
+          payload?: Json | null
+          scheduled_at?: string
+          started_at?: string | null
+          status?: string
+          worker_id?: string | null
         }
         Relationships: []
       }
@@ -589,6 +670,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      certificate_queue: {
+        Row: {
+          certificate_url: string | null
+          error_message: string | null
+          id: string
+          processed_at: string | null
+          queued_at: string | null
+          status: string
+          subject_name: string
+          user_id: string
+        }
+        Insert: {
+          certificate_url?: string | null
+          error_message?: string | null
+          id?: string
+          processed_at?: string | null
+          queued_at?: string | null
+          status?: string
+          subject_name: string
+          user_id: string
+        }
+        Update: {
+          certificate_url?: string | null
+          error_message?: string | null
+          id?: string
+          processed_at?: string | null
+          queued_at?: string | null
+          status?: string
+          subject_name?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       chapter_prerequisites: {
         Row: {
@@ -887,6 +1001,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      daily_content_metrics: {
+        Row: {
+          avg_post_upvotes: number | null
+          avg_resource_rating: number | null
+          created_at: string | null
+          engagement_rate: number | null
+          forum_posts_created: number | null
+          group_messages_sent: number | null
+          id: string
+          metric_date: string
+          moderation_actions: number | null
+          resources_shared: number | null
+        }
+        Insert: {
+          avg_post_upvotes?: number | null
+          avg_resource_rating?: number | null
+          created_at?: string | null
+          engagement_rate?: number | null
+          forum_posts_created?: number | null
+          group_messages_sent?: number | null
+          id?: string
+          metric_date: string
+          moderation_actions?: number | null
+          resources_shared?: number | null
+        }
+        Update: {
+          avg_post_upvotes?: number | null
+          avg_resource_rating?: number | null
+          created_at?: string | null
+          engagement_rate?: number | null
+          forum_posts_created?: number | null
+          group_messages_sent?: number | null
+          id?: string
+          metric_date?: string
+          moderation_actions?: number | null
+          resources_shared?: number | null
+        }
+        Relationships: []
       }
       event_attendees: {
         Row: {
@@ -1309,6 +1462,33 @@ export type Database = {
           },
         ]
       }
+      hourly_active_users: {
+        Row: {
+          account_type: string | null
+          active_count: number
+          created_at: string | null
+          grade_level: number | null
+          hour_timestamp: string
+          id: string
+        }
+        Insert: {
+          account_type?: string | null
+          active_count?: number
+          created_at?: string | null
+          grade_level?: number | null
+          hour_timestamp: string
+          id?: string
+        }
+        Update: {
+          account_type?: string | null
+          active_count?: number
+          created_at?: string | null
+          grade_level?: number | null
+          hour_timestamp?: string
+          id?: string
+        }
+        Relationships: []
+      }
       institution_recommendations: {
         Row: {
           admission_probability: string | null
@@ -1361,6 +1541,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notification_digests: {
+        Row: {
+          clicked_at: string | null
+          created_at: string | null
+          digest_type: string
+          id: string
+          notification_ids: string[]
+          opened_at: string | null
+          sent_at: string | null
+          user_id: string
+        }
+        Insert: {
+          clicked_at?: string | null
+          created_at?: string | null
+          digest_type: string
+          id?: string
+          notification_ids: string[]
+          opened_at?: string | null
+          sent_at?: string | null
+          user_id: string
+        }
+        Update: {
+          clicked_at?: string | null
+          created_at?: string | null
+          digest_type?: string
+          id?: string
+          notification_ids?: string[]
+          opened_at?: string | null
+          sent_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      performance_metrics: {
+        Row: {
+          device_type: string
+          id: string
+          metric_name: string
+          page: string
+          timestamp: string | null
+          user_id: string | null
+          value_ms: number
+        }
+        Insert: {
+          device_type: string
+          id?: string
+          metric_name: string
+          page: string
+          timestamp?: string | null
+          user_id?: string | null
+          value_ms: number
+        }
+        Update: {
+          device_type?: string
+          id?: string
+          metric_name?: string
+          page?: string
+          timestamp?: string | null
+          user_id?: string | null
+          value_ms?: number
+        }
+        Relationships: []
       }
       post_replies: {
         Row: {
@@ -1581,6 +1824,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      quiz_performance_history: {
+        Row: {
+          average_score: number | null
+          created_at: string | null
+          id: string
+          quizzes_completed: number | null
+          snapshot_date: string
+          subject_name: string
+          total_time_minutes: number | null
+          user_id: string
+        }
+        Insert: {
+          average_score?: number | null
+          created_at?: string | null
+          id?: string
+          quizzes_completed?: number | null
+          snapshot_date: string
+          subject_name: string
+          total_time_minutes?: number | null
+          user_id: string
+        }
+        Update: {
+          average_score?: number | null
+          created_at?: string | null
+          id?: string
+          quizzes_completed?: number | null
+          snapshot_date?: string
+          subject_name?: string
+          total_time_minutes?: number | null
+          user_id?: string
+        }
+        Relationships: []
       }
       quiz_questions: {
         Row: {
@@ -2260,6 +2536,39 @@ export type Database = {
           rankings?: Json | null
           student_support?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_actions: {
+        Row: {
+          action_data: Json | null
+          action_type: string
+          browser: string | null
+          device_type: string | null
+          id: string
+          session_id: string | null
+          timestamp: string | null
+          user_id: string
+        }
+        Insert: {
+          action_data?: Json | null
+          action_type: string
+          browser?: string | null
+          device_type?: string | null
+          id?: string
+          session_id?: string | null
+          timestamp?: string | null
+          user_id: string
+        }
+        Update: {
+          action_data?: Json | null
+          action_type?: string
+          browser?: string | null
+          device_type?: string | null
+          id?: string
+          session_id?: string | null
+          timestamp?: string | null
+          user_id?: string
         }
         Relationships: []
       }
