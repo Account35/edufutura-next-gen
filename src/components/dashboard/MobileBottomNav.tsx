@@ -54,7 +54,7 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
   return (
     <>
       {/* Desktop Side Navigation */}
-      <nav className="hidden lg:flex fixed left-0 top-0 bottom-0 w-20 bg-white border-r border-border z-50 flex-col items-center py-6 gap-6">
+      <nav className="hidden lg:flex fixed left-0 top-0 bottom-0 w-20 bg-white border-r border-border z-50 flex-col items-center py-6 gap-4">
         {allNavItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
@@ -64,16 +64,16 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
               key={item.id}
               onClick={() => navigate(item.path)}
               className={cn(
-                'flex flex-col items-center gap-1 p-2 rounded-lg min-h-[60px] min-w-[60px] transition-all duration-200',
+                'flex flex-col items-center gap-1 p-2 rounded-lg min-h-[56px] min-w-[56px] transition-all duration-200',
                 active 
                   ? 'bg-secondary/10 text-secondary' 
                   : 'text-gray-600 hover:bg-gray-100 hover:text-foreground'
               )}
               aria-label={item.label}
             >
-              <Icon className="h-6 w-6" />
+              <Icon className="h-5 w-5" />
               <span className={cn(
-                'text-xs font-medium text-center',
+                'text-[10px] font-medium text-center',
                 active && 'font-semibold'
               )}>
                 {item.label}
@@ -82,14 +82,24 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
           );
         })}
 
+        {/* More Menu Button for desktop */}
+        <button
+          onClick={onMoreClick}
+          className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[56px] min-w-[56px] text-gray-600 hover:bg-gray-100 hover:text-foreground transition-all duration-200"
+          aria-label="More Options"
+        >
+          <Menu className="h-5 w-5" />
+          <span className="text-[10px] font-medium">More</span>
+        </button>
+
         {/* Logout Button at bottom */}
         <button
           onClick={handleSignOut}
-          className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[60px] min-w-[60px] text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 mt-auto"
+          className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[56px] min-w-[56px] text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 mt-auto"
           aria-label="Logout"
         >
-          <LogOut className="h-6 w-6" />
-          <span className="text-xs font-medium">Logout</span>
+          <LogOut className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Logout</span>
         </button>
       </nav>
 
