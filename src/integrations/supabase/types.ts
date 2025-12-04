@@ -2857,6 +2857,7 @@ export type Database = {
           id: string
           last_dashboard_visit: string | null
           last_login: string | null
+          last_login_at: string | null
           last_payment_date: string | null
           last_study_date: string | null
           location_lat: number | null
@@ -2904,6 +2905,7 @@ export type Database = {
           id: string
           last_dashboard_visit?: string | null
           last_login?: string | null
+          last_login_at?: string | null
           last_payment_date?: string | null
           last_study_date?: string | null
           location_lat?: number | null
@@ -2951,6 +2953,7 @@ export type Database = {
           id?: string
           last_dashboard_visit?: string | null
           last_login?: string | null
+          last_login_at?: string | null
           last_payment_date?: string | null
           last_study_date?: string | null
           location_lat?: number | null
