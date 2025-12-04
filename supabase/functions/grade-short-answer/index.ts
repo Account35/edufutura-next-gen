@@ -36,12 +36,47 @@ serve(async (req) => {
       throw new Error('Question not found');
     }
 
+    // Fetch the grading template
+    const { data: templateData } = await supabaseClient
+      .rpc('get_active_template', { p_template_name: 'grading_short_answer' });
+
+    const template = templateData?.[0];
+
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     if (!OPENAI_API_KEY) {
       throw new Error('OpenAI API key not configured');
     }
 
-    const gradingPrompt = `You are grading a South African CAPS curriculum assessment for ${question.quizzes?.subject_name || 'a subject'}.
+    // Build prompt from template or use default
+    let systemPrompt: string;
+    let gradingPrompt: string;
+    let temperature = 0.2;
+    let maxTokens = 800;
+
+    if (template) {
+      systemPrompt = template.system_context || '';
+      gradingPrompt = template.prompt_text;
+      temperature = Number(template.temperature) || 0.2;
+      maxTokens = template.max_tokens || 800;
+
+      // Interpolate variables
+      const variables: Record<string, string> = {
+        grade_level: '10', // Default, could be fetched from user profile
+        subject_name: question.quizzes?.subject_name || 'General',
+        question_text: question.question_text,
+        correct_answer_rubric: question.correct_answer,
+        student_answer: student_answer,
+        max_points: String(question.points || 1),
+      };
+
+      for (const [key, value] of Object.entries(variables)) {
+        gradingPrompt = gradingPrompt.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+        systemPrompt = systemPrompt.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+      }
+    } else {
+      // Fallback to inline prompt
+      systemPrompt = 'You are an expert educator providing fair and consistent grading. Always respond with valid JSON.';
+      gradingPrompt = `You are grading a South African CAPS curriculum assessment for ${question.quizzes?.subject_name || 'a subject'}.
 
 Question: ${question.question_text}
 Expected Answer: ${question.correct_answer}
@@ -63,7 +98,9 @@ Return ONLY valid JSON in this format:
   "is_correct": boolean,
   "confidence": number (0-1)
 }`;
+    }
 
+    const startTime = Date.now();
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -71,13 +108,13 @@ Return ONLY valid JSON in this format:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: template?.model_name || 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'You are an expert educator providing fair and consistent grading. Always respond with valid JSON.' },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: gradingPrompt }
         ],
-        temperature: 0.2,
-        max_tokens: 800,
+        temperature,
+        max_tokens: maxTokens,
       }),
     });
 
@@ -88,7 +125,9 @@ Return ONLY valid JSON in this format:
     }
 
     const openaiData = await openaiResponse.json();
+    const responseTime = Date.now() - startTime;
     const aiResponse = openaiData.choices[0].message.content;
+    const tokensUsed = openaiData.usage?.total_tokens || 0;
     
     let gradingResult;
     try {
@@ -100,13 +139,37 @@ Return ONLY valid JSON in this format:
       }
     } catch (e) {
       console.error('Failed to parse grading response:', aiResponse);
+      
+      // Log failure for optimization
+      if (template) {
+        await supabaseClient.from('failed_ai_responses').insert({
+          template_name: 'grading_short_answer',
+          template_version: template.template_version,
+          model_name: template.model_name,
+          input_data: { question_id, student_answer },
+          ai_response: aiResponse,
+          failure_reason: 'Invalid JSON format in grading response',
+        });
+      }
+      
       throw new Error('Invalid grading format');
     }
 
     // Validate score within range
-    const score = Math.max(0, Math.min(question.points || 1, gradingResult.score || 0));
-    const confidence = gradingResult.confidence || 0.5;
+    const score = Math.max(0, Math.min(question.points || 1, gradingResult.score || gradingResult.exact_score || 0));
+    const confidence = gradingResult.confidence || gradingResult.grading_confidence || 0.5;
     const needsReview = confidence < 0.6;
+
+    // Update template metrics
+    if (template) {
+      await supabaseClient.rpc('update_template_metrics', {
+        p_template_name: 'grading_short_answer',
+        p_template_version: template.template_version,
+        p_success: true,
+        p_rating: null,
+        p_cost: tokensUsed * 0.00001,
+      });
+    }
 
     // Update attempt with grading results
     if (attempt_id) {
@@ -122,7 +185,7 @@ Return ONLY valid JSON in this format:
           ...(answers[question_id] || {}),
           student_answer,
           ai_score: score,
-          ai_feedback: gradingResult.feedback,
+          ai_feedback: gradingResult.feedback || gradingResult.detailed_feedback,
           graded_at: new Date().toISOString(),
           needs_review: needsReview,
         };
@@ -139,22 +202,27 @@ Return ONLY valid JSON in this format:
       .from('ai_feedback')
       .insert({
         user_id: user.id,
-        message_id: question_id, // Using question_id as reference
+        message_id: question_id,
         rating: needsReview ? 3 : 5,
         feedback_text: `Auto-graded: ${score}/${question.points}. Confidence: ${confidence.toFixed(2)}`,
       })
-      .then(() => {}, () => {}); // Ignore errors in audit logging
+      .then(() => {}, () => {});
 
     return new Response(
       JSON.stringify({
         success: true,
         score,
-        feedback: gradingResult.feedback,
+        feedback: gradingResult.feedback || gradingResult.detailed_feedback,
         concepts_demonstrated: gradingResult.concepts_demonstrated || [],
         concepts_missing: gradingResult.concepts_missing || [],
         is_correct: gradingResult.is_correct || false,
         confidence,
         needs_review: needsReview,
+        metadata: {
+          response_time_ms: responseTime,
+          tokens_used: tokensUsed,
+          template_version: template?.template_version || 0,
+        }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

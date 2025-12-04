@@ -18,9 +18,15 @@ serve(async (req) => {
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
 
-    const { content, contentType, contentId, userId } = await req.json();
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    const { content, contentType, contentId, userId, contextMetadata } = await req.json();
 
+    // Fetch the moderation template
+    const { data: templateData } = await supabaseClient
+      .rpc('get_active_template', { p_template_name: 'content_moderation_community' });
+
+    const template = templateData?.[0];
+    
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     if (!OPENAI_API_KEY) {
       console.error('OPENAI_API_KEY not configured');
       return new Response(
@@ -33,8 +39,32 @@ serve(async (req) => {
       );
     }
 
-    // Call OpenAI with moderation prompt
-    const moderationPrompt = `You are a content moderator for an educational platform serving South African high school students aged 11-18. Analyze the following content for:
+    // Build prompt from template or use default
+    let systemPrompt: string;
+    let moderationPrompt: string;
+    let temperature = 0.1;
+    let maxTokens = 600;
+
+    if (template) {
+      systemPrompt = template.system_context || '';
+      moderationPrompt = template.prompt_text;
+      temperature = Number(template.temperature) || 0.1;
+      maxTokens = template.max_tokens || 600;
+
+      // Interpolate variables
+      const variables: Record<string, string> = {
+        content_type: contentType || 'unknown',
+        content_text: content,
+        context_metadata: JSON.stringify(contextMetadata || {}),
+      };
+
+      for (const [key, value] of Object.entries(variables)) {
+        moderationPrompt = moderationPrompt.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+      }
+    } else {
+      // Fallback to inline prompt
+      systemPrompt = 'You are a content moderation AI. Always respond with valid JSON.';
+      moderationPrompt = `You are a content moderator for an educational platform serving South African high school students aged 11-18. Analyze the following content for:
 1) Profanity and inappropriate language
 2) Personal information (emails, phone numbers, physical addresses)
 3) Bullying, harassment, or threats
@@ -47,7 +77,9 @@ Content: ${content}
 
 Respond ONLY with valid JSON in this exact format:
 {"approved": boolean, "issues": ["issue1", "issue2"], "confidence": 0.95, "suggested_action": "approve|flag|remove"}`;
+    }
 
+    const startTime = Date.now();
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -55,13 +87,13 @@ Respond ONLY with valid JSON in this exact format:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: template?.model_name || 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'You are a content moderation AI. Always respond with valid JSON.' },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: moderationPrompt }
         ],
-        temperature: 0.3,
-        max_tokens: 500,
+        temperature,
+        max_tokens: maxTokens,
       }),
     });
 
@@ -71,11 +103,18 @@ Respond ONLY with valid JSON in this exact format:
     }
 
     const openaiData = await openaiResponse.json();
+    const responseTime = Date.now() - startTime;
     const aiResponse = openaiData.choices[0].message.content;
+    const tokensUsed = openaiData.usage?.total_tokens || 0;
     
     let moderationResult;
     try {
-      moderationResult = JSON.parse(aiResponse);
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        moderationResult = JSON.parse(jsonMatch[0]);
+      } else {
+        moderationResult = JSON.parse(aiResponse);
+      }
     } catch (e) {
       console.error('Failed to parse AI response:', aiResponse);
       moderationResult = {
@@ -86,12 +125,29 @@ Respond ONLY with valid JSON in this exact format:
       };
     }
 
+    // Extract issues from different possible formats
+    const issues = moderationResult.issues || 
+                   moderationResult.issues_found?.map((i: any) => i.specific_issue || i) || 
+                   [];
+    const confidence = moderationResult.confidence || moderationResult.confidence_score || 0.5;
+
     // Determine moderation decision based on confidence and issues
     let moderationDecision = 'approved';
-    if (moderationResult.confidence > 0.9 && moderationResult.issues.length > 0) {
+    if (confidence > 0.9 && issues.length > 0) {
       moderationDecision = 'removed';
-    } else if (moderationResult.confidence >= 0.6 && moderationResult.issues.length > 0) {
+    } else if (confidence >= 0.6 && issues.length > 0) {
       moderationDecision = 'flagged';
+    }
+
+    // Update template metrics
+    if (template) {
+      await supabaseClient.rpc('update_template_metrics', {
+        p_template_name: 'content_moderation_community',
+        p_template_version: template.template_version,
+        p_success: true,
+        p_rating: null,
+        p_cost: tokensUsed * 0.00001,
+      });
     }
 
     // Log moderation result
@@ -101,8 +157,8 @@ Respond ONLY with valid JSON in this exact format:
         content_type: contentType,
         content_id: contentId,
         user_id: userId,
-        ai_confidence: moderationResult.confidence,
-        issues_detected: moderationResult.issues,
+        ai_confidence: confidence,
+        issues_detected: issues,
         moderation_decision: moderationDecision,
         reviewed: false,
       });
@@ -115,8 +171,14 @@ Respond ONLY with valid JSON in this exact format:
       JSON.stringify({
         approved: moderationResult.approved && moderationDecision === 'approved',
         moderation_decision: moderationDecision,
-        issues: moderationResult.issues,
-        confidence: moderationResult.confidence,
+        issues: issues,
+        confidence: confidence,
+        severity: moderationResult.overall_severity || (issues.length > 0 ? 'medium' : 'low'),
+        metadata: {
+          response_time_ms: responseTime,
+          tokens_used: tokensUsed,
+          template_version: template?.template_version || 0,
+        }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
