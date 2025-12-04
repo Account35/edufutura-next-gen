@@ -214,6 +214,46 @@ Access job monitoring at `/admin/jobs` (admin only):
 - `VITE_SUPABASE_PUBLISHABLE_KEY` - Auto-provided
 - `VITE_SUPABASE_PROJECT_ID` - Auto-provided
 
+## Security Implementation
+
+### Security Tables
+- `security_log` - Tracks all security events (login failures, admin actions, suspicious activity)
+- `failed_login_attempts` - Records failed login attempts for brute force detection
+- `account_lockouts` - Manages temporary account lockouts (5 failed attempts = 1 hour lockout)
+- `data_export_requests` - POPIA compliance: data export requests
+- `data_deletion_requests` - POPIA compliance: right to be forgotten requests
+
+### Security Features
+1. **Account Lockout Protection**
+   - Tracks failed login attempts per email
+   - Locks account after 5 failed attempts within 1 hour
+   - Auto-unlocks after 1 hour cooldown
+   - Clear warnings shown to users (remaining attempts)
+
+2. **POPIA Compliance**
+   - Data export request system
+   - Data deletion request system
+   - Privacy settings in Settings > More tab
+   - All requests logged with timestamps and status
+
+3. **Security Monitoring**
+   - All security events logged to `security_log` table
+   - Admin-only access to security logs via RLS
+   - Suspicious activity detection (configurable thresholds)
+
+4. **Security Headers**
+   - Shared security headers utility for Edge Functions
+   - CORS configuration
+   - XSS protection headers
+   - Content Security Policy
+   - Rate limiting utilities
+
+### Security Files
+- `src/services/security.service.ts` - Security utilities
+- `src/hooks/useSecurityMonitoring.tsx` - React hook for security features
+- `src/components/settings/PrivacyDataSection.tsx` - POPIA compliance UI
+- `supabase/functions/_shared/security-headers.ts` - Edge Function security headers
+
 ## Completion Status
 
 - [x] Edge Functions deployed (18 total)
@@ -226,6 +266,10 @@ Access job monitoring at `/admin/jobs` (admin only):
 - [x] Activity feed hooks
 - [x] Performance stats hooks
 - [x] Content moderation utilities
+- [x] Security tables (security_log, failed_login_attempts, etc.)
+- [x] Account lockout protection
+- [x] POPIA compliance (data export/deletion)
+- [x] Security headers utility
 - [ ] Enable pg_cron extension (run SQL above)
 - [ ] Schedule cron jobs (run SQL above)
 - [ ] Configure external monitoring (Sentry optional)

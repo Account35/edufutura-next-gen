@@ -5,9 +5,15 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  checkAccountLockout, 
+  trackFailedLogin, 
+  clearFailedAttempts 
+} from "@/services/security.service";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -24,6 +30,8 @@ interface LoginFormProps {
 export const LoginForm = ({ onSuccess, onSwitchToRegister }: LoginFormProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [lockoutInfo, setLockoutInfo] = useState<{ isLocked: boolean; unlockAt?: Date } | null>(null);
+  const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
   const { toast } = useToast();
 
   const {
@@ -38,17 +46,44 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister }: LoginFormProps) => 
     setIsLoading(true);
     
     try {
+      // Check if account is locked
+      const lockStatus = await checkAccountLockout(data.email);
+      if (lockStatus.isLocked) {
+        setLockoutInfo(lockStatus);
+        toast({
+          variant: "destructive",
+          title: "Account temporarily locked",
+          description: `Too many failed attempts. Please try again later.`
+        });
+        return;
+      }
+
       const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password
       });
 
       if (error) {
-        if (error.message.includes("Invalid login credentials")) {
+        // Track failed login attempt
+        const { isLocked, remainingAttempts: remaining } = await trackFailedLogin(
+          data.email, 
+          error.message
+        );
+        
+        setRemainingAttempts(remaining);
+        
+        if (isLocked) {
+          setLockoutInfo({ isLocked: true, unlockAt: new Date(Date.now() + 60 * 60 * 1000) });
+          toast({
+            variant: "destructive",
+            title: "Account locked",
+            description: "Too many failed attempts. Your account is locked for 1 hour."
+          });
+        } else if (error.message.includes("Invalid login credentials")) {
           toast({
             variant: "destructive",
             title: "Login failed",
-            description: "Invalid email or password. Please try again."
+            description: `Invalid email or password. ${remaining} attempts remaining.`
           });
         } else {
           toast({
@@ -59,6 +94,11 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister }: LoginFormProps) => 
         }
         return;
       }
+
+      // Clear failed attempts on successful login
+      await clearFailedAttempts(data.email);
+      setRemainingAttempts(null);
+      setLockoutInfo(null);
 
       // Update last_login timestamp
       if (authData.user) {
@@ -87,7 +127,27 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister }: LoginFormProps) => 
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {/* Email field */}
+      {/* Account Lockout Warning */}
+      {lockoutInfo?.isLocked && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Account temporarily locked. Try again {lockoutInfo.unlockAt 
+              ? `at ${lockoutInfo.unlockAt.toLocaleTimeString()}` 
+              : 'in 1 hour'}.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Remaining Attempts Warning */}
+      {remainingAttempts !== null && remainingAttempts <= 2 && !lockoutInfo?.isLocked && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Warning: {remainingAttempts} login attempts remaining before account lockout.
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="space-y-2">
         <Label htmlFor="login-email" className="text-foreground">Email Address</Label>
         <Input

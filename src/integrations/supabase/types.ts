@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_lockouts: {
+        Row: {
+          created_at: string | null
+          email: string
+          failure_count: number | null
+          id: string
+          locked_at: string | null
+          unlock_at: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          failure_count?: number | null
+          id?: string
+          locked_at?: string | null
+          unlock_at: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          failure_count?: number | null
+          id?: string
+          locked_at?: string | null
+          unlock_at?: string
+        }
+        Relationships: []
+      }
       achievements: {
         Row: {
           badge_description: string | null
@@ -1041,6 +1068,66 @@ export type Database = {
         }
         Relationships: []
       }
+      data_deletion_requests: {
+        Row: {
+          id: string
+          processed_at: string | null
+          processed_by: string | null
+          reason: string | null
+          requested_at: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          requested_at?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          requested_at?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      data_export_requests: {
+        Row: {
+          completed_at: string | null
+          expires_at: string | null
+          export_url: string | null
+          id: string
+          requested_at: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          expires_at?: string | null
+          export_url?: string | null
+          id?: string
+          requested_at?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          expires_at?: string | null
+          export_url?: string | null
+          id?: string
+          requested_at?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       event_attendees: {
         Row: {
           created_at: string | null
@@ -1072,6 +1159,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      failed_login_attempts: {
+        Row: {
+          attempted_at: string | null
+          email: string
+          failure_reason: string | null
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          attempted_at?: string | null
+          email: string
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          attempted_at?: string | null
+          email?: string
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
       }
       forum_posts: {
         Row: {
@@ -2178,6 +2292,39 @@ export type Database = {
           id?: string
           query?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      security_log: {
+        Row: {
+          created_at: string | null
+          event_details: Json | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          severity: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_details?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          severity?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_details?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          severity?: string | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
