@@ -56,3 +56,12 @@ verify_jwt = false
 
 [functions.health-check]
 verify_jwt = false
+
+[functions.ai-career-counseling]
+verify_jwt = true
+
+[functions.ai-study-tips]
+verify_jwt = true
+
+[functions.ai-forum-suggestion]
+verify_jwt = true

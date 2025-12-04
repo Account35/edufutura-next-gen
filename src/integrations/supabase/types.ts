@@ -113,6 +113,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_ab_tests: {
+        Row: {
+          created_by: string | null
+          ended_at: string | null
+          id: string
+          is_active: boolean | null
+          metrics_version_a: Json | null
+          metrics_version_b: Json | null
+          rollout_percentage: number
+          started_at: string | null
+          template_name: string
+          test_name: string
+          version_a: number
+          version_b: number
+          winner_version: number | null
+        }
+        Insert: {
+          created_by?: string | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          metrics_version_a?: Json | null
+          metrics_version_b?: Json | null
+          rollout_percentage?: number
+          started_at?: string | null
+          template_name: string
+          test_name: string
+          version_a: number
+          version_b: number
+          winner_version?: number | null
+        }
+        Update: {
+          created_by?: string | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          metrics_version_a?: Json | null
+          metrics_version_b?: Json | null
+          rollout_percentage?: number
+          started_at?: string | null
+          template_name?: string
+          test_name?: string
+          version_a?: number
+          version_b?: number
+          winner_version?: number | null
+        }
+        Relationships: []
+      }
       ai_conversations: {
         Row: {
           chapter_id: string | null
@@ -245,6 +293,57 @@ export type Database = {
           },
         ]
       }
+      ai_prompt_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean
+          max_tokens: number
+          model_name: string
+          performance_metrics: Json | null
+          prompt_text: string
+          response_format: string | null
+          system_context: string | null
+          temperature: number
+          template_name: string
+          template_version: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          max_tokens?: number
+          model_name?: string
+          performance_metrics?: Json | null
+          prompt_text: string
+          response_format?: string | null
+          system_context?: string | null
+          temperature?: number
+          template_name: string
+          template_version?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          max_tokens?: number
+          model_name?: string
+          performance_metrics?: Json | null
+          prompt_text?: string
+          response_format?: string | null
+          system_context?: string | null
+          temperature?: number
+          template_name?: string
+          template_version?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       ai_safety_logs: {
         Row: {
           ai_response: string | null
@@ -288,6 +387,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ai_template_changelog: {
+        Row: {
+          actual_improvement: string | null
+          changed_by: string | null
+          changes_made: string
+          created_at: string | null
+          expected_improvement: string | null
+          id: string
+          reason_for_change: string
+          template_name: string
+          version_number: number
+        }
+        Insert: {
+          actual_improvement?: string | null
+          changed_by?: string | null
+          changes_made: string
+          created_at?: string | null
+          expected_improvement?: string | null
+          id?: string
+          reason_for_change: string
+          template_name: string
+          version_number: number
+        }
+        Update: {
+          actual_improvement?: string | null
+          changed_by?: string | null
+          changes_made?: string
+          created_at?: string | null
+          expected_improvement?: string | null
+          id?: string
+          reason_for_change?: string
+          template_name?: string
+          version_number?: number
+        }
+        Relationships: []
       }
       ai_usage_tracking: {
         Row: {
@@ -1159,6 +1294,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      failed_ai_responses: {
+        Row: {
+          ai_response: string | null
+          created_at: string | null
+          failure_reason: string
+          human_corrected_response: string | null
+          id: string
+          input_data: Json
+          model_name: string | null
+          reviewed: boolean | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          template_name: string
+          template_version: number | null
+        }
+        Insert: {
+          ai_response?: string | null
+          created_at?: string | null
+          failure_reason: string
+          human_corrected_response?: string | null
+          id?: string
+          input_data: Json
+          model_name?: string | null
+          reviewed?: boolean | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          template_name: string
+          template_version?: number | null
+        }
+        Update: {
+          ai_response?: string | null
+          created_at?: string | null
+          failure_reason?: string
+          human_corrected_response?: string | null
+          id?: string
+          input_data?: Json
+          model_name?: string | null
+          reviewed?: boolean | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          template_name?: string
+          template_version?: number | null
+        }
+        Relationships: []
       }
       failed_login_attempts: {
         Row: {
@@ -3250,6 +3430,20 @@ export type Database = {
     Functions: {
       calculate_reputation_level: { Args: { score: number }; Returns: string }
       check_subscription_status: { Args: never; Returns: undefined }
+      get_active_template: {
+        Args: { p_template_name: string }
+        Returns: {
+          id: string
+          max_tokens: number
+          model_name: string
+          prompt_text: string
+          response_format: string
+          system_context: string
+          temperature: number
+          template_name: string
+          template_version: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3258,6 +3452,16 @@ export type Database = {
         Returns: boolean
       }
       refresh_materialized_views: { Args: never; Returns: undefined }
+      update_template_metrics: {
+        Args: {
+          p_cost?: number
+          p_rating?: number
+          p_success: boolean
+          p_template_name: string
+          p_template_version: number
+        }
+        Returns: undefined
+      }
       update_user_reputation: {
         Args: {
           p_change_type: string
