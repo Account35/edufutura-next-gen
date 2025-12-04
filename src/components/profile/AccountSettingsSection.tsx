@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -7,7 +7,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Settings, Globe, Bell, Shield, Loader2, AlertCircle } from 'lucide-react';
+import { Globe, Bell, Loader2, AlertCircle } from 'lucide-react';
+import { PrivacyDataSection } from '@/components/settings/PrivacyDataSection';
 
 interface AccountSettingsSectionProps {
   userProfile: any;
@@ -166,23 +167,8 @@ export const AccountSettingsSection = ({ userProfile, userId }: AccountSettingsS
         </CardContent>
       </Card>
 
-      {/* Privacy Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Privacy Settings
-          </CardTitle>
-          <CardDescription>Control your data and profile visibility</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-4 bg-muted rounded-lg">
-            <p className="text-sm text-muted-foreground">
-              Privacy settings will be available in future updates when community features are enabled.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Privacy & Data Management (POPIA Compliance) */}
+      <PrivacyDataSection />
 
       <Button onClick={handleSave} disabled={isLoading} className="w-full lg:w-auto">
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
