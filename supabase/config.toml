@@ -65,3 +65,9 @@ verify_jwt = true
 
 [functions.ai-forum-suggestion]
 verify_jwt = true
+
+[functions.warm-cache]
+verify_jwt = false
+
+[functions.analyze-learning-path]
+verify_jwt = true
