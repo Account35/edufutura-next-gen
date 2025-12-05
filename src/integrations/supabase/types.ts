@@ -161,6 +161,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_cache_metrics: {
+        Row: {
+          avg_cached_latency_ms: number | null
+          avg_fresh_latency_ms: number | null
+          cache_hits: number
+          cache_misses: number
+          created_at: string
+          estimated_cost_saved_cents: number | null
+          id: string
+          metric_date: string
+          miss_reasons: Json | null
+          template_name: string | null
+          total_requests: number
+        }
+        Insert: {
+          avg_cached_latency_ms?: number | null
+          avg_fresh_latency_ms?: number | null
+          cache_hits?: number
+          cache_misses?: number
+          created_at?: string
+          estimated_cost_saved_cents?: number | null
+          id?: string
+          metric_date?: string
+          miss_reasons?: Json | null
+          template_name?: string | null
+          total_requests?: number
+        }
+        Update: {
+          avg_cached_latency_ms?: number | null
+          avg_fresh_latency_ms?: number | null
+          cache_hits?: number
+          cache_misses?: number
+          created_at?: string
+          estimated_cost_saved_cents?: number | null
+          id?: string
+          metric_date?: string
+          miss_reasons?: Json | null
+          template_name?: string | null
+          total_requests?: number
+        }
+        Relationships: []
+      }
       ai_conversations: {
         Row: {
           chapter_id: string | null
@@ -341,6 +383,66 @@ export type Database = {
           template_name?: string
           template_version?: number
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      ai_response_cache: {
+        Row: {
+          cache_tags: string[] | null
+          context_hash: string | null
+          created_at: string
+          generation_cost_cents: number | null
+          grade_level: number | null
+          hit_count: number
+          id: string
+          last_accessed: string
+          model_used: string
+          normalized_query: string
+          query_hash: string
+          query_text: string
+          response_json: Json
+          response_time_ms: number | null
+          subject_name: string | null
+          template_name: string | null
+          ttl_seconds: number
+        }
+        Insert: {
+          cache_tags?: string[] | null
+          context_hash?: string | null
+          created_at?: string
+          generation_cost_cents?: number | null
+          grade_level?: number | null
+          hit_count?: number
+          id?: string
+          last_accessed?: string
+          model_used: string
+          normalized_query: string
+          query_hash: string
+          query_text: string
+          response_json: Json
+          response_time_ms?: number | null
+          subject_name?: string | null
+          template_name?: string | null
+          ttl_seconds?: number
+        }
+        Update: {
+          cache_tags?: string[] | null
+          context_hash?: string | null
+          created_at?: string
+          generation_cost_cents?: number | null
+          grade_level?: number | null
+          hit_count?: number
+          id?: string
+          last_accessed?: string
+          model_used?: string
+          normalized_query?: string
+          query_hash?: string
+          query_text?: string
+          response_json?: Json
+          response_time_ms?: number | null
+          subject_name?: string | null
+          template_name?: string | null
+          ttl_seconds?: number
         }
         Relationships: []
       }
@@ -3430,6 +3532,8 @@ export type Database = {
     Functions: {
       calculate_reputation_level: { Args: { score: number }; Returns: string }
       check_subscription_status: { Args: never; Returns: undefined }
+      cleanup_expired_cache: { Args: never; Returns: number }
+      evict_lru_cache: { Args: { max_entries?: number }; Returns: number }
       get_active_template: {
         Args: { p_template_name: string }
         Returns: {
@@ -3451,6 +3555,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      invalidate_cache_by_tags: { Args: { tags: string[] }; Returns: number }
       refresh_materialized_views: { Args: never; Returns: undefined }
       update_template_metrics: {
         Args: {
