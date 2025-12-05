@@ -10,6 +10,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteErrorBoundary } from "@/components/error-boundaries/RouteErrorBoundary";
 import { NetworkStatusBanner } from "@/components/NetworkStatusBanner";
 import { LazyLoadFallback } from "@/components/ui/LazyLoadFallback";
+import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
+import { PWAUpdatePrompt } from "@/components/pwa/PWAUpdatePrompt";
 
 // Critical path - loaded immediately
 import Index from "./pages/Index";
@@ -60,6 +62,9 @@ const ModerationDashboard = lazy(() => import("./pages/ModerationDashboard"));
 const CommunityGuidelines = lazy(() => import("./pages/CommunityGuidelines"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 
+// PWA Install page
+const Install = lazy(() => import("./pages/Install"));
+
 // Admin features - separate chunk
 const AdminContent = lazy(() => import("./pages/AdminContent"));
 const AdminQuizzes = lazy(() => import("./pages/AdminQuizzes"));
@@ -83,9 +88,11 @@ const App = () => (
       <AuthProvider>
         <AuthEventsProvider>
           <TooltipProvider>
+            <PWAUpdatePrompt />
             <NetworkStatusBanner />
             <Toaster />
             <Sonner />
+            <PWAInstallPrompt minPageViews={3} />
             <BrowserRouter>
               <RouteErrorBoundary>
                 <Suspense fallback={<LazyLoadFallback type="page" />}>
@@ -145,6 +152,9 @@ const App = () => (
                     <Route path="/admin/jobs" element={<JobMonitoring />} />
                     <Route path="/admin/quizzes" element={<AdminQuizzes />} />
                     <Route path="/admin/quizzes/create" element={<AdminQuizCreate />} />
+                    
+                    {/* PWA Install */}
+                    <Route path="/install" element={<Install />} />
                     
                     {/* Catch-all */}
                     <Route path="*" element={<NotFound />} />
