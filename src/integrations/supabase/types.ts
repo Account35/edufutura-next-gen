@@ -1365,6 +1365,74 @@ export type Database = {
         }
         Relationships: []
       }
+      dropout_risk_scores: {
+        Row: {
+          calculated_at: string | null
+          days_since_study: number | null
+          id: string
+          intervention_needed: boolean | null
+          intervention_type: string | null
+          last_intervention_at: string | null
+          last_login_days: number | null
+          login_frequency_score: number | null
+          performance_decline_score: number | null
+          progress_stagnation_score: number | null
+          risk_factors: Json | null
+          risk_level: string | null
+          risk_score: number | null
+          social_isolation_score: number | null
+          study_gap_score: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          calculated_at?: string | null
+          days_since_study?: number | null
+          id?: string
+          intervention_needed?: boolean | null
+          intervention_type?: string | null
+          last_intervention_at?: string | null
+          last_login_days?: number | null
+          login_frequency_score?: number | null
+          performance_decline_score?: number | null
+          progress_stagnation_score?: number | null
+          risk_factors?: Json | null
+          risk_level?: string | null
+          risk_score?: number | null
+          social_isolation_score?: number | null
+          study_gap_score?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          calculated_at?: string | null
+          days_since_study?: number | null
+          id?: string
+          intervention_needed?: boolean | null
+          intervention_type?: string | null
+          last_intervention_at?: string | null
+          last_login_days?: number | null
+          login_frequency_score?: number | null
+          performance_decline_score?: number | null
+          progress_stagnation_score?: number | null
+          risk_factors?: Json | null
+          risk_level?: string | null
+          risk_score?: number | null
+          social_isolation_score?: number | null
+          study_gap_score?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dropout_risk_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_attendees: {
         Row: {
           created_at: string | null
@@ -2145,6 +2213,54 @@ export type Database = {
         }
         Relationships: []
       }
+      peer_benchmarks: {
+        Row: {
+          calculated_at: string | null
+          grade_level: number
+          id: string
+          mean_value: number | null
+          metric_type: string
+          percentile_10: number | null
+          percentile_25: number | null
+          percentile_50: number | null
+          percentile_75: number | null
+          percentile_90: number | null
+          sample_size: number | null
+          std_deviation: number | null
+          subject_name: string
+        }
+        Insert: {
+          calculated_at?: string | null
+          grade_level: number
+          id?: string
+          mean_value?: number | null
+          metric_type: string
+          percentile_10?: number | null
+          percentile_25?: number | null
+          percentile_50?: number | null
+          percentile_75?: number | null
+          percentile_90?: number | null
+          sample_size?: number | null
+          std_deviation?: number | null
+          subject_name: string
+        }
+        Update: {
+          calculated_at?: string | null
+          grade_level?: number
+          id?: string
+          mean_value?: number | null
+          metric_type?: string
+          percentile_10?: number | null
+          percentile_25?: number | null
+          percentile_50?: number | null
+          percentile_75?: number | null
+          percentile_90?: number | null
+          sample_size?: number | null
+          std_deviation?: number | null
+          subject_name?: string
+        }
+        Relationships: []
+      }
       performance_metrics: {
         Row: {
           device_type: string
@@ -2174,6 +2290,134 @@ export type Database = {
           value_ms?: number
         }
         Relationships: []
+      }
+      performance_predictions: {
+        Row: {
+          accuracy_score: number | null
+          actual_value: number | null
+          chapter_id: string | null
+          confidence_lower: number | null
+          confidence_upper: number | null
+          created_at: string | null
+          features_used: Json | null
+          id: string
+          model_version: string | null
+          predicted_value: number
+          prediction_type: string
+          quiz_id: string | null
+          subject_name: string | null
+          user_id: string
+          validated_at: string | null
+        }
+        Insert: {
+          accuracy_score?: number | null
+          actual_value?: number | null
+          chapter_id?: string | null
+          confidence_lower?: number | null
+          confidence_upper?: number | null
+          created_at?: string | null
+          features_used?: Json | null
+          id?: string
+          model_version?: string | null
+          predicted_value: number
+          prediction_type: string
+          quiz_id?: string | null
+          subject_name?: string | null
+          user_id: string
+          validated_at?: string | null
+        }
+        Update: {
+          accuracy_score?: number | null
+          actual_value?: number | null
+          chapter_id?: string | null
+          confidence_lower?: number | null
+          confidence_upper?: number | null
+          created_at?: string | null
+          features_used?: Json | null
+          id?: string
+          model_version?: string | null
+          predicted_value?: number
+          prediction_type?: string
+          quiz_id?: string | null
+          subject_name?: string | null
+          user_id?: string
+          validated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_predictions_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_predictions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_trends: {
+        Row: {
+          analysis_period_end: string | null
+          analysis_period_start: string | null
+          created_at: string | null
+          data_points: number | null
+          forecast_4_weeks: number | null
+          forecast_confidence: number | null
+          id: string
+          improvement_rate: number | null
+          insights: Json | null
+          plateau_duration_weeks: number | null
+          slope: number | null
+          subject_name: string
+          trend_type: string
+          user_id: string
+        }
+        Insert: {
+          analysis_period_end?: string | null
+          analysis_period_start?: string | null
+          created_at?: string | null
+          data_points?: number | null
+          forecast_4_weeks?: number | null
+          forecast_confidence?: number | null
+          id?: string
+          improvement_rate?: number | null
+          insights?: Json | null
+          plateau_duration_weeks?: number | null
+          slope?: number | null
+          subject_name: string
+          trend_type: string
+          user_id: string
+        }
+        Update: {
+          analysis_period_end?: string | null
+          analysis_period_start?: string | null
+          created_at?: string | null
+          data_points?: number | null
+          forecast_4_weeks?: number | null
+          forecast_confidence?: number | null
+          id?: string
+          improvement_rate?: number | null
+          insights?: Json | null
+          plateau_duration_weeks?: number | null
+          slope?: number | null
+          subject_name?: string
+          trend_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_trends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       post_replies: {
         Row: {
@@ -3420,6 +3664,50 @@ export type Database = {
             columns: ["chapter_id"]
             isOneToOne: false
             referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_percentile_rankings: {
+        Row: {
+          calculated_at: string | null
+          gap_to_median: number | null
+          id: string
+          metric_type: string
+          peer_comparison: string | null
+          percentile_rank: number | null
+          subject_name: string
+          user_id: string
+          user_value: number | null
+        }
+        Insert: {
+          calculated_at?: string | null
+          gap_to_median?: number | null
+          id?: string
+          metric_type: string
+          peer_comparison?: string | null
+          percentile_rank?: number | null
+          subject_name: string
+          user_id: string
+          user_value?: number | null
+        }
+        Update: {
+          calculated_at?: string | null
+          gap_to_median?: number | null
+          id?: string
+          metric_type?: string
+          peer_comparison?: string | null
+          percentile_rank?: number | null
+          subject_name?: string
+          user_id?: string
+          user_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_percentile_rankings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
