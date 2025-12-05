@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { ExternalServiceError } from '@/lib/errors';
+import { getCachedResponse, cacheResponse } from './ai-cache.service';
 
 export interface QuickResponseOptions {
   prompt: string;
@@ -23,10 +24,29 @@ export interface ResponseMetrics {
 
 export async function quickResponse(
   prompt: string,
-  maxTokens = 100
+  maxTokens = 100,
+  templateName?: string
 ): Promise<{ response: string; metrics: ResponseMetrics }> {
   const startTime = Date.now();
   
+  // Check cache first for non-moderation queries
+  if (templateName && !templateName.includes('moderat')) {
+    const cacheResult = await getCachedResponse(prompt, { templateName });
+    if (cacheResult.hit && cacheResult.data) {
+      console.log(`Cache hit for Cerebras query (${cacheResult.latencyMs}ms)`);
+      return {
+        response: cacheResult.data,
+        metrics: {
+          response_time_ms: cacheResult.latencyMs,
+          tokens_used: 0,
+          model_version: 'cached',
+          success: true,
+          fallback_used: false,
+        },
+      };
+    }
+  }
+
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
@@ -44,13 +64,19 @@ export async function quickResponse(
 
     if (error) throw error;
 
+    const responseTime = Date.now() - startTime;
     const metrics: ResponseMetrics = {
-      response_time_ms: Date.now() - startTime,
+      response_time_ms: responseTime,
       tokens_used: data.tokens_used || 0,
       model_version: 'llama3.1-70b',
       success: true,
       fallback_used: false,
     };
+
+    // Cache the response
+    if (templateName && !templateName.includes('moderat')) {
+      await cacheResponse(prompt, data.response, 'llama3.1-70b', { templateName }, responseTime);
+    }
 
     // Log metrics
     logApiUsage(metrics);

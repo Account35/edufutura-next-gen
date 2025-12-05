@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { ExternalServiceError } from '@/lib/errors';
 import { logApiUsage } from './cerebras.service';
+import { getCachedResponse, cacheResponse } from './ai-cache.service';
 
 export interface QuizQuestion {
   question_number: number;
@@ -26,9 +27,6 @@ export interface ModerationResult {
   confidence: number;
 }
 
-const CACHE_PREFIX = 'quiz_cache_';
-const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
-
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
   maxRetries = 3,
@@ -49,20 +47,26 @@ async function retryWithBackoff<T>(
 export async function generateQuizQuestions(
   chapterContent: string,
   difficulty: 'beginner' | 'intermediate' | 'advanced',
-  questionCount: number
+  questionCount: number,
+  subjectName?: string,
+  gradeLevel?: number
 ): Promise<QuizQuestion[]> {
-  // Check cache first
-  const cacheKey = `${CACHE_PREFIX}${btoa(chapterContent).slice(0, 50)}_${difficulty}_${questionCount}`;
-  const cached = localStorage.getItem(cacheKey);
-  
-  if (cached) {
-    const { data, timestamp } = JSON.parse(cached);
-    if (Date.now() - timestamp < CACHE_DURATION) {
-      console.log('Returning cached quiz questions');
-      return data;
-    }
+  // Build query string for caching
+  const queryKey = `quiz|${difficulty}|${questionCount}|${chapterContent.slice(0, 200)}`;
+  const context = {
+    templateName: 'quiz_generation',
+    subjectName,
+    gradeLevel,
+  };
+
+  // Check database cache first
+  const cacheResult = await getCachedResponse(queryKey, context);
+  if (cacheResult.hit && cacheResult.data) {
+    console.log('Returning cached quiz questions from database');
+    return cacheResult.data as QuizQuestion[];
   }
 
+  const startTime = Date.now();
   const result = await retryWithBackoff(async () => {
     const { data, error } = await supabase.functions.invoke('generate-quiz', {
       body: {
@@ -78,11 +82,8 @@ export async function generateQuizQuestions(
     return data.questions as QuizQuestion[];
   });
 
-  // Cache the result
-  localStorage.setItem(cacheKey, JSON.stringify({
-    data: result,
-    timestamp: Date.now()
-  }));
+  // Cache to database
+  await cacheResponse(queryKey, result, 'gpt-4o-mini', context, Date.now() - startTime);
 
   return result;
 }
