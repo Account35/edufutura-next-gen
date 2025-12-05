@@ -6,6 +6,7 @@ import { PricingSection } from "@/components/landing/PricingSection";
 import { Footer } from "@/components/landing/Footer";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { useAuth } from "@/hooks/useAuth";
+import { Loader2 } from "lucide-react";
 
 const Index = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -26,9 +27,22 @@ const Index = () => {
     }
   }, [user, userProfile, loading, navigate]);
 
-  // Don't render landing page content if authenticated
-  if (loading || user) {
-    return null;
+  // Show loading state while checking auth
+  if (loading || (user && !userProfile)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // If user is authenticated and has profile, don't render (redirect will happen)
+  if (user && userProfile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
