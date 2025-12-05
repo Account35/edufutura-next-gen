@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Bookmark, Trophy, FileText, LogOut, Compass, HelpCircle, DollarSign, Building2, Sparkles } from 'lucide-react';
+import { X, LogOut, Compass, HelpCircle, DollarSign, Building2, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -37,14 +37,7 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
     }
   };
 
-  // Mobile-only navigation items (shown on small screens)
-  const mobileNavItems: MenuItem[] = [
-    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', action: () => { navigate('/bookmarks'); onClose(); } },
-    { id: 'reports', icon: FileText, label: 'Reports', action: () => { navigate('/reports'); onClose(); } },
-    { id: 'certificates', icon: Trophy, label: 'Certificates', action: () => { navigate('/certificates'); onClose(); } },
-  ];
-
-  // Career Guidance items (shown on desktop)
+  // Career Guidance items
   const careerGuidanceItems: MenuItem[] = [
     { id: 'career-quiz', icon: Sparkles, label: 'Career Quiz', action: () => { navigate('/career-guidance/quiz'); onClose(); } },
     { id: 'universities', icon: Building2, label: 'Universities', action: () => { navigate('/career-guidance/universities'); onClose(); } },
@@ -141,36 +134,8 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
 
         {/* Content - scrollable */}
         <div className="overflow-y-auto flex-1 px-4 py-4">
-          {/* Mobile Navigation - shown only on mobile */}
-          <div className="lg:hidden space-y-2 mb-6">
-            {mobileNavItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={item.action}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-gray-50 text-gray-700"
-                >
-                  <Icon className="h-5 w-5 flex-shrink-0" />
-                  <span className="flex-1 text-left font-medium">{item.label}</span>
-                </button>
-              );
-            })}
-            
-            {/* Logout - mobile only */}
-            <div className="pt-4 border-t border-gray-100 mt-4">
-              <button
-                onClick={handleSignOut}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-red-50 text-red-600"
-              >
-                <LogOut className="h-5 w-5 flex-shrink-0" />
-                <span className="flex-1 text-left font-medium">Logout</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Career Guidance Section - shown only on desktop */}
-          <div className="hidden lg:block">
+          {/* Career Guidance Section */}
+          <div>
             <h3 className="px-4 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Career Guidance
             </h3>
@@ -189,6 +154,17 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
                 );
               })}
             </div>
+          </div>
+
+          {/* Logout */}
+          <div className="pt-4 border-t border-gray-100 mt-4">
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-red-50 text-red-600"
+            >
+              <LogOut className="h-5 w-5 flex-shrink-0" />
+              <span className="flex-1 text-left font-medium">Logout</span>
+            </button>
           </div>
         </div>
       </div>
