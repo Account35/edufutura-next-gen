@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { query, systemPrompt, userId } = await req.json();
+    const { query, systemPrompt, userId, careerContext } = await req.json();
 
     if (!query) {
       throw new Error('Query is required');
@@ -27,6 +27,13 @@ serve(async (req) => {
     console.log(`[Cerebras] Processing query for user ${userId}`);
     const startTime = Date.now();
 
+    // Build career-aware system prompt if context provided
+    let finalSystemPrompt = systemPrompt;
+    if (careerContext) {
+      const { strongSubjects, gradeLevel } = careerContext;
+      finalSystemPrompt = `You are an expert South African career counselor helping a Grade ${gradeLevel} student. Strong subjects: ${strongSubjects?.join(', ') || 'Not yet determined'}. Provide quick, helpful career guidance using South African context. Be concise but encouraging.`;
+    }
+
     // Call Cerebras API
     const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
       method: 'POST',
@@ -37,7 +44,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'llama3.1-70b',
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: finalSystemPrompt },
           { role: 'user', content: query }
         ],
         temperature: 0.7,

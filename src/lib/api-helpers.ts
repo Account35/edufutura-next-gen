@@ -1,4 +1,6 @@
 import { toast } from '@/hooks/use-toast';
+import { RateLimitError, ExternalServiceError, DatabaseError } from './errors';
+import { logApiCall } from './logging';
 
 const REQUEST_TIMEOUT = 30000; // 30 seconds
 
@@ -11,6 +13,7 @@ export const apiRequest = async <T>(
   options: ApiRequestOptions = {}
 ): Promise<T> => {
   const { timeout = REQUEST_TIMEOUT, ...fetchOptions } = options;
+  const startTime = performance.now();
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -22,14 +25,39 @@ export const apiRequest = async <T>(
     });
 
     clearTimeout(timeoutId);
+    const duration = Math.round(performance.now() - startTime);
+
+    // Log API call
+    await logApiCall({
+      endpoint: url,
+      method: fetchOptions.method || 'GET',
+      parameters: fetchOptions.body ? JSON.parse(fetchOptions.body as string) : undefined,
+      status: response.status,
+      duration_ms: duration,
+    });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new ExternalServiceError(
+        'openai', // Default, adjust based on URL
+        `HTTP error! status: ${response.status}`,
+        response.status.toString(),
+        undefined,
+        response.status >= 500
+      );
     }
 
     return await response.json();
   } catch (error) {
     clearTimeout(timeoutId);
+    const duration = Math.round(performance.now() - startTime);
+
+    await logApiCall({
+      endpoint: url,
+      method: fetchOptions.method || 'GET',
+      status: 0,
+      duration_ms: duration,
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+    });
 
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
@@ -38,7 +66,7 @@ export const apiRequest = async <T>(
           description: 'The request took too long. Please try again.',
           variant: 'destructive',
         });
-        throw new Error('Request timeout');
+        throw new ExternalServiceError('openai', 'Request timeout', 'TIMEOUT', 5);
       }
 
       if (!navigator.onLine) {
@@ -48,6 +76,15 @@ export const apiRequest = async <T>(
           variant: 'destructive',
         });
         throw new Error('Network error');
+      }
+
+      if (error instanceof ExternalServiceError) {
+        toast({
+          title: 'Service Unavailable',
+          description: error.getUserMessage(),
+          variant: 'destructive',
+        });
+        throw error;
       }
 
       toast({

@@ -50,7 +50,7 @@ export const SubjectGrid = ({ subjects, isPremium, onUpgrade }: SubjectGridProps
         description="Complete your profile to see your subjects here"
         action={{
           label: 'Update Profile',
-          onClick: () => navigate('/settings')
+          onClick: () => navigate('/profile')
         }}
       />
     );

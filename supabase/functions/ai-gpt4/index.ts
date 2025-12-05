@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { query, systemPrompt, userId } = await req.json();
+    const { query, systemPrompt, userId, careerContext } = await req.json();
 
     if (!query) {
       throw new Error('Query is required');
@@ -27,6 +27,31 @@ serve(async (req) => {
     console.log(`[GPT-4] Processing query for user ${userId}`);
     const startTime = Date.now();
 
+    // Build career-aware system prompt if context provided
+    let finalSystemPrompt = systemPrompt;
+    if (careerContext) {
+      const { strongSubjects, careerRecommendations, gradeLevel, province, savedInstitutions } = careerContext;
+      
+      finalSystemPrompt = `You are an expert South African career counselor and educational assistant helping a Grade ${gradeLevel} student in ${province}. 
+
+STUDENT CONTEXT:
+- Strong subjects: ${strongSubjects?.join(', ') || 'Not yet determined'}
+- Top career recommendations: ${careerRecommendations?.map((c: any) => c.name).join(', ') || 'None yet'}
+- Saved institutions: ${savedInstitutions?.map((i: any) => i.name).join(', ') || 'None yet'}
+
+GUIDANCE PRINCIPLES:
+1. Provide thoughtful, age-appropriate career guidance grounded in South African context
+2. Reference local universities, job market realities, and cultural considerations
+3. Encourage exploration while being realistic about requirements and opportunities
+4. Mention NSFAS and bursary opportunities when discussing tertiary education
+5. Consider provincial context and local institution availability
+6. Proactively suggest career paths aligned with strong subjects
+7. Use South African Rand (ZAR) when discussing salaries
+8. Reference CAPS curriculum subjects and APS scores
+
+When students excel in certain subjects, proactively mention relevant career opportunities. Be encouraging but realistic about entry requirements and career prospects.`;
+    }
+
     // Call OpenAI GPT-4 API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -37,7 +62,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4-turbo-preview',
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: finalSystemPrompt },
           { role: 'user', content: query }
         ],
         temperature: 0.8,

@@ -11,3 +11,69 @@ verify_jwt = true
 
 [functions.ai-gpt4]
 verify_jwt = true
+
+[functions.generate-quiz]
+verify_jwt = true
+
+[functions.grade-short-answer]
+verify_jwt = true
+
+[functions.generate-certificate]
+verify_jwt = true
+
+[functions.match-study-buddies]
+verify_jwt = true
+
+[functions.send-notifications]
+verify_jwt = false
+
+[functions.payfast-webhook]
+verify_jwt = false
+
+[functions.moderate-content]
+verify_jwt = true
+
+[functions.process-background-jobs]
+verify_jwt = false
+
+[functions.aggregate-daily-stats]
+verify_jwt = false
+
+[functions.recalculate-reputation]
+verify_jwt = false
+
+[functions.welcome-new-user]
+verify_jwt = false
+
+[functions.track-login]
+verify_jwt = true
+
+[functions.analyze-career-fit]
+verify_jwt = true
+
+[functions.send-password-reset]
+verify_jwt = false
+
+[functions.health-check]
+verify_jwt = false
+
+[functions.ai-career-counseling]
+verify_jwt = true
+
+[functions.ai-study-tips]
+verify_jwt = true
+
+[functions.ai-forum-suggestion]
+verify_jwt = true
+
+[functions.warm-cache]
+verify_jwt = false
+
+[functions.analyze-learning-path]
+verify_jwt = true
+
+[functions.predict-performance]
+verify_jwt = true
+
+[functions.generate-recommendations]
+verify_jwt = true

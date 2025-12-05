@@ -1,67 +1,169 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { AuthEventsProvider } from "@/components/AuthEventsProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RouteErrorBoundary } from "@/components/error-boundaries/RouteErrorBoundary";
 import { NetworkStatusBanner } from "@/components/NetworkStatusBanner";
-import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import Onboarding from "./pages/Onboarding";
-import Settings from "./pages/Settings";
-import Profile from "./pages/Profile";
-import Reports from "./pages/Reports";
-import NotFound from "./pages/NotFound";
-import SubjectBrowser from "./pages/SubjectBrowser";
-import AdminContent from "./pages/AdminContent";
-import SubjectLanding from "./pages/SubjectLanding";
-import ChapterContent from "./pages/ChapterContent";
-import SearchResults from "./pages/SearchResults";
-import Bookmarks from "./pages/Bookmarks";
-import { QuizLanding } from "./pages/QuizLanding";
-import { QuizTaking } from "./pages/QuizTaking";
-import { QuizResults } from "./pages/QuizResults";
-import Analytics from "./pages/Analytics";
-import AdminQuizzes from "./pages/AdminQuizzes";
-import AdminQuizCreate from "./pages/AdminQuizCreate";
+import { LazyLoadFallback } from "@/components/ui/LazyLoadFallback";
+import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
+import { PWAUpdatePrompt } from "@/components/pwa/PWAUpdatePrompt";
 
-const queryClient = new QueryClient();
+// Critical path - loaded immediately
+import Index from "./pages/Index";
+import NotFound from "./pages/NotFound";
+
+// Phase 1: Auth & Onboarding - loaded early
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+
+// Phase 2: Dashboard & Profile - primary user area
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Profile = lazy(() => import("./pages/Profile"));
+const ProfileCertificates = lazy(() => import("./pages/ProfileCertificates"));
+const Reports = lazy(() => import("./pages/Reports"));
+
+// Phase 3: Curriculum - core learning content
+const SubjectBrowser = lazy(() => import("./pages/SubjectBrowser"));
+const SubjectLanding = lazy(() => import("./pages/SubjectLanding"));
+const ChapterContent = lazy(() => import("./pages/ChapterContent"));
+const SearchResults = lazy(() => import("./pages/SearchResults"));
+const Bookmarks = lazy(() => import("./pages/Bookmarks"));
+
+// Phase 5: Assessment - quiz engine
+const QuizLanding = lazy(() => import("./pages/QuizLanding").then(m => ({ default: m.QuizLanding })));
+const QuizTaking = lazy(() => import("./pages/QuizTaking").then(m => ({ default: m.QuizTaking })));
+const QuizResults = lazy(() => import("./pages/QuizResults").then(m => ({ default: m.QuizResults })));
+const Analytics = lazy(() => import("./pages/Analytics"));
+
+// Phase 6: Certificates
+const VerifyCertificate = lazy(() => import("./pages/VerifyCertificate"));
+const Certificates = lazy(() => import("./pages/Certificates"));
+
+// Phase 7: Career Guidance
+const Universities = lazy(() => import("./pages/Universities"));
+const InstitutionDetail = lazy(() => import("./pages/InstitutionDetail"));
+const CareerQuiz = lazy(() => import("./pages/CareerQuiz"));
+const SalaryCalculator = lazy(() => import("./pages/SalaryCalculator"));
+const CareerResources = lazy(() => import("./pages/CareerResources"));
+const CareerFAQ = lazy(() => import("./pages/CareerFAQ"));
+
+// Phase 8: Community - social features
+const Forums = lazy(() => import("./pages/Forums"));
+const ForumDetail = lazy(() => import("./pages/ForumDetail"));
+const PostDetail = lazy(() => import("./pages/PostDetail"));
+const Resources = lazy(() => import("./pages/Resources"));
+const StudyBuddyFinder = lazy(() => import("./pages/StudyBuddyFinder"));
+const ModerationDashboard = lazy(() => import("./pages/ModerationDashboard"));
+const CommunityGuidelines = lazy(() => import("./pages/CommunityGuidelines"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+
+// PWA Install page
+const Install = lazy(() => import("./pages/Install"));
+
+// Admin features - separate chunk
+const AdminContent = lazy(() => import("./pages/AdminContent"));
+const AdminQuizzes = lazy(() => import("./pages/AdminQuizzes"));
+const AdminQuizCreate = lazy(() => import("./pages/AdminQuizCreate"));
+const JobMonitoring = lazy(() => import("./pages/admin/JobMonitoring"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <NetworkStatusBanner />
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/subjects" element={<SubjectBrowser />} />
-              <Route path="/admin/content" element={<AdminContent />} />
-              <Route path="/curriculum/:subjectName" element={<SubjectLanding />} />
-              <Route path="/curriculum/:subjectName/:chapterNumber" element={<ChapterContent />} />
-              <Route path="/search" element={<SearchResults />} />
-              <Route path="/bookmarks" element={<Bookmarks />} />
-              <Route path="/quiz/:quizId" element={<QuizLanding />} />
-              <Route path="/quiz/:quizId/attempt/:attemptId" element={<QuizTaking />} />
-              <Route path="/quiz/:quizId/results/:attemptId" element={<QuizResults />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/analytics/:subject" element={<Analytics />} />
-              <Route path="/admin/quizzes" element={<AdminQuizzes />} />
-              <Route path="/admin/quizzes/create" element={<AdminQuizCreate />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        <AuthEventsProvider>
+          <TooltipProvider>
+            <PWAUpdatePrompt />
+            <NetworkStatusBanner />
+            <Toaster />
+            <Sonner />
+            <PWAInstallPrompt minPageViews={3} />
+            <BrowserRouter>
+              <RouteErrorBoundary>
+                <Suspense fallback={<LazyLoadFallback type="page" />}>
+                  <Routes>
+                    {/* Critical path */}
+                    <Route path="/" element={<Index />} />
+                    
+                    {/* Phase 1: Auth & Onboarding */}
+                    <Route path="/onboarding" element={<Onboarding />} />
+                    
+                    {/* Phase 2: Dashboard & Profile */}
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/profile/certificates" element={<ProfileCertificates />} />
+                    <Route path="/reports" element={<Reports />} />
+                    
+                    {/* Phase 3: Curriculum */}
+                    <Route path="/subjects" element={<SubjectBrowser />} />
+                    <Route path="/curriculum/:subjectName" element={<SubjectLanding />} />
+                    <Route path="/curriculum/:subjectName/:chapterNumber" element={<ChapterContent />} />
+                    <Route path="/search" element={<SearchResults />} />
+                    <Route path="/bookmarks" element={<Bookmarks />} />
+                    
+                    {/* Phase 5: Assessment */}
+                    <Route path="/quiz/:quizId" element={<QuizLanding />} />
+                    <Route path="/quiz/:quizId/attempt/:attemptId" element={<QuizTaking />} />
+                    <Route path="/quiz/:quizId/results/:attemptId" element={<QuizResults />} />
+                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/analytics/:subject" element={<Analytics />} />
+                    
+                    {/* Phase 6: Certificates */}
+                    <Route path="/verify" element={<VerifyCertificate />} />
+                    <Route path="/verify/:code" element={<VerifyCertificate />} />
+                    <Route path="/certificates" element={<Certificates />} />
+                    
+                    {/* Phase 7: Career Guidance */}
+                    <Route path="/career-guidance/universities" element={<Universities />} />
+                    <Route path="/career-guidance/quiz" element={<CareerQuiz />} />
+                    <Route path="/career-guidance/salary-calculator" element={<SalaryCalculator />} />
+                    <Route path="/career-guidance/resources" element={<CareerResources />} />
+                    <Route path="/career-guidance/faq" element={<CareerFAQ />} />
+                    <Route path="/institutions/:institutionName" element={<InstitutionDetail />} />
+                    
+                    {/* Phase 8: Community */}
+                    <Route path="/community/forums" element={<Forums />} />
+                    <Route path="/community/forums/:subject" element={<ForumDetail />} />
+                    <Route path="/community/forums/:subject/post/:postId" element={<PostDetail />} />
+                    <Route path="/community/resources" element={<Resources />} />
+                    <Route path="/community/study-buddies" element={<StudyBuddyFinder />} />
+                    <Route path="/community/guidelines" element={<CommunityGuidelines />} />
+                    <Route path="/community/leaderboard" element={<Leaderboard />} />
+                    <Route path="/admin/moderation" element={<ModerationDashboard />} />
+                    
+                    {/* Admin */}
+                    <Route path="/admin/content" element={<AdminContent />} />
+                    <Route path="/admin/jobs" element={<JobMonitoring />} />
+                    <Route path="/admin/quizzes" element={<AdminQuizzes />} />
+                    <Route path="/admin/quizzes/create" element={<AdminQuizCreate />} />
+                    
+                    {/* PWA Install */}
+                    <Route path="/install" element={<Install />} />
+                    
+                    {/* Catch-all */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </RouteErrorBoundary>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthEventsProvider>
       </AuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>

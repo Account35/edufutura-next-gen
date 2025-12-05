@@ -13,6 +13,8 @@ import { ChapterSidebar } from '@/components/curriculum/ChapterSidebar';
 import { ChapterContentRenderer } from '@/components/curriculum/ChapterContentRenderer';
 import { MobileReadingToolbar } from '@/components/curriculum/MobileReadingToolbar';
 import { ChapterNavigation } from '@/components/curriculum/ChapterNavigation';
+import { ChapterDiscussionSection } from '@/components/curriculum/ChapterDiscussionSection';
+import { FloatingDiscussButton } from '@/components/curriculum/FloatingDiscussButton';
 import { PrerequisiteModal } from '@/components/curriculum/PrerequisiteModal';
 import { DifficultyBadge } from '@/components/curriculum/DifficultyBadge';
 import { CAPSBadge } from '@/components/curriculum/CAPSBadge';
@@ -38,6 +40,7 @@ export default function ChapterContent() {
   const [showPrereqModal, setShowPrereqModal] = useState(false);
   const [readingTime, setReadingTime] = useState({ total: 0, remaining: 0 });
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [timeSpent, setTimeSpent] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
   
   const { fontSize, isDarkMode, updateFontSize, toggleDarkMode, getFontSizeClass } = useReadingPreferences();
@@ -71,6 +74,7 @@ export default function ChapterContent() {
   useTimeTracking(!!chapter, useCallback(() => {
     if (chapter?.id) {
       updateTimeSpent(1); // Add 1 minute
+      setTimeSpent(prev => prev + 1);
     }
   }, [chapter?.id, updateTimeSpent]));
 
@@ -342,6 +346,16 @@ export default function ChapterContent() {
                 previousChapter={previousChapter}
                 nextChapter={nextChapter}
               />
+
+              {/* Community Integration */}
+              <ChapterDiscussionSection
+                chapterId={chapter.id}
+                subjectName={subjectName}
+                chapterTitle={chapter.chapter_title}
+                timeSpent={timeSpent}
+                progressPercentage={scrollProgress}
+                estimatedMinutes={chapter.estimated_duration_minutes || 30}
+              />
             </div>
 
             {/* Sidebar TOC */}
@@ -367,6 +381,13 @@ export default function ChapterContent() {
 
         {/* Progress Saved Indicator */}
         <ProgressSavedIndicator show={showProgressSaved} />
+
+        {/* Floating Discuss Button */}
+        <FloatingDiscussButton
+          onClick={() => navigate(`/community/forums/${encodeURIComponent(subjectName)}`, {
+            state: { chapterId: chapter.id, chapterTitle: chapter.chapter_title }
+          })}
+        />
       </div>
     </DashboardLayout>
   );

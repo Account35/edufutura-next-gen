@@ -94,12 +94,20 @@ export const QuickActionsPanel = ({
       onClick: onCertificates,
     },
     {
+      id: 'community',
+      icon: Users,
+      label: 'Explore Community',
+      description: 'Connect with students',
+      isPremium: false,
+      onClick: () => window.location.href = '/community/forums',
+    },
+    {
       id: 'study-group',
       icon: Users,
-      label: 'Study Group',
+      label: 'Study Groups',
       description: 'Learn together',
-      isPremium: true,
-      onClick: onStudyGroup,
+      isPremium: false,
+      onClick: () => window.location.href = '/community/groups',
     },
     {
       id: 'assessment',
@@ -115,7 +123,7 @@ export const QuickActionsPanel = ({
       label: 'Career Guidance',
       description: 'Plan your future',
       isPremium: false,
-      isComingSoon: true,
+      isComingSoon: false,
       onClick: onCareerGuidance,
     },
   ];

@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Settings, HelpCircle, FileText, Shield, LogOut, ChevronRight } from 'lucide-react';
+import { X, LogOut, Compass, HelpCircle, DollarSign, Building2, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MobileMoreSheetProps {
   isOpen: boolean;
@@ -16,6 +16,8 @@ interface MenuItem {
   label: string;
   action: () => void;
   destructive?: boolean;
+  badge?: string;
+  comingSoon?: boolean;
 }
 
 export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
@@ -30,56 +32,18 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
       await supabase.auth.signOut();
       navigate('/');
       toast.success('Signed out successfully');
-      onClose();
     } catch (error) {
       toast.error('Error signing out');
     }
   };
 
-  const menuItems: MenuItem[] = [
-    {
-      id: 'settings',
-      icon: Settings,
-      label: 'Settings',
-      action: () => {
-        navigate('/settings');
-        onClose();
-      }
-    },
-    {
-      id: 'help',
-      icon: HelpCircle,
-      label: 'Help & Support',
-      action: () => {
-        toast.info('Help center coming soon');
-        onClose();
-      }
-    },
-    {
-      id: 'terms',
-      icon: FileText,
-      label: 'Terms & Conditions',
-      action: () => {
-        toast.info('Terms coming soon');
-        onClose();
-      }
-    },
-    {
-      id: 'privacy',
-      icon: Shield,
-      label: 'Privacy Policy',
-      action: () => {
-        toast.info('Privacy policy coming soon');
-        onClose();
-      }
-    },
-    {
-      id: 'logout',
-      icon: LogOut,
-      label: 'Logout',
-      action: handleSignOut,
-      destructive: true
-    }
+  // Career Guidance items
+  const careerGuidanceItems: MenuItem[] = [
+    { id: 'career-quiz', icon: Sparkles, label: 'Career Quiz', action: () => { navigate('/career-guidance/quiz'); onClose(); } },
+    { id: 'universities', icon: Building2, label: 'Universities', action: () => { navigate('/career-guidance/universities'); onClose(); } },
+    { id: 'salary-calculator', icon: DollarSign, label: 'Salary Calculator', action: () => { navigate('/career-guidance/salary-calculator'); onClose(); } },
+    { id: 'career-resources', icon: Compass, label: 'Career Resources', action: () => { navigate('/career-guidance/resources'); onClose(); } },
+    { id: 'career-faq', icon: HelpCircle, label: 'Career FAQ', action: () => { navigate('/career-guidance/faq'); onClose(); } },
   ];
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -142,56 +106,65 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
       <div
         ref={sheetRef}
         className={cn(
-          'fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out',
+          'fixed bg-white shadow-2xl transition-transform duration-300 ease-out',
+          'lg:bottom-20 lg:left-4 lg:w-80 lg:rounded-2xl',
+          'bottom-0 left-0 right-0 rounded-t-3xl lg:translate-y-0',
           isOpen && dragY === 0 ? 'translate-y-0' : 'translate-y-full'
         )}
         style={{
           transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
-          maxHeight: '80vh'
+          maxHeight: 'calc(100vh - 100px)'
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Handle bar */}
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
+        {/* Handle Bar (mobile only) */}
+        <div className="flex justify-center pt-3 pb-2 lg:hidden">
+          <div className="w-12 h-1 bg-gray-300 rounded-full" />
         </div>
 
-        {/* Content */}
-        <div className="px-6 pb-8 pt-2">
-          <h3 className="text-lg font-semibold text-primary text-center mb-6">
-            More Options
-          </h3>
+        {/* Header */}
+        <div className="px-6 pb-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-primary">More</h2>
+          <button onClick={onClose} className="lg:flex hidden p-2 hover:bg-gray-100 rounded-full">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-          <div className="space-y-1">
-            {menuItems.map((item, index) => {
-              const Icon = item.icon;
-              const isLast = index === menuItems.length - 1;
-              
-              return (
-                <div key={item.id}>
-                  {isLast && <div className="my-4 border-t border-border" />}
+        {/* Content - scrollable */}
+        <div className="overflow-y-auto flex-1 px-4 py-4">
+          {/* Career Guidance Section */}
+          <div>
+            <h3 className="px-4 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Career Guidance
+            </h3>
+            <div className="space-y-2">
+              {careerGuidanceItems.map((item) => {
+                const Icon = item.icon;
+                return (
                   <button
+                    key={item.id}
                     onClick={item.action}
-                    className={cn(
-                      'w-full flex items-center justify-between px-4 py-4 rounded-lg transition-colors duration-200 active:scale-98 min-h-[56px]',
-                      item.destructive
-                        ? 'text-destructive hover:bg-destructive/10'
-                        : 'text-foreground hover:bg-muted'
-                    )}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-secondary/10 text-gray-700"
                   >
-                    <div className="flex items-center gap-3">
-                      <Icon className="h-5 w-5" />
-                      <span className="font-medium">{item.label}</span>
-                    </div>
-                    {!item.destructive && (
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    )}
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="flex-1 text-left font-medium">{item.label}</span>
                   </button>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Logout */}
+          <div className="pt-4 border-t border-gray-100 mt-4">
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-red-50 text-red-600"
+            >
+              <LogOut className="h-5 w-5 flex-shrink-0" />
+              <span className="flex-1 text-left font-medium">Logout</span>
+            </button>
           </div>
         </div>
       </div>

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfileSettings } from '@/components/settings/ProfileSettings';
 import { PreferencesSettings } from '@/components/settings/PreferencesSettings';
 import { SubscriptionSettings } from '@/components/settings/SubscriptionSettings';
+import { PrivacyDataSection } from '@/components/settings/PrivacyDataSection';
 import { FullPageLoader } from '@/components/ui/loading';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -60,6 +60,9 @@ export default function Settings() {
 
           <TabsContent value="more">
             <div className="space-y-4">
+              {/* POPIA Compliance - Data Export & Deletion */}
+              <PrivacyDataSection />
+
               <Card>
                 <CardHeader>
                   <CardTitle>Help & Support</CardTitle>
