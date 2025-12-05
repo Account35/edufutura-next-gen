@@ -1052,6 +1052,48 @@ export type Database = {
         }
         Relationships: []
       }
+      content_features: {
+        Row: {
+          complexity_score: number | null
+          computed_at: string | null
+          difficulty_score: number | null
+          feature_names: string[] | null
+          feature_vector: number[] | null
+          id: string
+          item_id: string
+          item_type: string
+          key_concepts: string[] | null
+          subject_name: string | null
+          tags: string[] | null
+        }
+        Insert: {
+          complexity_score?: number | null
+          computed_at?: string | null
+          difficulty_score?: number | null
+          feature_names?: string[] | null
+          feature_vector?: number[] | null
+          id?: string
+          item_id: string
+          item_type: string
+          key_concepts?: string[] | null
+          subject_name?: string | null
+          tags?: string[] | null
+        }
+        Update: {
+          complexity_score?: number | null
+          computed_at?: string | null
+          difficulty_score?: number | null
+          feature_names?: string[] | null
+          feature_vector?: number[] | null
+          id?: string
+          item_id?: string
+          item_type?: string
+          key_concepts?: string[] | null
+          subject_name?: string | null
+          tags?: string[] | null
+        }
+        Relationships: []
+      }
       content_moderation_log: {
         Row: {
           ai_confidence: number | null
@@ -2006,6 +2048,33 @@ export type Database = {
           },
         ]
       }
+      item_similarity_scores: {
+        Row: {
+          computed_at: string | null
+          id: string
+          item_a_id: string
+          item_b_id: string
+          item_type: string
+          similarity_score: number
+        }
+        Insert: {
+          computed_at?: string | null
+          id?: string
+          item_a_id: string
+          item_b_id: string
+          item_type: string
+          similarity_score: number
+        }
+        Update: {
+          computed_at?: string | null
+          id?: string
+          item_a_id?: string
+          item_b_id?: string
+          item_type?: string
+          similarity_score?: number
+        }
+        Relationships: []
+      }
       learning_goals: {
         Row: {
           completed_at: string | null
@@ -2902,6 +2971,87 @@ export type Database = {
         }
         Relationships: []
       }
+      recommendation_feedback: {
+        Row: {
+          algorithm_used: string | null
+          created_at: string | null
+          feedback_type: string
+          feedback_value: number | null
+          id: string
+          item_id: string
+          item_type: string
+          position_shown: number | null
+          recommendation_id: string | null
+          user_id: string
+        }
+        Insert: {
+          algorithm_used?: string | null
+          created_at?: string | null
+          feedback_type: string
+          feedback_value?: number | null
+          id?: string
+          item_id: string
+          item_type: string
+          position_shown?: number | null
+          recommendation_id?: string | null
+          user_id: string
+        }
+        Update: {
+          algorithm_used?: string | null
+          created_at?: string | null
+          feedback_type?: string
+          feedback_value?: number | null
+          id?: string
+          item_id?: string
+          item_type?: string
+          position_shown?: number | null
+          recommendation_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      recommendations_cache: {
+        Row: {
+          algorithm_used: string | null
+          computed_at: string
+          created_at: string | null
+          expires_at: string
+          explanations: string[] | null
+          id: string
+          metadata: Json | null
+          ranked_item_ids: string[]
+          recommendation_type: string
+          scores: number[] | null
+          user_id: string
+        }
+        Insert: {
+          algorithm_used?: string | null
+          computed_at?: string
+          created_at?: string | null
+          expires_at?: string
+          explanations?: string[] | null
+          id?: string
+          metadata?: Json | null
+          ranked_item_ids?: string[]
+          recommendation_type: string
+          scores?: number[] | null
+          user_id: string
+        }
+        Update: {
+          algorithm_used?: string | null
+          computed_at?: string
+          created_at?: string | null
+          expires_at?: string
+          explanations?: string[] | null
+          id?: string
+          metadata?: Json | null
+          ranked_item_ids?: string[]
+          recommendation_type?: string
+          scores?: number[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       reply_upvotes: {
         Row: {
           created_at: string | null
@@ -3668,6 +3818,69 @@ export type Database = {
           },
         ]
       }
+      user_content_preferences: {
+        Row: {
+          id: string
+          interaction_count: number | null
+          last_updated: string | null
+          preference_type: string
+          preference_value: string
+          user_id: string
+          weight: number | null
+        }
+        Insert: {
+          id?: string
+          interaction_count?: number | null
+          last_updated?: string | null
+          preference_type: string
+          preference_value: string
+          user_id: string
+          weight?: number | null
+        }
+        Update: {
+          id?: string
+          interaction_count?: number | null
+          last_updated?: string | null
+          preference_type?: string
+          preference_value?: string
+          user_id?: string
+          weight?: number | null
+        }
+        Relationships: []
+      }
+      user_item_interactions: {
+        Row: {
+          created_at: string | null
+          duration_seconds: number | null
+          id: string
+          interaction_type: string
+          interaction_value: number | null
+          item_id: string
+          item_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          interaction_type: string
+          interaction_value?: number | null
+          item_id: string
+          item_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          interaction_type?: string
+          interaction_value?: number | null
+          item_id?: string
+          item_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_percentile_rankings: {
         Row: {
           calculated_at: string | null
@@ -4126,6 +4339,10 @@ export type Database = {
       calculate_reputation_level: { Args: { score: number }; Returns: string }
       check_subscription_status: { Args: never; Returns: undefined }
       cleanup_expired_cache: { Args: never; Returns: number }
+      compute_cosine_similarity: {
+        Args: { vector_a: number[]; vector_b: number[] }
+        Returns: number
+      }
       evict_lru_cache: { Args: { max_entries?: number }; Returns: number }
       get_active_template: {
         Args: { p_template_name: string }
