@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.analyze-learning-path]
 verify_jwt = true
+
+[functions.predict-performance]
+verify_jwt = true
