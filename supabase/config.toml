@@ -74,3 +74,6 @@ verify_jwt = true
 
 [functions.predict-performance]
 verify_jwt = true
+
+[functions.generate-recommendations]
+verify_jwt = true
