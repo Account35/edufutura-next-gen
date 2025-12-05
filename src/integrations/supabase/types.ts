@@ -1938,6 +1938,180 @@ export type Database = {
           },
         ]
       }
+      learning_goals: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          current_value: number | null
+          goal_description: string | null
+          goal_title: string
+          goal_type: string
+          id: string
+          metadata: Json | null
+          status: string | null
+          subject_name: string | null
+          target_date: string | null
+          target_value: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_value?: number | null
+          goal_description?: string | null
+          goal_title: string
+          goal_type: string
+          id?: string
+          metadata?: Json | null
+          status?: string | null
+          subject_name?: string | null
+          target_date?: string | null
+          target_value: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_value?: number | null
+          goal_description?: string | null
+          goal_title?: string
+          goal_type?: string
+          id?: string
+          metadata?: Json | null
+          status?: string | null
+          subject_name?: string | null
+          target_date?: string | null
+          target_value?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_recommendations: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_completed: boolean | null
+          is_dismissed: boolean | null
+          metadata: Json | null
+          priority_score: number | null
+          reason: string | null
+          recommendation_type: string
+          subject_name: string | null
+          target_id: string | null
+          target_type: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_completed?: boolean | null
+          is_dismissed?: boolean | null
+          metadata?: Json | null
+          priority_score?: number | null
+          reason?: string | null
+          recommendation_type: string
+          subject_name?: string | null
+          target_id?: string | null
+          target_type?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_completed?: boolean | null
+          is_dismissed?: boolean | null
+          metadata?: Json | null
+          priority_score?: number | null
+          reason?: string | null
+          recommendation_type?: string
+          subject_name?: string | null
+          target_id?: string | null
+          target_type?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_recommendations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_style_profiles: {
+        Row: {
+          auditory_score: number | null
+          content_preferences: Json | null
+          created_at: string | null
+          dominant_style: string | null
+          effectiveness_data: Json | null
+          id: string
+          kinesthetic_score: number | null
+          last_analyzed_at: string | null
+          reading_writing_score: number | null
+          updated_at: string | null
+          user_id: string
+          visual_score: number | null
+        }
+        Insert: {
+          auditory_score?: number | null
+          content_preferences?: Json | null
+          created_at?: string | null
+          dominant_style?: string | null
+          effectiveness_data?: Json | null
+          id?: string
+          kinesthetic_score?: number | null
+          last_analyzed_at?: string | null
+          reading_writing_score?: number | null
+          updated_at?: string | null
+          user_id: string
+          visual_score?: number | null
+        }
+        Update: {
+          auditory_score?: number | null
+          content_preferences?: Json | null
+          created_at?: string | null
+          dominant_style?: string | null
+          effectiveness_data?: Json | null
+          id?: string
+          kinesthetic_score?: number | null
+          last_analyzed_at?: string | null
+          reading_writing_score?: number | null
+          updated_at?: string | null
+          user_id?: string
+          visual_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_style_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_digests: {
         Row: {
           clicked_at: string | null
@@ -2057,6 +2231,64 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prerequisite_gaps: {
+        Row: {
+          chapter_id: string | null
+          created_at: string | null
+          gap_severity: string | null
+          id: string
+          is_resolved: boolean | null
+          prerequisite_chapter_id: string | null
+          quiz_score: number | null
+          resolved_at: string | null
+          user_id: string
+        }
+        Insert: {
+          chapter_id?: string | null
+          created_at?: string | null
+          gap_severity?: string | null
+          id?: string
+          is_resolved?: boolean | null
+          prerequisite_chapter_id?: string | null
+          quiz_score?: number | null
+          resolved_at?: string | null
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string | null
+          created_at?: string | null
+          gap_severity?: string | null
+          id?: string
+          is_resolved?: boolean | null
+          prerequisite_chapter_id?: string | null
+          quiz_score?: number | null
+          resolved_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prerequisite_gaps_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prerequisite_gaps_prerequisite_chapter_id_fkey"
+            columns: ["prerequisite_chapter_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prerequisite_gaps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -2674,6 +2906,66 @@ export type Database = {
             columns: ["chapter_id"]
             isOneToOne: false
             referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spaced_repetition_items: {
+        Row: {
+          chapter_id: string | null
+          created_at: string | null
+          ease_factor: number | null
+          id: string
+          interval_days: number | null
+          last_quality: number | null
+          last_review_date: string | null
+          next_review_date: string
+          repetition_count: number | null
+          topic_name: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          chapter_id?: string | null
+          created_at?: string | null
+          ease_factor?: number | null
+          id?: string
+          interval_days?: number | null
+          last_quality?: number | null
+          last_review_date?: string | null
+          next_review_date: string
+          repetition_count?: number | null
+          topic_name?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string | null
+          created_at?: string | null
+          ease_factor?: number | null
+          id?: string
+          interval_days?: number | null
+          last_quality?: number | null
+          last_review_date?: string | null
+          next_review_date?: string
+          repetition_count?: number | null
+          topic_name?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spaced_repetition_items_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spaced_repetition_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -3530,6 +3822,19 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_next_review: {
+        Args: {
+          p_ease_factor: number
+          p_interval: number
+          p_quality: number
+          p_repetition: number
+        }
+        Returns: {
+          new_ease_factor: number
+          new_interval: number
+          new_repetition: number
+        }[]
+      }
       calculate_reputation_level: { Args: { score: number }; Returns: string }
       check_subscription_status: { Args: never; Returns: undefined }
       cleanup_expired_cache: { Args: never; Returns: number }
