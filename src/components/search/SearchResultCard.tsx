@@ -3,6 +3,7 @@ import { Clock, BookOpen } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { DifficultyBadge } from '@/components/curriculum/DifficultyBadge';
 import { Badge } from '@/components/ui/badge';
+import DOMPurify from 'dompurify';
 
 interface SearchResultCardProps {
   chapterId: string;
@@ -28,11 +29,18 @@ export const SearchResultCard = ({
   highlightTerms = [],
 }: SearchResultCardProps) => {
   const highlightText = (text: string) => {
-    if (highlightTerms.length === 0) return text;
+    if (highlightTerms.length === 0) return DOMPurify.sanitize(text);
     
-    let highlightedText = text;
+    // First sanitize the text to prevent XSS
+    const sanitizedText = DOMPurify.sanitize(text);
+    
+    // Escape special regex characters in search terms
+    const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    
+    let highlightedText = sanitizedText;
     highlightTerms.forEach(term => {
-      const regex = new RegExp(`(${term})`, 'gi');
+      const escapedTerm = escapeRegex(DOMPurify.sanitize(term));
+      const regex = new RegExp(`(${escapedTerm})`, 'gi');
       highlightedText = highlightedText.replace(
         regex,
         '<mark class="bg-secondary/20 text-primary font-semibold">$1</mark>'

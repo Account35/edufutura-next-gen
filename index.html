@@ -7,6 +7,26 @@
     <meta name="description" content="AI-powered education for South African students in Grades 6-12. Master your CAPS curriculum with personalized learning, AI tutoring, and official certificates." />
     <meta name="author" content="EduFutura" />
     
+    <!-- Security Headers via Meta Tags -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://esm.sh;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      img-src 'self' data: blob: https: http:;
+      font-src 'self' https://fonts.gstatic.com;
+      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.cerebras.ai https://api.elevenlabs.io https://fonts.googleapis.com https://fonts.gstatic.com;
+      frame-src 'self' https://www.youtube.com https://player.vimeo.com;
+      media-src 'self' blob: https:;
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+      upgrade-insecure-requests;
+    " />
+    
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#1B4332" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -27,7 +47,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon.ico" />
     
-    <!-- Fonts -->
+    <!-- Fonts with crossorigin for security -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
