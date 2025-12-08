@@ -1475,6 +1475,45 @@ export type Database = {
           },
         ]
       }
+      email_templates: {
+        Row: {
+          created_at: string | null
+          from_email: string | null
+          from_name: string | null
+          html_body: string
+          id: string
+          is_active: boolean | null
+          subject_line: string
+          template_name: string
+          text_body: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          html_body: string
+          id?: string
+          is_active?: boolean | null
+          subject_line: string
+          template_name: string
+          text_body?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          html_body?: string
+          id?: string
+          is_active?: boolean | null
+          subject_line?: string
+          template_name?: string
+          text_body?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       event_attendees: {
         Row: {
           created_at: string | null
@@ -2249,6 +2288,47 @@ export type Database = {
           },
         ]
       }
+      notification_analytics: {
+        Row: {
+          channel: string
+          event_at: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          notification_id: string | null
+          notification_type: string
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          event_at?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          notification_id?: string | null
+          notification_type: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          event_at?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          notification_id?: string | null
+          notification_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_analytics_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_digests: {
         Row: {
           clicked_at: string | null
@@ -2278,6 +2358,63 @@ export type Database = {
           notification_ids?: string[]
           opened_at?: string | null
           sent_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string | null
+          delivery_channels: string[] | null
+          delivery_status: Json | null
+          expires_at: string | null
+          icon_name: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          metadata: Json | null
+          notification_type: string
+          priority_level: string
+          read_at: string | null
+          sent_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string | null
+          delivery_channels?: string[] | null
+          delivery_status?: Json | null
+          expires_at?: string | null
+          icon_name?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          metadata?: Json | null
+          notification_type: string
+          priority_level?: string
+          read_at?: string | null
+          sent_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string | null
+          delivery_channels?: string[] | null
+          delivery_status?: Json | null
+          expires_at?: string | null
+          icon_name?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          metadata?: Json | null
+          notification_type?: string
+          priority_level?: string
+          read_at?: string | null
+          sent_at?: string | null
+          title?: string
           user_id?: string
         }
         Relationships: []
@@ -2605,6 +2742,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_subscriptions: {
+        Row: {
+          browser: string | null
+          device_type: string | null
+          endpoint: string
+          id: string
+          is_active: boolean | null
+          keys: Json
+          last_used_at: string | null
+          subscribed_at: string | null
+          user_id: string
+        }
+        Insert: {
+          browser?: string | null
+          device_type?: string | null
+          endpoint: string
+          id?: string
+          is_active?: boolean | null
+          keys: Json
+          last_used_at?: string | null
+          subscribed_at?: string | null
+          user_id: string
+        }
+        Update: {
+          browser?: string | null
+          device_type?: string | null
+          endpoint?: string
+          id?: string
+          is_active?: boolean | null
+          keys?: Json
+          last_used_at?: string | null
+          subscribed_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       quiz_attempts: {
         Row: {
@@ -3881,6 +4054,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_notification_preferences: {
+        Row: {
+          channels: string[] | null
+          created_at: string | null
+          digest_frequency: string | null
+          enabled: boolean | null
+          id: string
+          notification_type: string
+          quiet_hours: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channels?: string[] | null
+          created_at?: string | null
+          digest_frequency?: string | null
+          enabled?: boolean | null
+          id?: string
+          notification_type: string
+          quiet_hours?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channels?: string[] | null
+          created_at?: string | null
+          digest_frequency?: string | null
+          enabled?: boolean | null
+          id?: string
+          notification_type?: string
+          quiet_hours?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_percentile_rankings: {
         Row: {
           calculated_at: string | null
@@ -4339,6 +4548,7 @@ export type Database = {
       calculate_reputation_level: { Args: { score: number }; Returns: string }
       check_subscription_status: { Args: never; Returns: undefined }
       cleanup_expired_cache: { Args: never; Returns: number }
+      cleanup_expired_notifications: { Args: never; Returns: number }
       compute_cosine_similarity: {
         Args: { vector_a: number[]; vector_b: number[] }
         Returns: number
