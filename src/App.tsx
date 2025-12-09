@@ -13,15 +13,13 @@ import { LazyLoadFallback } from "@/components/ui/LazyLoadFallback";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { PWAUpdatePrompt } from "@/components/pwa/PWAUpdatePrompt";
 
-// Critical path - loaded immediately
+// Critical path - loaded immediately (essential screens)
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import Dashboard from "./pages/Dashboard";
+import Onboarding from "./pages/Onboarding";
 
-// Phase 1: Auth & Onboarding - loaded early
-const Onboarding = lazy(() => import("./pages/Onboarding"));
-
-// Phase 2: Dashboard & Profile - primary user area
-const Dashboard = lazy(() => import("./pages/Dashboard"));
+// Phase 2: Profile & Settings - lazy loaded
 const Settings = lazy(() => import("./pages/Settings"));
 const Profile = lazy(() => import("./pages/Profile"));
 const ProfileCertificates = lazy(() => import("./pages/ProfileCertificates"));
