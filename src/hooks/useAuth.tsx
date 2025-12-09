@@ -79,44 +79,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    let mounted = true;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
+        if (!mounted) return;
+        
         setSession(newSession);
         const currentUser = newSession?.user ?? null;
         setUser(currentUser);
 
         if (currentUser) {
-          // Defer profile loading with setTimeout to avoid deadlock
-          setTimeout(async () => {
-            const profile = await loadUserProfile(currentUser.id);
+          const profile = await loadUserProfile(currentUser.id);
+          if (mounted) {
             setUserProfile(profile);
-          }, 0);
+            setLoading(false);
+          }
         } else {
           setUserProfile(null);
+          setLoading(false);
         }
-
-        setLoading(false);
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+    const initializeAuth = async () => {
+      const { data: { session: existingSession } } = await supabase.auth.getSession();
+      
+      if (!mounted) return;
+      
       setSession(existingSession);
       const currentUser = existingSession?.user ?? null;
       setUser(currentUser);
 
       if (currentUser) {
-        setTimeout(async () => {
-          const profile = await loadUserProfile(currentUser.id);
+        const profile = await loadUserProfile(currentUser.id);
+        if (mounted) {
           setUserProfile(profile);
-        }, 0);
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
       }
+    };
 
-      setLoading(false);
-    });
+    initializeAuth();
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
       if (inactivityTimer) clearTimeout(inactivityTimer);
       if (warningTimer) clearTimeout(warningTimer);
