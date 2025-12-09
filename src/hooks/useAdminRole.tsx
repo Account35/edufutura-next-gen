@@ -3,20 +3,26 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 export const useAdminRole = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isEducator, setIsEducator] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkRoles = async () => {
-      if (!user) {
-        setIsAdmin(false);
-        setIsEducator(false);
-        setLoading(false);
-        return;
-      }
+    // Wait for auth to finish loading
+    if (authLoading) {
+      return;
+    }
 
+    // If no user, we're done loading
+    if (!user) {
+      setIsAdmin(false);
+      setIsEducator(false);
+      setLoading(false);
+      return;
+    }
+
+    const checkRoles = async () => {
       try {
         const { data, error } = await supabase
           .from('user_roles')
@@ -38,7 +44,7 @@ export const useAdminRole = () => {
     };
 
     checkRoles();
-  }, [user]);
+  }, [user, authLoading]);
 
   return {
     isAdmin,
