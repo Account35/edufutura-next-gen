@@ -64,9 +64,11 @@ const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const Install = lazy(() => import("./pages/Install"));
 
 // Admin features - separate chunk
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const AdminContent = lazy(() => import("./pages/AdminContent"));
 const AdminQuizzes = lazy(() => import("./pages/AdminQuizzes"));
 const AdminQuizCreate = lazy(() => import("./pages/AdminQuizCreate"));
+const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
 const JobMonitoring = lazy(() => import("./pages/admin/JobMonitoring"));
 
 const queryClient = new QueryClient({
@@ -146,10 +148,12 @@ const App = () => (
                     <Route path="/admin/moderation" element={<ModerationDashboard />} />
                     
                     {/* Admin */}
+                    <Route path="/admin" element={<AdminDashboard />} />
                     <Route path="/admin/content" element={<AdminContent />} />
                     <Route path="/admin/jobs" element={<JobMonitoring />} />
                     <Route path="/admin/quizzes" element={<AdminQuizzes />} />
                     <Route path="/admin/quizzes/create" element={<AdminQuizCreate />} />
+                    <Route path="/admin/analytics" element={<AdminAnalytics />} />
                     
                     {/* PWA Install */}
                     <Route path="/install" element={<Install />} />
