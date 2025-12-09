@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdminRole } from '@/hooks/useAdminRole';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
@@ -17,6 +18,7 @@ import { toast } from 'sonner';
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, userProfile, loading: authLoading } = useAuth();
+  const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
   const { isPremium, isLoading: subLoading } = useSubscription();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [dashboardData, setDashboardData] = useState({
@@ -39,12 +41,18 @@ export default function Dashboard() {
       return;
     }
 
+    // Redirect admins/educators to admin dashboard
+    if (!roleLoading && (isAdmin || isEducator)) {
+      navigate('/admin');
+      return;
+    }
+
     if (user) {
       loadDashboardData();
       loadSchoolData();
       updateLastDashboardVisit();
     }
-  }, [user, userProfile, authLoading, navigate]);
+  }, [user, userProfile, authLoading, roleLoading, isAdmin, isEducator, navigate]);
 
   const loadDashboardData = async () => {
     try {
