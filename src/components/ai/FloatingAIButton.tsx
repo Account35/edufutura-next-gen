@@ -46,7 +46,7 @@ export const FloatingAIButton = ({ onClick, unreadSuggestions = 0 }: FloatingAIB
           <Button
             onClick={handleClick}
             className={cn(
-              "hidden lg:flex fixed bottom-6 right-6 w-16 h-16 rounded-full shadow-xl bg-secondary hover:bg-secondary/90 text-white z-50 group items-center justify-center transition-transform duration-200 hover:scale-110",
+              "fixed bottom-24 right-4 md:bottom-6 md:right-6 w-14 h-14 md:w-16 md:h-16 rounded-full shadow-xl bg-secondary hover:bg-secondary/90 text-white z-40 group flex items-center justify-center transition-transform duration-200 hover:scale-110",
               showPulse && "animate-[pulse_2s_ease-in-out_3]"
             )}
             size="icon"
