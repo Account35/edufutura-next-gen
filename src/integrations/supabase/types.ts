@@ -113,6 +113,87 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          created_at: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_acknowledged: boolean | null
+          severity: string | null
+          title: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type: string
+          created_at?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_acknowledged?: boolean | null
+          severity?: string | null
+          title: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          created_at?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_acknowledged?: boolean | null
+          severity?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      admin_audit_log: {
+        Row: {
+          action_description: string | null
+          action_type: string
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          severity: string | null
+          target_id: string | null
+          target_type: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_description?: string | null
+          action_type: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          severity?: string | null
+          target_id?: string | null
+          target_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_description?: string | null
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          severity?: string | null
+          target_id?: string | null
+          target_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ai_ab_tests: {
         Row: {
           created_by: string | null
@@ -3319,6 +3400,30 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          created_at: string | null
+          has_permission: boolean
+          id: string
+          permission_key: string
+          role_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          has_permission?: boolean
+          id?: string
+          permission_key: string
+          role_name: string
+        }
+        Update: {
+          created_at?: string | null
+          has_permission?: boolean
+          id?: string
+          permission_key?: string
+          role_name?: string
+        }
+        Relationships: []
+      }
       schools: {
         Row: {
           created_at: string | null
@@ -4568,6 +4673,10 @@ export type Database = {
           template_version: number
         }[]
       }
+      has_permission: {
+        Args: { _permission_key: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -4576,6 +4685,18 @@ export type Database = {
         Returns: boolean
       }
       invalidate_cache_by_tags: { Args: { tags: string[] }; Returns: number }
+      log_admin_action: {
+        Args: {
+          _action_description: string
+          _action_type: string
+          _metadata?: Json
+          _severity?: string
+          _target_id?: string
+          _target_type?: string
+          _user_id: string
+        }
+        Returns: string
+      }
       refresh_materialized_views: { Args: never; Returns: undefined }
       update_template_metrics: {
         Args: {
