@@ -56,9 +56,11 @@ const ForumDetail = lazy(() => import("./pages/ForumDetail"));
 const PostDetail = lazy(() => import("./pages/PostDetail"));
 const Resources = lazy(() => import("./pages/Resources"));
 const StudyBuddyFinder = lazy(() => import("./pages/StudyBuddyFinder"));
-const ModerationDashboard = lazy(() => import("./pages/ModerationDashboard"));
 const CommunityGuidelines = lazy(() => import("./pages/CommunityGuidelines"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+
+// Admin moderation
+const AdminModeration = lazy(() => import("./pages/admin/AdminModeration"));
 
 // PWA Install page
 const Install = lazy(() => import("./pages/Install"));
@@ -146,10 +148,10 @@ const App = () => (
                     <Route path="/community/study-buddies" element={<StudyBuddyFinder />} />
                     <Route path="/community/guidelines" element={<CommunityGuidelines />} />
                     <Route path="/community/leaderboard" element={<Leaderboard />} />
-                    <Route path="/admin/moderation" element={<ModerationDashboard />} />
                     
                     {/* Admin */}
                     <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/admin/moderation" element={<AdminModeration />} />
                     <Route path="/admin/content" element={<AdminContent />} />
                     <Route path="/admin/jobs" element={<JobMonitoring />} />
                     <Route path="/admin/quizzes" element={<AdminQuizzes />} />
