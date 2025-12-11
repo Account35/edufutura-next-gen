@@ -15,6 +15,11 @@ interface AuditLogEntry {
   user_email?: string;
   ip_address?: string | null;
   user_agent?: string | null;
+  old_value?: any;
+  new_value?: any;
+  reason?: string | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
 }
 
 export const useAdminAuditLog = (limit = 50) => {

@@ -157,9 +157,14 @@ export type Database = {
           action_description: string | null
           action_type: string
           created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
           id: string
           ip_address: string | null
           metadata: Json | null
+          new_value: Json | null
+          old_value: Json | null
+          reason: string | null
           severity: string | null
           target_id: string | null
           target_type: string | null
@@ -170,9 +175,14 @@ export type Database = {
           action_description?: string | null
           action_type: string
           created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
           ip_address?: string | null
           metadata?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
+          reason?: string | null
           severity?: string | null
           target_id?: string | null
           target_type?: string | null
@@ -183,9 +193,14 @@ export type Database = {
           action_description?: string | null
           action_type?: string
           created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
           ip_address?: string | null
           metadata?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
+          reason?: string | null
           severity?: string | null
           target_id?: string | null
           target_type?: string | null
@@ -2153,6 +2168,91 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      impersonation_actions: {
+        Row: {
+          action_description: string | null
+          action_type: string
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          impersonation_id: string
+          metadata: Json | null
+        }
+        Insert: {
+          action_description?: string | null
+          action_type: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          impersonation_id: string
+          metadata?: Json | null
+        }
+        Update: {
+          action_description?: string | null
+          action_type?: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          impersonation_id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impersonation_actions_impersonation_id_fkey"
+            columns: ["impersonation_id"]
+            isOneToOne: false
+            referencedRelation: "impersonation_log"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      impersonation_log: {
+        Row: {
+          admin_id: string
+          created_at: string | null
+          duration_minutes: number | null
+          ended_at: string | null
+          id: string
+          reason: string
+          started_at: string
+          support_ticket_id: string | null
+          target_user_id: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string | null
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          reason: string
+          started_at?: string
+          support_ticket_id?: string | null
+          target_user_id: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string | null
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          reason?: string
+          started_at?: string
+          support_ticket_id?: string | null
+          target_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impersonation_log_support_ticket_id_fkey"
+            columns: ["support_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       institution_recommendations: {
         Row: {
@@ -4204,6 +4304,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_access_notifications: {
+        Row: {
+          access_date: string
+          admin_id: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          access_date: string
+          admin_id: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          reason: string
+          user_id: string
+        }
+        Update: {
+          access_date?: string
+          admin_id?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          reason?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_actions: {
         Row: {
