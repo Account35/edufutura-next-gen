@@ -882,6 +882,45 @@ export type Database = {
           },
         ]
       }
+      canned_responses: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          created_by: string
+          id: string
+          is_shared: boolean | null
+          title: string
+          updated_at: string | null
+          use_count: number | null
+          variables: string[] | null
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string | null
+          created_by: string
+          id?: string
+          is_shared?: boolean | null
+          title: string
+          updated_at?: string | null
+          use_count?: number | null
+          variables?: string[] | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          is_shared?: boolean | null
+          title?: string
+          updated_at?: string | null
+          use_count?: number | null
+          variables?: string[] | null
+        }
+        Relationships: []
+      }
       career_assessments: {
         Row: {
           assessment_data: Json | null
@@ -2192,6 +2231,48 @@ export type Database = {
           item_b_id?: string
           item_type?: string
           similarity_score?: number
+        }
+        Relationships: []
+      }
+      knowledge_base_articles: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          created_by: string
+          helpful_count: number | null
+          id: string
+          is_published: boolean | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          view_count: number | null
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string | null
+          created_by: string
+          helpful_count?: number | null
+          id?: string
+          is_published?: boolean | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          created_by?: string
+          helpful_count?: number | null
+          id?: string
+          is_published?: boolean | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          view_count?: number | null
         }
         Relationships: []
       }
@@ -3582,6 +3663,68 @@ export type Database = {
           },
         ]
       }
+      sla_breaches: {
+        Row: {
+          breach_type: string
+          breached_at: string | null
+          escalated_to: string | null
+          id: string
+          notes: string | null
+          ticket_id: string
+        }
+        Insert: {
+          breach_type: string
+          breached_at?: string | null
+          escalated_to?: string | null
+          id?: string
+          notes?: string | null
+          ticket_id: string
+        }
+        Update: {
+          breach_type?: string
+          breached_at?: string | null
+          escalated_to?: string | null
+          id?: string
+          notes?: string | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sla_breaches_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sla_rules: {
+        Row: {
+          created_at: string | null
+          first_response_minutes: number
+          id: string
+          is_active: boolean | null
+          priority: string
+          resolution_minutes: number
+        }
+        Insert: {
+          created_at?: string | null
+          first_response_minutes: number
+          id?: string
+          is_active?: boolean | null
+          priority: string
+          resolution_minutes: number
+        }
+        Update: {
+          created_at?: string | null
+          first_response_minutes?: number
+          id?: string
+          is_active?: boolean | null
+          priority?: string
+          resolution_minutes?: number
+        }
+        Relationships: []
+      }
       spaced_repetition_items: {
         Row: {
           chapter_id: string | null
@@ -3872,6 +4015,63 @@ export type Database = {
         }
         Relationships: []
       }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          created_at: string | null
+          description: string
+          first_response_at: string | null
+          id: string
+          priority: string
+          resolved_at: string | null
+          satisfaction_feedback: string | null
+          satisfaction_rating: number | null
+          status: string
+          subject: string
+          tags: string[] | null
+          ticket_number: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string
+          created_at?: string | null
+          description: string
+          first_response_at?: string | null
+          id?: string
+          priority?: string
+          resolved_at?: string | null
+          satisfaction_feedback?: string | null
+          satisfaction_rating?: number | null
+          status?: string
+          subject: string
+          tags?: string[] | null
+          ticket_number?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string
+          first_response_at?: string | null
+          id?: string
+          priority?: string
+          resolved_at?: string | null
+          satisfaction_feedback?: string | null
+          satisfaction_rating?: number | null
+          status?: string
+          subject?: string
+          tags?: string[] | null
+          ticket_number?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       tertiary_institutions: {
         Row: {
           accreditation: string | null
@@ -3931,6 +4131,79 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      ticket_assignment_history: {
+        Row: {
+          assigned_from: string | null
+          assigned_to: string
+          created_at: string | null
+          id: string
+          reason: string | null
+          ticket_id: string
+        }
+        Insert: {
+          assigned_from?: string | null
+          assigned_to: string
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          ticket_id: string
+        }
+        Update: {
+          assigned_from?: string | null
+          assigned_to?: string
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_assignment_history_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_messages: {
+        Row: {
+          attachments: Json | null
+          created_at: string | null
+          id: string
+          is_internal: boolean | null
+          message_content: string
+          sender_id: string
+          ticket_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          message_content: string
+          sender_id: string
+          ticket_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          message_content?: string
+          sender_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_actions: {
         Row: {
