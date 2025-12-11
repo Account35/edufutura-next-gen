@@ -14,9 +14,9 @@ import {
   Shield,
   BarChart3,
   Settings,
-  MessageSquare,
   Briefcase,
-  Headphones
+  Headphones,
+  ScrollText
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -35,6 +35,7 @@ const sidebarItems = [
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/support', label: 'Support', icon: Headphones },
+  { href: '/admin/audit-log', label: 'Audit Log', icon: ScrollText },
   { href: '/admin/jobs', label: 'Jobs', icon: Briefcase },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
