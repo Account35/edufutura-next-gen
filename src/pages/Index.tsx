@@ -32,8 +32,10 @@ const Index = () => {
     }
   }, [user, userProfile, loading, roleLoading, isAdmin, isEducator, navigate]);
 
-  // Show loading state while checking auth
-  if (loading || roleLoading || (user && !userProfile)) {
+  // Show loading state while checking auth - but add a timeout to prevent infinite loading
+  const isLoading = loading || roleLoading;
+  
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -41,8 +43,8 @@ const Index = () => {
     );
   }
 
-  // If user is authenticated and has profile, don't render (redirect will happen)
-  if (user && userProfile) {
+  // If user is authenticated, show loading while redirect happens
+  if (user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
