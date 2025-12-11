@@ -34,7 +34,7 @@ const sidebarItems = [
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/jobs', label: 'Jobs', icon: Briefcase },
-  { href: '/community/forums', label: 'Forums', icon: MessageSquare },
+  { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
 export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => {

@@ -73,6 +73,7 @@ const AdminQuizzes = lazy(() => import("./pages/AdminQuizzes"));
 const AdminQuizCreate = lazy(() => import("./pages/AdminQuizCreate"));
 const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
+const AdminSettings = lazy(() => import("./pages/AdminSettings"));
 const JobMonitoring = lazy(() => import("./pages/admin/JobMonitoring"));
 
 const queryClient = new QueryClient({
@@ -160,6 +161,7 @@ const App = () => (
                     <Route path="/admin/quizzes/create" element={<AdminQuizCreate />} />
                     <Route path="/admin/analytics" element={<AdminAnalytics />} />
                     <Route path="/admin/users" element={<AdminUsers />} />
+                    <Route path="/admin/settings" element={<AdminSettings />} />
                     
                     {/* PWA Install */}
                     <Route path="/install" element={<Install />} />
