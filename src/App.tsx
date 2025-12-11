@@ -68,6 +68,7 @@ const Install = lazy(() => import("./pages/Install"));
 // Admin features - separate chunk
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const AdminContent = lazy(() => import("./pages/AdminContent"));
+const AdminCurriculum = lazy(() => import("./pages/AdminCurriculum"));
 const AdminQuizzes = lazy(() => import("./pages/AdminQuizzes"));
 const AdminQuizCreate = lazy(() => import("./pages/AdminQuizCreate"));
 const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
@@ -153,6 +154,7 @@ const App = () => (
                     <Route path="/admin" element={<AdminDashboard />} />
                     <Route path="/admin/moderation" element={<AdminModeration />} />
                     <Route path="/admin/content" element={<AdminContent />} />
+                    <Route path="/admin/curriculum" element={<AdminCurriculum />} />
                     <Route path="/admin/jobs" element={<JobMonitoring />} />
                     <Route path="/admin/quizzes" element={<AdminQuizzes />} />
                     <Route path="/admin/quizzes/create" element={<AdminQuizCreate />} />
