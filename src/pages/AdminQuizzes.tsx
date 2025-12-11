@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { useAdminQuizzes } from '@/hooks/useAdminQuizzes';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FullPageLoader } from '@/components/ui/loading';
+import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -32,18 +33,38 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Search, MoreVertical, Edit, Copy, Trash2, BarChart3, Eye, EyeOff } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Plus, Search, MoreVertical, Edit, Copy, Trash2, BarChart3, Eye, EyeOff,
+  FileQuestion, Users, Target, Clock, TrendingUp
+} from 'lucide-react';
+
+interface QuizStatsDisplay {
+  totalAttempts: number;
+  uniqueStudents: number;
+  averageScore: number;
+  passRate: number;
+  averageTimeMinutes: number;
+}
 
 export default function AdminQuizzes() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useAdminRole();
-  const { quizzes, loading: quizzesLoading, deleteQuiz, duplicateQuiz, bulkPublish, bulkUnpublish } = useAdminQuizzes();
+  const { quizzes, loading: quizzesLoading, deleteQuiz, duplicateQuiz, bulkPublish, bulkUnpublish, getQuizStats } = useAdminQuizzes();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [subjectFilter, setSubjectFilter] = useState<string>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
   const [publishedFilter, setPublishedFilter] = useState<string>('all');
   const [selectedQuizzes, setSelectedQuizzes] = useState<string[]>([]);
+  const [statsModal, setStatsModal] = useState<{ open: boolean; quizId: string | null; stats: QuizStatsDisplay | null }>({
+    open: false,
+    quizId: null,
+    stats: null,
+  });
+  const [loadingStats, setLoadingStats] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !roleLoading && !isAdmin) {
@@ -59,16 +80,25 @@ export default function AdminQuizzes() {
     return null;
   }
 
+  // Get unique subjects for filter
+  const subjects = [...new Set(quizzes.map(q => q.subject_name))].sort();
+
   // Filter quizzes
   const filteredQuizzes = quizzes.filter(quiz => {
     const matchesSearch = quiz.quiz_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       quiz.subject_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSubject = subjectFilter === 'all' || quiz.subject_name === subjectFilter;
     const matchesDifficulty = difficultyFilter === 'all' || quiz.difficulty_level === difficultyFilter;
     const matchesPublished = publishedFilter === 'all' ||
       (publishedFilter === 'published' && quiz.is_published) ||
       (publishedFilter === 'draft' && !quiz.is_published);
-    return matchesSearch && matchesDifficulty && matchesPublished;
+    return matchesSearch && matchesSubject && matchesDifficulty && matchesPublished;
   });
+
+  // Calculate overview stats
+  const totalQuizzes = quizzes.length;
+  const publishedQuizzes = quizzes.filter(q => q.is_published).length;
+  const totalQuestions = quizzes.reduce((sum, q) => sum + q.total_questions, 0);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -109,8 +139,16 @@ export default function AdminQuizzes() {
     }
   };
 
+  const handleViewStats = async (quizId: string) => {
+    setLoadingStats(true);
+    setStatsModal({ open: true, quizId, stats: null });
+    const stats = await getQuizStats(quizId);
+    setStatsModal({ open: true, quizId, stats });
+    setLoadingStats(false);
+  };
+
   return (
-    <DashboardLayout>
+    <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -124,10 +162,51 @@ export default function AdminQuizzes() {
           </Button>
         </div>
 
+        {/* Overview Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Quizzes</CardTitle>
+              <FileQuestion className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalQuizzes}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Published</CardTitle>
+              <Eye className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{publishedQuizzes}</div>
+              <Progress value={(publishedQuizzes / Math.max(totalQuizzes, 1)) * 100} className="h-1 mt-2" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Questions</CardTitle>
+              <Target className="h-4 w-4 text-secondary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalQuestions}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Subjects</CardTitle>
+              <TrendingUp className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{subjects.length}</div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Filters */}
         <Card className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search quizzes..."
@@ -136,6 +215,18 @@ export default function AdminQuizzes() {
                 className="pl-10"
               />
             </div>
+
+            <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Subject" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Subjects</SelectItem>
+                {subjects.map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
               <SelectTrigger>
@@ -159,20 +250,23 @@ export default function AdminQuizzes() {
                 <SelectItem value="draft">Draft</SelectItem>
               </SelectContent>
             </Select>
-
-            {selectedQuizzes.length > 0 && (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleBulkPublish}>
-                  <Eye className="h-4 w-4 mr-2" />
-                  Publish ({selectedQuizzes.length})
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleBulkUnpublish}>
-                  <EyeOff className="h-4 w-4 mr-2" />
-                  Unpublish
-                </Button>
-              </div>
-            )}
           </div>
+
+          {selectedQuizzes.length > 0 && (
+            <div className="flex gap-2 mt-4 pt-4 border-t">
+              <span className="text-sm text-muted-foreground self-center">
+                {selectedQuizzes.length} selected
+              </span>
+              <Button variant="outline" size="sm" onClick={handleBulkPublish}>
+                <Eye className="h-4 w-4 mr-2" />
+                Publish
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleBulkUnpublish}>
+                <EyeOff className="h-4 w-4 mr-2" />
+                Unpublish
+              </Button>
+            </div>
+          )}
         </Card>
 
         {/* Quiz Table */}
@@ -189,7 +283,7 @@ export default function AdminQuizzes() {
                 <TableHead>Title</TableHead>
                 <TableHead>Subject</TableHead>
                 <TableHead>Difficulty</TableHead>
-                <TableHead>Questions</TableHead>
+                <TableHead className="text-center">Questions</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -199,7 +293,7 @@ export default function AdminQuizzes() {
               {filteredQuizzes.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                    {searchTerm || difficultyFilter !== 'all' || publishedFilter !== 'all'
+                    {searchTerm || difficultyFilter !== 'all' || publishedFilter !== 'all' || subjectFilter !== 'all'
                       ? 'No quizzes match your filters'
                       : 'No quizzes yet. Create your first quiz to get started.'}
                   </TableCell>
@@ -213,8 +307,15 @@ export default function AdminQuizzes() {
                         onCheckedChange={(checked) => handleSelectQuiz(quiz.id, checked as boolean)}
                       />
                     </TableCell>
-                    <TableCell className="font-medium">{quiz.quiz_title}</TableCell>
-                    <TableCell>{quiz.subject_name}</TableCell>
+                    <TableCell>
+                      <div className="font-medium">{quiz.quiz_title}</div>
+                      {quiz.quiz_description && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">{quiz.quiz_description}</p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{quiz.subject_name}</Badge>
+                    </TableCell>
                     <TableCell>
                       <Badge variant={
                         quiz.difficulty_level === 'Beginner' ? 'secondary' :
@@ -224,7 +325,7 @@ export default function AdminQuizzes() {
                         {quiz.difficulty_level || 'N/A'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{quiz.total_questions}</TableCell>
+                    <TableCell className="text-center">{quiz.total_questions}</TableCell>
                     <TableCell>
                       {quiz.is_published ? (
                         <Badge className="bg-green-500">Published</Badge>
@@ -247,7 +348,7 @@ export default function AdminQuizzes() {
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/admin/quizzes/${quiz.id}/stats`)}>
+                          <DropdownMenuItem onClick={() => handleViewStats(quiz.id)}>
                             <BarChart3 className="h-4 w-4 mr-2" />
                             View Stats
                           </DropdownMenuItem>
@@ -272,7 +373,71 @@ export default function AdminQuizzes() {
             </TableBody>
           </Table>
         </Card>
+
+        {/* Stats Modal */}
+        <Dialog open={statsModal.open} onOpenChange={(open) => setStatsModal({ open, quizId: null, stats: null })}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Quiz Statistics</DialogTitle>
+            </DialogHeader>
+            {loadingStats ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              </div>
+            ) : statsModal.stats ? (
+              <div className="grid grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Total Attempts</span>
+                    </div>
+                    <p className="text-2xl font-bold mt-1">{statsModal.stats.totalAttempts}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Unique Students</span>
+                    </div>
+                    <p className="text-2xl font-bold mt-1">{statsModal.stats.uniqueStudents}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Average Score</span>
+                    </div>
+                    <p className="text-2xl font-bold mt-1">{statsModal.stats.averageScore.toFixed(1)}%</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Pass Rate</span>
+                    </div>
+                    <p className="text-2xl font-bold mt-1">{statsModal.stats.passRate.toFixed(1)}%</p>
+                  </CardContent>
+                </Card>
+                <Card className="col-span-2">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Average Time</span>
+                    </div>
+                    <p className="text-2xl font-bold mt-1">{Math.round(statsModal.stats.averageTimeMinutes)} min</p>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">No statistics available for this quiz</p>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
-    </DashboardLayout>
+    </AdminLayout>
   );
 }
