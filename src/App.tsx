@@ -2,8 +2,9 @@ import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { createBrowserRouter, RouterProvider, createRoutesFromElements, Route } from "react-router-dom";
+import createQueryClient from '@/lib/query-client';
 import { AuthProvider } from "@/hooks/useAuth";
 import { AuthEventsProvider } from "@/components/AuthEventsProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -16,8 +17,9 @@ import { PWAUpdatePrompt } from "@/components/pwa/PWAUpdatePrompt";
 // Critical path - loaded immediately (essential screens)
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import Dashboard from "./pages/Dashboard";
-import Onboarding from "./pages/Onboarding";
+// Dashboard & Onboarding are only needed after auth - lazy-load to reduce initial bundle
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
 
 // Phase 2: Profile & Settings - lazy loaded
 const Settings = lazy(() => import("./pages/Settings"));
@@ -78,16 +80,83 @@ const JobMonitoring = lazy(() => import("./pages/admin/JobMonitoring"));
 const AdminSupport = lazy(() => import("./pages/AdminSupport"));
 const AdminAuditLog = lazy(() => import("./pages/AdminAuditLog"));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+const queryClient = createQueryClient();
+// Router with opt-in future flags (v7 safe opt-in feature flags)
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route errorElement={<RouteErrorBoundary><div/></RouteErrorBoundary>}>
+      {/* Critical path */}
+      <Route path="/" element={<Index />} />
+      
+      {/* Phase 1: Auth & Onboarding */}
+      <Route path="/onboarding" element={<Onboarding />} />
+      
+      {/* Phase 2: Dashboard & Profile */}
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/profile/certificates" element={<ProfileCertificates />} />
+      <Route path="/reports" element={<Reports />} />
+      
+      {/* Phase 3: Curriculum */}
+      <Route path="/subjects" element={<SubjectBrowser />} />
+      <Route path="/curriculum/:subjectName" element={<SubjectLanding />} />
+      <Route path="/curriculum/:subjectName/:chapterNumber" element={<ChapterContent />} />
+      <Route path="/search" element={<SearchResults />} />
+      <Route path="/bookmarks" element={<Bookmarks />} />
+      
+      {/* Phase 5: Assessment */}
+      <Route path="/quiz/:quizId" element={<QuizLanding />} />
+      <Route path="/quiz/:quizId/attempt/:attemptId" element={<QuizTaking />} />
+      <Route path="/quiz/:quizId/results/:attemptId" element={<QuizResults />} />
+      <Route path="/analytics" element={<Analytics />} />
+      <Route path="/analytics/:subject" element={<Analytics />} />
+      
+      {/* Phase 6: Certificates */}
+      <Route path="/verify" element={<VerifyCertificate />} />
+      <Route path="/verify/:code" element={<VerifyCertificate />} />
+      <Route path="/certificates" element={<Certificates />} />
+      
+      {/* Phase 7: Career Guidance */}
+      <Route path="/career-guidance/universities" element={<Universities />} />
+      <Route path="/career-guidance/quiz" element={<CareerQuiz />} />
+      <Route path="/career-guidance/salary-calculator" element={<SalaryCalculator />} />
+      <Route path="/career-guidance/resources" element={<CareerResources />} />
+      <Route path="/career-guidance/faq" element={<CareerFAQ />} />
+      <Route path="/institutions/:institutionName" element={<InstitutionDetail />} />
+      
+      {/* Phase 8: Community */}
+      <Route path="/community/forums" element={<Forums />} />
+      <Route path="/community/forums/:subject" element={<ForumDetail />} />
+      <Route path="/community/forums/:subject/post/:postId" element={<PostDetail />} />
+      <Route path="/community/resources" element={<Resources />} />
+      <Route path="/community/study-buddies" element={<StudyBuddyFinder />} />
+      <Route path="/community/guidelines" element={<CommunityGuidelines />} />
+      <Route path="/community/leaderboard" element={<Leaderboard />} />
+      
+      {/* Admin */}
+      <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/admin/moderation" element={<AdminModeration />} />
+      <Route path="/admin/content" element={<AdminContent />} />
+      <Route path="/admin/curriculum" element={<AdminCurriculum />} />
+      <Route path="/admin/jobs" element={<JobMonitoring />} />
+      <Route path="/admin/quizzes" element={<AdminQuizzes />} />
+      <Route path="/admin/quizzes/create" element={<AdminQuizCreate />} />
+      <Route path="/admin/analytics" element={<AdminAnalytics />} />
+      <Route path="/admin/users" element={<AdminUsers />} />
+      <Route path="/admin/settings" element={<AdminSettings />} />
+      <Route path="/admin/support" element={<AdminSupport />} />
+      <Route path="/admin/audit-log" element={<AdminAuditLog />} />
+      
+      {/* PWA Install */}
+      <Route path="/install" element={<Install />} />
+      
+      {/* Catch-all */}
+      <Route path="*" element={<NotFound />} />
+    </Route>
+  ),
+  { future: ({ v7_startTransition: true, v7_relativeSplatPath: true } as any) }
+);
 
 const App = () => (
   <ErrorBoundary>
@@ -100,82 +169,11 @@ const App = () => (
             <Toaster />
             <Sonner />
             <PWAInstallPrompt minPageViews={3} />
-            <BrowserRouter>
-              <RouteErrorBoundary>
+            <RouteErrorBoundary>
                 <Suspense fallback={<LazyLoadFallback type="page" />}>
-                  <Routes>
-                    {/* Critical path */}
-                    <Route path="/" element={<Index />} />
-                    
-                    {/* Phase 1: Auth & Onboarding */}
-                    <Route path="/onboarding" element={<Onboarding />} />
-                    
-                    {/* Phase 2: Dashboard & Profile */}
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/profile/certificates" element={<ProfileCertificates />} />
-                    <Route path="/reports" element={<Reports />} />
-                    
-                    {/* Phase 3: Curriculum */}
-                    <Route path="/subjects" element={<SubjectBrowser />} />
-                    <Route path="/curriculum/:subjectName" element={<SubjectLanding />} />
-                    <Route path="/curriculum/:subjectName/:chapterNumber" element={<ChapterContent />} />
-                    <Route path="/search" element={<SearchResults />} />
-                    <Route path="/bookmarks" element={<Bookmarks />} />
-                    
-                    {/* Phase 5: Assessment */}
-                    <Route path="/quiz/:quizId" element={<QuizLanding />} />
-                    <Route path="/quiz/:quizId/attempt/:attemptId" element={<QuizTaking />} />
-                    <Route path="/quiz/:quizId/results/:attemptId" element={<QuizResults />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/analytics/:subject" element={<Analytics />} />
-                    
-                    {/* Phase 6: Certificates */}
-                    <Route path="/verify" element={<VerifyCertificate />} />
-                    <Route path="/verify/:code" element={<VerifyCertificate />} />
-                    <Route path="/certificates" element={<Certificates />} />
-                    
-                    {/* Phase 7: Career Guidance */}
-                    <Route path="/career-guidance/universities" element={<Universities />} />
-                    <Route path="/career-guidance/quiz" element={<CareerQuiz />} />
-                    <Route path="/career-guidance/salary-calculator" element={<SalaryCalculator />} />
-                    <Route path="/career-guidance/resources" element={<CareerResources />} />
-                    <Route path="/career-guidance/faq" element={<CareerFAQ />} />
-                    <Route path="/institutions/:institutionName" element={<InstitutionDetail />} />
-                    
-                    {/* Phase 8: Community */}
-                    <Route path="/community/forums" element={<Forums />} />
-                    <Route path="/community/forums/:subject" element={<ForumDetail />} />
-                    <Route path="/community/forums/:subject/post/:postId" element={<PostDetail />} />
-                    <Route path="/community/resources" element={<Resources />} />
-                    <Route path="/community/study-buddies" element={<StudyBuddyFinder />} />
-                    <Route path="/community/guidelines" element={<CommunityGuidelines />} />
-                    <Route path="/community/leaderboard" element={<Leaderboard />} />
-                    
-                    {/* Admin */}
-                    <Route path="/admin" element={<AdminDashboard />} />
-                    <Route path="/admin/moderation" element={<AdminModeration />} />
-                    <Route path="/admin/content" element={<AdminContent />} />
-                    <Route path="/admin/curriculum" element={<AdminCurriculum />} />
-                    <Route path="/admin/jobs" element={<JobMonitoring />} />
-                    <Route path="/admin/quizzes" element={<AdminQuizzes />} />
-                    <Route path="/admin/quizzes/create" element={<AdminQuizCreate />} />
-                    <Route path="/admin/analytics" element={<AdminAnalytics />} />
-                    <Route path="/admin/users" element={<AdminUsers />} />
-                    <Route path="/admin/settings" element={<AdminSettings />} />
-                    <Route path="/admin/support" element={<AdminSupport />} />
-                    <Route path="/admin/audit-log" element={<AdminAuditLog />} />
-                    
-                    {/* PWA Install */}
-                    <Route path="/install" element={<Install />} />
-                    
-                    {/* Catch-all */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
+                  <RouterProvider router={router} />
                 </Suspense>
-              </RouteErrorBoundary>
-            </BrowserRouter>
+            </RouteErrorBoundary>
           </TooltipProvider>
         </AuthEventsProvider>
       </AuthProvider>
