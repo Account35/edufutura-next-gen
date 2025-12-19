@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
@@ -81,29 +81,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    // Set up auth state listener FIRST
+    // Set up auth state listener FIRST, and avoid blocking UI while profile loads
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         if (!mounted) return;
-        
+
         setSession(newSession);
         const currentUser = newSession?.user ?? null;
         setUser(currentUser);
 
+        // Do not block rendering while we fetch the profile - fetch in background
+        setLoading(false);
+
         if (currentUser) {
-          const profile = await loadUserProfile(currentUser.id);
-          if (mounted) {
-            setUserProfile(profile);
-            setLoading(false);
-          }
+          loadUserProfile(currentUser.id).then(profile => {
+            if (mounted) setUserProfile(profile);
+          }).catch(err => console.error('Error loading profile:', err));
         } else {
           setUserProfile(null);
-          setLoading(false);
         }
       }
     );
 
-    // THEN check for existing session
+    // THEN check for existing session - don't wait for profile to finish before clearing loading
     const initializeAuth = async () => {
       const { data: { session: existingSession } } = await supabase.auth.getSession();
       
@@ -113,14 +113,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const currentUser = existingSession?.user ?? null;
       setUser(currentUser);
 
+      // Allow app to render even if we haven't loaded profile yet
+      setLoading(false);
+
       if (currentUser) {
-        const profile = await loadUserProfile(currentUser.id);
-        if (mounted) {
-          setUserProfile(profile);
-          setLoading(false);
-        }
-      } else {
-        setLoading(false);
+        loadUserProfile(currentUser.id).then(profile => {
+          if (mounted) setUserProfile(profile);
+        }).catch(err => console.error('Error loading profile:', err));
       }
     };
 
@@ -179,7 +178,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     session,
     userProfile,
@@ -187,7 +186,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isAuthenticated: !!session,
     signOut,
     refreshProfile,
-  };
+  }), [user, session, userProfile, loading, signOut, refreshProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
