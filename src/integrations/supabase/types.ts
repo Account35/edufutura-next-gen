@@ -14,6 +14,228 @@ export type Database = {
   }
   public: {
     Tables: {
+      ab_experiment_results: {
+        Row: {
+          calculated_at: string | null
+          experiment_id: string | null
+          id: string
+          is_significant: boolean | null
+          p_value: number | null
+          relative_improvement: number | null
+          result_date: string
+          variant_a_conversions: number
+          variant_a_rate: number | null
+          variant_a_users: number
+          variant_b_conversions: number
+          variant_b_rate: number | null
+          variant_b_users: number
+        }
+        Insert: {
+          calculated_at?: string | null
+          experiment_id?: string | null
+          id?: string
+          is_significant?: boolean | null
+          p_value?: number | null
+          relative_improvement?: number | null
+          result_date: string
+          variant_a_conversions?: number
+          variant_a_rate?: number | null
+          variant_a_users?: number
+          variant_b_conversions?: number
+          variant_b_rate?: number | null
+          variant_b_users?: number
+        }
+        Update: {
+          calculated_at?: string | null
+          experiment_id?: string | null
+          id?: string
+          is_significant?: boolean | null
+          p_value?: number | null
+          relative_improvement?: number | null
+          result_date?: string
+          variant_a_conversions?: number
+          variant_a_rate?: number | null
+          variant_a_users?: number
+          variant_b_conversions?: number
+          variant_b_rate?: number | null
+          variant_b_users?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_experiment_results_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "ab_experiments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ab_experiments: {
+        Row: {
+          confidence_level: number | null
+          created_at: string | null
+          created_by: string | null
+          end_date: string | null
+          experiment_description: string | null
+          experiment_name: string
+          id: string
+          is_significant: boolean | null
+          p_value: number | null
+          start_date: string | null
+          status: string
+          target_audience: Json | null
+          target_metric: string
+          traffic_percentage: number
+          updated_at: string | null
+          variant_a_config: Json | null
+          variant_a_name: string
+          variant_b_config: Json | null
+          variant_b_name: string
+          winner_variant: string | null
+        }
+        Insert: {
+          confidence_level?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string | null
+          experiment_description?: string | null
+          experiment_name: string
+          id?: string
+          is_significant?: boolean | null
+          p_value?: number | null
+          start_date?: string | null
+          status?: string
+          target_audience?: Json | null
+          target_metric: string
+          traffic_percentage?: number
+          updated_at?: string | null
+          variant_a_config?: Json | null
+          variant_a_name?: string
+          variant_b_config?: Json | null
+          variant_b_name?: string
+          winner_variant?: string | null
+        }
+        Update: {
+          confidence_level?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string | null
+          experiment_description?: string | null
+          experiment_name?: string
+          id?: string
+          is_significant?: boolean | null
+          p_value?: number | null
+          start_date?: string | null
+          status?: string
+          target_audience?: Json | null
+          target_metric?: string
+          traffic_percentage?: number
+          updated_at?: string | null
+          variant_a_config?: Json | null
+          variant_a_name?: string
+          variant_b_config?: Json | null
+          variant_b_name?: string
+          winner_variant?: string | null
+        }
+        Relationships: []
+      }
+      ab_test_assignments: {
+        Row: {
+          assigned_at: string | null
+          experiment_id: string | null
+          id: string
+          user_id: string | null
+          variant: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          experiment_id?: string | null
+          id?: string
+          user_id?: string | null
+          variant: string
+        }
+        Update: {
+          assigned_at?: string | null
+          experiment_id?: string | null
+          id?: string
+          user_id?: string | null
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_test_assignments_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "ab_experiments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ab_test_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ab_test_conversions: {
+        Row: {
+          assignment_id: string | null
+          converted_at: string | null
+          experiment_id: string | null
+          id: string
+          metadata: Json | null
+          metric_name: string
+          metric_value: number
+          user_id: string | null
+          variant: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          converted_at?: string | null
+          experiment_id?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_name: string
+          metric_value?: number
+          user_id?: string | null
+          variant: string
+        }
+        Update: {
+          assignment_id?: string | null
+          converted_at?: string | null
+          experiment_id?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_name?: string
+          metric_value?: number
+          user_id?: string | null
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_test_conversions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "ab_test_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ab_test_conversions_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "ab_experiments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ab_test_conversions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       account_lockouts: {
         Row: {
           created_at: string | null
@@ -1142,6 +1364,36 @@ export type Database = {
           },
         ]
       }
+      cohort_retention: {
+        Row: {
+          calculated_at: string | null
+          cohort_month: string
+          id: string
+          month_offset: number
+          retained_users: number
+          retention_rate: number | null
+          total_users: number
+        }
+        Insert: {
+          calculated_at?: string | null
+          cohort_month: string
+          id?: string
+          month_offset: number
+          retained_users?: number
+          retention_rate?: number | null
+          total_users?: number
+        }
+        Update: {
+          calculated_at?: string | null
+          cohort_month?: string
+          id?: string
+          month_offset?: number
+          retained_users?: number
+          retention_rate?: number | null
+          total_users?: number
+        }
+        Relationships: []
+      }
       community_reports: {
         Row: {
           action_taken: string | null
@@ -1268,6 +1520,39 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      conversion_funnels: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          funnel_description: string | null
+          funnel_name: string
+          id: string
+          is_active: boolean | null
+          steps: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          funnel_description?: string | null
+          funnel_name: string
+          id?: string
+          is_active?: boolean | null
+          steps?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          funnel_description?: string | null
+          funnel_name?: string
+          id?: string
+          is_active?: boolean | null
+          steps?: Json
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1875,6 +2160,104 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      funnel_analytics: {
+        Row: {
+          analysis_date: string
+          avg_time_to_convert_minutes: number | null
+          calculated_at: string | null
+          conversion_rate: number | null
+          converted_users: number
+          drop_off_rate: number | null
+          funnel_id: string | null
+          id: string
+          step_name: string
+          step_order: number
+          total_users: number
+        }
+        Insert: {
+          analysis_date: string
+          avg_time_to_convert_minutes?: number | null
+          calculated_at?: string | null
+          conversion_rate?: number | null
+          converted_users?: number
+          drop_off_rate?: number | null
+          funnel_id?: string | null
+          id?: string
+          step_name: string
+          step_order: number
+          total_users?: number
+        }
+        Update: {
+          analysis_date?: string
+          avg_time_to_convert_minutes?: number | null
+          calculated_at?: string | null
+          conversion_rate?: number | null
+          converted_users?: number
+          drop_off_rate?: number | null
+          funnel_id?: string | null
+          id?: string
+          step_name?: string
+          step_order?: number
+          total_users?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_analytics_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "conversion_funnels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funnel_events: {
+        Row: {
+          completed_at: string | null
+          funnel_id: string | null
+          id: string
+          metadata: Json | null
+          session_id: string | null
+          step_name: string
+          step_order: number
+          user_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          funnel_id?: string | null
+          id?: string
+          metadata?: Json | null
+          session_id?: string | null
+          step_name: string
+          step_order: number
+          user_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          funnel_id?: string | null
+          id?: string
+          metadata?: Json | null
+          session_id?: string | null
+          step_name?: string
+          step_order?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_events_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "conversion_funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funnel_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       grading_log: {
         Row: {
@@ -2886,6 +3269,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_forecasts: {
+        Row: {
+          accuracy_score: number | null
+          actual_value: number | null
+          confidence_lower: number | null
+          confidence_upper: number | null
+          created_at: string | null
+          features_used: Json | null
+          forecast_date: string
+          forecast_type: string
+          id: string
+          model_version: string | null
+          predicted_value: number
+          validated_at: string | null
+        }
+        Insert: {
+          accuracy_score?: number | null
+          actual_value?: number | null
+          confidence_lower?: number | null
+          confidence_upper?: number | null
+          created_at?: string | null
+          features_used?: Json | null
+          forecast_date: string
+          forecast_type: string
+          id?: string
+          model_version?: string | null
+          predicted_value: number
+          validated_at?: string | null
+        }
+        Update: {
+          accuracy_score?: number | null
+          actual_value?: number | null
+          confidence_lower?: number | null
+          confidence_upper?: number | null
+          created_at?: string | null
+          features_used?: Json | null
+          forecast_date?: string
+          forecast_type?: string
+          id?: string
+          model_version?: string | null
+          predicted_value?: number
+          validated_at?: string | null
+        }
+        Relationships: []
       }
       post_replies: {
         Row: {
@@ -4495,6 +4923,38 @@ export type Database = {
             columns: ["chapter_id"]
             isOneToOne: false
             referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_cohorts: {
+        Row: {
+          cohort_month: string
+          created_at: string | null
+          id: string
+          registration_date: string
+          user_id: string
+        }
+        Insert: {
+          cohort_month: string
+          created_at?: string | null
+          id?: string
+          registration_date: string
+          user_id: string
+        }
+        Update: {
+          cohort_month?: string
+          created_at?: string | null
+          id?: string
+          registration_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_cohorts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
