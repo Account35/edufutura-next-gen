@@ -9,21 +9,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
-  Users, TrendingUp, DollarSign, Target, Activity, 
+  Users, TrendingUp, DollarSign, Target,
   Download, Calendar as CalendarIcon, RefreshCw,
-  BookOpen, FileQuestion, MessageSquare, Bot
+  BookOpen, FileQuestion, MessageSquare, Bot, FlaskConical, Filter, BarChart3
 } from 'lucide-react';
-import { format, subDays, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { format, subDays, subMonths, startOfMonth } from 'date-fns';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, PieChart, Pie, Cell
 } from 'recharts';
+import { CohortAnalysisChart, FunnelAnalysisView, ABTestingDashboard, PredictiveForecasting } from '@/components/admin/analytics';
 
 const COLORS = ['#1B4332', '#D4AF37', '#800020', '#3B82F6', '#10B981', '#F97316', '#9333EA', '#EF4444', '#14B8A6'];
 
@@ -172,11 +171,27 @@ export default function AdminAnalytics() {
 
         {/* Tabs for different analytics views */}
         <Tabs defaultValue="growth" className="space-y-4">
-          <TabsList>
+          <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="growth">User Growth</TabsTrigger>
             <TabsTrigger value="engagement">Engagement</TabsTrigger>
             <TabsTrigger value="academic">Academic</TabsTrigger>
             <TabsTrigger value="geographic">Geographic</TabsTrigger>
+            <TabsTrigger value="cohorts" className="flex items-center gap-1">
+              <BarChart3 className="h-3 w-3" />
+              Cohorts
+            </TabsTrigger>
+            <TabsTrigger value="funnels" className="flex items-center gap-1">
+              <Filter className="h-3 w-3" />
+              Funnels
+            </TabsTrigger>
+            <TabsTrigger value="abtesting" className="flex items-center gap-1">
+              <FlaskConical className="h-3 w-3" />
+              A/B Tests
+            </TabsTrigger>
+            <TabsTrigger value="forecasting" className="flex items-center gap-1">
+              <TrendingUp className="h-3 w-3" />
+              Forecasting
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="growth" className="space-y-4">
