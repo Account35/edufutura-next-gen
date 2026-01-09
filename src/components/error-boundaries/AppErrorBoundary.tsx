@@ -52,7 +52,8 @@ export class AppErrorBoundary extends Component<Props, State> {
   };
 
   handleGoHome = () => {
-    window.location.href = '/dashboard';
+    // Navigate to root and let the app handle proper routing based on user role
+    window.location.href = '/';
   };
 
   handleReport = () => {

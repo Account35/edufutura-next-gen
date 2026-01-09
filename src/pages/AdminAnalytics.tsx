@@ -71,15 +71,7 @@ export default function AdminAnalytics() {
     exportReport 
   } = useAdminAnalytics(dateRange);
 
-  useEffect(() => {
-    if (!authLoading && !roleLoading) {
-      if (!user) {
-        navigate('/');
-      } else if (!isAdmin && !isEducator) {
-        navigate('/dashboard');
-      }
-    }
-  }, [user, isAdmin, isEducator, authLoading, roleLoading, navigate]);
+  // Access control is handled by AdminLayout - no need for duplicate redirect logic
 
   if (authLoading || roleLoading) {
     return <FullPageLoader message="Loading analytics..." />;

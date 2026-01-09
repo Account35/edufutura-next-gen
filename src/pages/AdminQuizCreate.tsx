@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminRole } from '@/hooks/useAdminRole';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FullPageLoader } from '@/components/ui/loading';
@@ -31,11 +31,7 @@ export default function AdminQuizCreate() {
   });
   const [questions, setQuestions] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (!authLoading && !roleLoading && !isAdmin) {
-      navigate('/dashboard');
-    }
-  }, [isAdmin, authLoading, roleLoading, navigate]);
+  // Access control is handled by AdminLayout - no need for duplicate redirect logic
 
   if (authLoading || roleLoading) {
     return <FullPageLoader message="Loading..." />;
@@ -46,7 +42,7 @@ export default function AdminQuizCreate() {
   }
 
   return (
-    <DashboardLayout>
+    <AdminLayout title="Create Quiz">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -107,6 +103,6 @@ export default function AdminQuizCreate() {
           </Tabs>
         </Card>
       </div>
-    </DashboardLayout>
+    </AdminLayout>
   );
 }

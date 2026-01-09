@@ -66,11 +66,7 @@ export default function AdminQuizzes() {
   });
   const [loadingStats, setLoadingStats] = useState(false);
 
-  useEffect(() => {
-    if (!authLoading && !roleLoading && !isAdmin) {
-      navigate('/dashboard');
-    }
-  }, [isAdmin, authLoading, roleLoading, navigate]);
+  // Access control is handled by AdminLayout - no need for duplicate redirect logic
 
   if (authLoading || roleLoading || quizzesLoading) {
     return <FullPageLoader message="Loading admin panel..." />;

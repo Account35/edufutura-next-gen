@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { supabase } from '@/integrations/supabase/client';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,11 +19,7 @@ export default function AdminContent() {
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!roleLoading && !isAdminOrEducator) {
-      navigate('/dashboard');
-    }
-  }, [isAdminOrEducator, roleLoading, navigate]);
+  // Access control is handled by AdminLayout - no need for duplicate redirect logic
 
   useEffect(() => {
     const fetchSubjects = async () => {
@@ -50,12 +46,12 @@ export default function AdminContent() {
 
   if (roleLoading || loading) {
     return (
-      <DashboardLayout>
+      <AdminLayout title="Content Management">
         <div className="space-y-4">
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>
-      </DashboardLayout>
+      </AdminLayout>
     );
   }
 
@@ -64,15 +60,8 @@ export default function AdminContent() {
   }
 
   return (
-    <DashboardLayout>
+    <AdminLayout title="Content Management" subtitle="Upload and manage curriculum content">
       <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Shield className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold text-primary font-serif">Content Management</h1>
-            <p className="text-muted-foreground">Upload and manage curriculum content</p>
-          </div>
-        </div>
 
         <Alert>
           <Shield className="h-4 w-4" />
@@ -159,6 +148,6 @@ export default function AdminContent() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
+    </AdminLayout>
   );
 }
