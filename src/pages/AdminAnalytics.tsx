@@ -410,6 +410,22 @@ export default function AdminAnalytics() {
               </Card>
             </div>
           </TabsContent>
+
+          <TabsContent value="cohorts" className="space-y-4">
+            <CohortAnalysisChart />
+          </TabsContent>
+
+          <TabsContent value="funnels" className="space-y-4">
+            <FunnelAnalysisView />
+          </TabsContent>
+
+          <TabsContent value="abtesting" className="space-y-4">
+            <ABTestingDashboard />
+          </TabsContent>
+
+          <TabsContent value="forecasting" className="space-y-4">
+            <PredictiveForecasting />
+          </TabsContent>
         </Tabs>
       </div>
     </AdminLayout>
