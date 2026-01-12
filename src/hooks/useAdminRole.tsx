@@ -12,11 +12,13 @@ export const useAdminRole = () => {
   useEffect(() => {
     // Wait for auth to finish loading
     if (authLoading) {
+      console.log('[AdminRole] Waiting for auth...');
       return;
     }
 
     // If no user, reset and stop loading
     if (!user) {
+      console.log('[AdminRole] No user, resetting roles');
       setIsAdmin(false);
       setIsEducator(false);
       setLoading(false);
@@ -26,16 +28,19 @@ export const useAdminRole = () => {
 
     // Skip if we already checked this user
     if (lastCheckedUserId.current === user.id) {
+      console.log('[AdminRole] Already checked user, skipping');
       return;
     }
 
     const checkRoles = async () => {
       try {
         setLoading(true);
+        console.time('[AdminRole] checkRoles');
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id);
+        console.timeEnd('[AdminRole] checkRoles');
 
         if (error) {
           console.error('Error fetching roles:', error);
@@ -43,6 +48,7 @@ export const useAdminRole = () => {
           setIsEducator(false);
         } else {
           const roles = data?.map(r => r.role) || [];
+          console.log('[AdminRole] Roles found:', roles);
           setIsAdmin(roles.includes('admin'));
           setIsEducator(roles.includes('educator'));
         }

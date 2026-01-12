@@ -38,15 +38,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const loadUserProfile = async (currentUser: User) => {
     if (profileLoadRef.current?.userId === currentUser.id) {
+      console.log('[Auth] Profile load deduplicated for', currentUser.id);
       return profileLoadRef.current.promise;
     }
 
     const promise = (async (): Promise<Tables<'users'> | null> => {
+      console.time('[Auth] loadUserProfile');
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', currentUser.id)
         .maybeSingle();
+      console.timeEnd('[Auth] loadUserProfile');
 
       if (error) {
         console.error('Error loading user profile:', error);
@@ -54,7 +57,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // If profile exists, return it
-      if (data) return data;
+      if (data) {
+        console.log('[Auth] Profile fetched successfully');
+        return data;
+      }
 
       // If profile doesn't exist yet (common cause of onboarding spinner), create a minimal record.
       const fullNameFromMeta =
@@ -143,11 +149,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
+    console.time('[Auth] useEffect init');
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         if (!mounted) return;
+        console.log('[Auth] onAuthStateChange event:', event);
 
         // Clear in-flight profile promise when user changes
         const newUser = newSession?.user ?? null;
@@ -173,11 +181,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // THEN check for existing session
     const initializeAuth = async () => {
+      console.time('[Auth] getSession');
       const { data: { session: existingSession } } = await supabase.auth.getSession();
+      console.timeEnd('[Auth] getSession');
 
       if (!mounted) return;
 
       const existingUser = existingSession?.user ?? null;
+      console.log('[Auth] existingUser:', existingUser?.id ?? 'none');
       if (profileLoadRef.current && profileLoadRef.current.userId !== (existingUser?.id ?? null)) {
         profileLoadRef.current = null;
       }
