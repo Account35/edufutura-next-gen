@@ -16,19 +16,27 @@ export default function Onboarding() {
   const [setupError, setSetupError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('[Onboarding] State:', {
+      loading,
+      roleLoading,
+      user: user?.id ?? null,
+      userProfile: userProfile ? 'exists' : null,
+      onboarding_completed: userProfile?.onboarding_completed,
+      autoAttempted,
+    });
+
     // Redirect if not authenticated
     if (!loading && !user) {
+      console.log('[Onboarding] Not authenticated, redirecting to /');
       navigate('/');
       return;
     }
 
     // If onboarding already completed, redirect appropriately
     if (userProfile?.onboarding_completed && !roleLoading) {
-      if (isAdmin || isEducator) {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+      const dest = isAdmin || isEducator ? '/admin' : '/dashboard';
+      console.log('[Onboarding] Already completed, redirecting to', dest);
+      navigate(dest);
       return;
     }
 
@@ -41,6 +49,7 @@ export default function Onboarding() {
       !roleLoading &&
       !autoAttempted
     ) {
+      console.log('[Onboarding] Auto-completing onboarding...');
       setAutoAttempted(true);
       completeOnboarding();
     }
