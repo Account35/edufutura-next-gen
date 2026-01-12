@@ -62,66 +62,88 @@ export const useAdminAnalytics = (dateRange: { start: Date; end: Date }) => {
     try {
       setLoading(true);
 
-      // Fetch user counts
-      const { count: totalUsers } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true });
-
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
-      const { count: activeToday } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .gte('last_login_at', today.toISOString());
 
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      
-      const { count: newUsersThisWeek } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', weekAgo.toISOString());
 
-      const { count: premiumUsers } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('account_type', 'premium');
+      // Core counts in parallel (prevents long request waterfall)
+      const [
+        totalUsersResult,
+        activeTodayResult,
+        newUsersThisWeekResult,
+        premiumUsersResult,
+        totalAttemptsResult,
+        completedAttemptsResult,
+      ] = await Promise.all([
+        supabase.from('users').select('id', { count: 'exact', head: true }),
+        supabase.from('users').select('id', { count: 'exact', head: true }).gte('last_login_at', today.toISOString()),
+        supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo.toISOString()),
+        supabase.from('users').select('id', { count: 'exact', head: true }).eq('account_type', 'premium'),
+        supabase.from('quiz_attempts').select('id', { count: 'exact', head: true }),
+        supabase.from('quiz_attempts').select('id', { count: 'exact', head: true }).eq('is_completed', true),
+      ]);
 
-      // Quiz completion stats
-      const { count: totalAttempts } = await supabase
-        .from('quiz_attempts')
-        .select('*', { count: 'exact', head: true });
+      const totalUsers = totalUsersResult.count || 0;
+      const activeToday = activeTodayResult.count || 0;
+      const newUsersThisWeek = newUsersThisWeekResult.count || 0;
+      const premiumUsers = premiumUsersResult.count || 0;
+      const totalAttempts = totalAttemptsResult.count || 0;
+      const completedAttempts = completedAttemptsResult.count || 0;
 
-      const { count: completedAttempts } = await supabase
-        .from('quiz_attempts')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_completed', true);
-
-      const quizCompletionRate = totalAttempts && totalAttempts > 0 
-        ? ((completedAttempts || 0) / totalAttempts) * 100 
+      const quizCompletionRate = totalAttempts > 0
+        ? (completedAttempts / totalAttempts) * 100
         : 0;
 
       setPlatformStats({
-        totalUsers: totalUsers || 0,
-        activeToday: activeToday || 0,
-        newUsersThisWeek: newUsersThisWeek || 0,
-        premiumUsers: premiumUsers || 0,
-        conversionRate: totalUsers && totalUsers > 0 ? ((premiumUsers || 0) / totalUsers) * 100 : 0,
-        monthlyRevenue: (premiumUsers || 0) * 60, // R60/month
+        totalUsers,
+        activeToday,
+        newUsersThisWeek,
+        premiumUsers,
+        conversionRate: totalUsers > 0 ? (premiumUsers / totalUsers) * 100 : 0,
+        monthlyRevenue: premiumUsers * 60, // R60/month
         churnRate: 0, // Would calculate from subscription_history
         avgSessionDuration: 0, // Would calculate from activity_log
         quizCompletionRate,
       });
 
-      // Fetch user growth data
-      const { data: growthData } = await supabase
-        .from('users')
-        .select('created_at, account_type')
-        .gte('created_at', dateRange.start.toISOString())
-        .lte('created_at', dateRange.end.toISOString())
-        .order('created_at');
+      // Fetch remaining datasets in parallel
+      const [
+        growthResult,
+        curriculumUsersResult,
+        quizUsersResult,
+        forumUsersResult,
+        aiUsersResult,
+        quizDataResult,
+        provinceDataResult,
+      ] = await Promise.all([
+        supabase
+          .from('users')
+          .select('created_at, account_type')
+          .gte('created_at', dateRange.start.toISOString())
+          .lte('created_at', dateRange.end.toISOString())
+          .order('created_at'),
 
+        supabase.from('user_chapter_progress').select('user_id', { count: 'exact', head: true }),
+        supabase.from('quiz_attempts').select('user_id', { count: 'exact', head: true }),
+        supabase.from('forum_posts').select('user_id', { count: 'exact', head: true }),
+        supabase.from('ai_conversations').select('user_id', { count: 'exact', head: true }),
+
+        (supabase as any)
+          .from('quiz_attempts')
+          .select(`
+            score_percentage,
+            passed,
+            user_id,
+            quizzes!inner(subject_name)
+          `)
+          .eq('is_completed', true),
+
+        supabase.from('users').select('province'),
+      ]);
+
+      const growthData = growthResult.data;
       if (growthData) {
         const growthMap = new Map<string, { free: number; premium: number }>();
         growthData.forEach((user: any) => {
@@ -143,49 +165,27 @@ export const useAdminAnalytics = (dateRange: { start: Date; end: Date }) => {
         })));
       }
 
-      // Fetch engagement data
-      const { count: curriculumUsers } = await supabase
-        .from('user_chapter_progress')
-        .select('user_id', { count: 'exact', head: true });
-
-      const { count: quizUsers } = await supabase
-        .from('quiz_attempts')
-        .select('user_id', { count: 'exact', head: true });
-
-      const { count: forumUsers } = await supabase
-        .from('forum_posts')
-        .select('user_id', { count: 'exact', head: true });
-
-      const { count: aiUsers } = await supabase
-        .from('ai_conversations')
-        .select('user_id', { count: 'exact', head: true });
+      const curriculumUsers = curriculumUsersResult.count || 0;
+      const quizUsers = quizUsersResult.count || 0;
+      const forumUsers = forumUsersResult.count || 0;
+      const aiUsers = aiUsersResult.count || 0;
 
       const total = totalUsers || 1;
       setEngagement([
-        { feature: 'Curriculum', uniqueUsers: curriculumUsers || 0, percentage: ((curriculumUsers || 0) / total) * 100 },
-        { feature: 'Quizzes', uniqueUsers: quizUsers || 0, percentage: ((quizUsers || 0) / total) * 100 },
-        { feature: 'Forums', uniqueUsers: forumUsers || 0, percentage: ((forumUsers || 0) / total) * 100 },
-        { feature: 'AI Tutor', uniqueUsers: aiUsers || 0, percentage: ((aiUsers || 0) / total) * 100 },
+        { feature: 'Curriculum', uniqueUsers: curriculumUsers, percentage: (curriculumUsers / total) * 100 },
+        { feature: 'Quizzes', uniqueUsers: quizUsers, percentage: (quizUsers / total) * 100 },
+        { feature: 'Forums', uniqueUsers: forumUsers, percentage: (forumUsers / total) * 100 },
+        { feature: 'AI Tutor', uniqueUsers: aiUsers, percentage: (aiUsers / total) * 100 },
       ]);
 
-      // Fetch subject performance
-      const { data: quizData } = await (supabase as any)
-        .from('quiz_attempts')
-        .select(`
-          score_percentage,
-          passed,
-          user_id,
-          quizzes!inner(subject_name)
-        `)
-        .eq('is_completed', true);
-
+      const quizData = quizDataResult.data;
       if (quizData) {
         const subjectMap = new Map<string, { scores: number[]; passed: number; users: Set<string> }>();
-        
+
         quizData.forEach((attempt: any) => {
           const subject = attempt.quizzes?.subject_name;
           if (!subject) return;
-          
+
           const existing = subjectMap.get(subject) || { scores: [], passed: 0, users: new Set() };
           existing.scores.push(attempt.score_percentage || 0);
           if (attempt.passed) existing.passed++;
@@ -202,11 +202,7 @@ export const useAdminAnalytics = (dateRange: { start: Date; end: Date }) => {
         })));
       }
 
-      // Fetch province stats
-      const { data: provinceData } = await supabase
-        .from('users')
-        .select('province');
-
+      const provinceData = provinceDataResult.data;
       if (provinceData) {
         const provinceMap = new Map<string, number>();
         provinceData.forEach((user: any) => {

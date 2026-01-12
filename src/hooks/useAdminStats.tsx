@@ -64,7 +64,8 @@ export const useAdminStats = () => {
           chaptersResult,
           moderationResult,
           forumResult,
-          quizAttemptsResult
+          totalAttemptsResult,
+          completedAttemptsResult,
         ] = await Promise.all([
           supabase.from('users').select('id', { count: 'exact', head: true }),
           supabase.from('activity_log').select('user_id', { count: 'exact', head: true }).gte('created_at', todayStart),
@@ -74,7 +75,8 @@ export const useAdminStats = () => {
           supabase.from('curriculum_chapters').select('id', { count: 'exact', head: true }).eq('is_published', true),
           supabase.from('content_moderation_log').select('id', { count: 'exact', head: true }).eq('reviewed', false),
           supabase.from('forum_posts').select('id', { count: 'exact', head: true }),
-          supabase.from('quiz_attempts').select('is_completed', { count: 'exact' })
+          supabase.from('quiz_attempts').select('id', { count: 'exact', head: true }),
+          supabase.from('quiz_attempts').select('id', { count: 'exact', head: true }).eq('is_completed', true),
         ]);
 
         setStats({
@@ -85,41 +87,40 @@ export const useAdminStats = () => {
           activeQuizzes: quizzesResult.count || 0,
           totalChapters: chaptersResult.count || 0,
           pendingReviews: moderationResult.count || 0,
-          totalForumPosts: forumResult.count || 0
+          totalForumPosts: forumResult.count || 0,
         });
 
-        // Calculate quiz completion rate
-        const { count: totalAttempts } = await supabase
-          .from('quiz_attempts')
-          .select('id', { count: 'exact', head: true });
-        
-        const { count: completedAttempts } = await supabase
-          .from('quiz_attempts')
-          .select('id', { count: 'exact', head: true })
-          .eq('is_completed', true);
-
-        const completionRate = totalAttempts && totalAttempts > 0 
-          ? Math.round((completedAttempts || 0) / totalAttempts * 100)
+        const completionRate = totalAttemptsResult.count && totalAttemptsResult.count > 0
+          ? Math.round(((completedAttemptsResult.count || 0) / totalAttemptsResult.count) * 100)
           : 0;
 
-        // Get daily active users for last 7 days
-        const dau: { date: string; count: number }[] = [];
-        for (let i = 6; i >= 0; i--) {
+        // Get daily active users for last 7 days (parallelized to avoid request waterfall)
+        const dauDays = Array.from({ length: 7 }, (_, idx) => {
+          const i = 6 - idx;
           const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
           const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString();
           const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).toISOString();
-          
-          const { count } = await supabase
-            .from('activity_log')
-            .select('user_id', { count: 'exact', head: true })
-            .gte('created_at', dayStart)
-            .lt('created_at', dayEnd);
-          
-          dau.push({
-            date: date.toLocaleDateString('en-ZA', { weekday: 'short' }),
-            count: count || 0
-          });
-        }
+          return {
+            label: date.toLocaleDateString('en-ZA', { weekday: 'short' }),
+            dayStart,
+            dayEnd,
+          };
+        });
+
+        const dauCounts = await Promise.all(
+          dauDays.map(({ dayStart, dayEnd }) =>
+            supabase
+              .from('activity_log')
+              .select('user_id', { count: 'exact', head: true })
+              .gte('created_at', dayStart)
+              .lt('created_at', dayEnd)
+          )
+        );
+
+        const dau = dauDays.map((d, idx) => ({
+          date: d.label,
+          count: dauCounts[idx].count || 0,
+        }));
 
         setEngagement({
           dailyActiveUsers: dau,
