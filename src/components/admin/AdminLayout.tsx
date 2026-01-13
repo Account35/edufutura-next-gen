@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -44,6 +44,76 @@ const sidebarItems = [
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
+// Extracted as a separate component to avoid re-creation on every render
+interface SidebarContentProps {
+  currentPath: string;
+  onNavigate: (path: string) => void;
+  onSignOut: () => void;
+}
+
+const SidebarContent = ({ currentPath, onNavigate, onSignOut }: SidebarContentProps) => {
+  const isActive = (href: string) => {
+    if (href === '/admin') return currentPath === '/admin';
+    return currentPath.startsWith(href);
+  };
+
+  return (
+    <>
+      {/* Logo */}
+      <div className="p-6 border-b border-primary-foreground/10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+            <GraduationCap className="w-6 h-6 text-secondary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold">EduFutura</h1>
+            <p className="text-xs opacity-80">Admin Panel</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        {sidebarItems.map((item) => (
+          <Link
+            key={item.href}
+            to={item.href}
+            className={cn(
+              'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors min-h-[48px]',
+              isActive(item.href) 
+                ? 'bg-secondary text-secondary-foreground' 
+                : 'hover:bg-primary-foreground/10'
+            )}
+          >
+            <item.icon className="w-5 h-5 shrink-0" />
+            <span className="font-medium">{item.label}</span>
+          </Link>
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-primary-foreground/10 space-y-2">
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 min-h-[48px]"
+          onClick={() => onNavigate('/dashboard')}
+        >
+          <Users className="w-5 h-5 mr-3" />
+          Student View
+        </Button>
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 min-h-[48px]"
+          onClick={onSignOut}
+        >
+          <LogOut className="w-5 h-5 mr-3" />
+          Sign Out
+        </Button>
+      </div>
+    </>
+  );
+};
+
 export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -66,10 +136,14 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     await supabase.auth.signOut();
     navigate('/');
-  };
+  }, [navigate]);
+
+  const handleNavigate = useCallback((path: string) => {
+    navigate(path);
+  }, [navigate]);
 
   if (authLoading || roleLoading) {
     return <FullPageLoader message="Loading admin panel..." />;
@@ -79,72 +153,15 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
     return null;
   }
 
-  const SidebarContent = () => (
-    <>
-      {/* Logo */}
-      <div className="p-6 border-b border-primary-foreground/10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-            <GraduationCap className="w-6 h-6 text-secondary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold">EduFutura</h1>
-            <p className="text-xs opacity-80">Admin Panel</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {sidebarItems.map((item) => {
-          const isActive = location.pathname === item.href || 
-            (item.href !== '/admin' && location.pathname.startsWith(item.href));
-          
-          return (
-            <Link
-              key={item.href}
-              to={item.href}
-              className={cn(
-                'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors min-h-[48px]',
-                isActive 
-                  ? 'bg-secondary text-secondary-foreground' 
-                  : 'hover:bg-primary-foreground/10'
-              )}
-            >
-              <item.icon className="w-5 h-5 shrink-0" />
-              <span className="font-medium">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-primary-foreground/10 space-y-2">
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 min-h-[48px]"
-          onClick={() => navigate('/dashboard')}
-        >
-          <Users className="w-5 h-5 mr-3" />
-          Student View
-        </Button>
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 min-h-[48px]"
-          onClick={handleSignOut}
-        >
-          <LogOut className="w-5 h-5 mr-3" />
-          Sign Out
-        </Button>
-      </div>
-    </>
-  );
-
   return (
     <div className="min-h-screen bg-background flex">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 flex-col bg-primary text-primary-foreground fixed left-0 top-0 bottom-0 z-30">
-        <SidebarContent />
+        <SidebarContent 
+          currentPath={location.pathname} 
+          onNavigate={handleNavigate} 
+          onSignOut={handleSignOut} 
+        />
       </aside>
 
       {/* Main Content */}
@@ -180,7 +197,11 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
                         <X className="w-5 h-5" />
                       </Button>
                     </div>
-                    <SidebarContent />
+                    <SidebarContent 
+                      currentPath={location.pathname} 
+                      onNavigate={handleNavigate} 
+                      onSignOut={handleSignOut} 
+                    />
                   </div>
                 </SheetContent>
               </Sheet>
