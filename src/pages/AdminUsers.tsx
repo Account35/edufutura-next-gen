@@ -84,7 +84,10 @@ export default function AdminUsers() {
     try {
       let query = supabase
         .from('users')
-        .select('*', { count: 'exact' })
+        .select(
+          'id,email,full_name,profile_picture_url,grade_level,account_type,subscription_status,subscription_plan,subscription_start_date,subscription_end_date,created_at,last_login_at,phone_number,province,city,school_id,total_study_hours,study_streak_days',
+          { count: 'estimated' }
+        )
         .order('created_at', { ascending: false })
         .range(page * pageSize, (page + 1) * pageSize - 1);
 
