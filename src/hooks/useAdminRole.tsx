@@ -26,9 +26,10 @@ export const useAdminRole = () => {
       return;
     }
 
-    // Skip if we already checked this user
+    // Skip if we already checked this user - but ensure loading is false
     if (lastCheckedUserId.current === user.id) {
       console.log('[AdminRole] Already checked user, skipping');
+      setLoading(false);
       return;
     }
 
