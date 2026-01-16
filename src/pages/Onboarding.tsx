@@ -1,242 +1,123 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdminRole } from '@/hooks/useAdminRole';
 import { supabase } from '@/integrations/supabase/client';
 import { FullPageLoader } from '@/components/ui/loading';
-import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { BasicInfoStep } from '@/components/onboarding/BasicInfoStep';
-import { GradeSchoolStep } from '@/components/onboarding/GradeSchoolStep';
-import { SubjectsStep } from '@/components/onboarding/SubjectsStep';
-import { LocationStep } from '@/components/onboarding/LocationStep';
-import { WelcomeStep } from '@/components/onboarding/WelcomeStep';
-
-const STEPS = [
-  { id: 'basic', title: 'Basic Information', description: 'Tell us about yourself' },
-  { id: 'grade-school', title: 'Grade & School', description: 'Select your grade and school' },
-  { id: 'subjects', title: 'Subjects', description: 'Choose subjects to study' },
-  { id: 'location', title: 'Location', description: 'Set your location' },
-  { id: 'welcome', title: 'Welcome!', description: 'You\'re all set' }
-];
+import { toast } from 'sonner';
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const { user, userProfile, loading, refreshProfile } = useAuth();
-  const [currentStepIndex, setCurrentStepIndex] = useState(0); // Index into requiredSteps array
-  const [onboardingData, setOnboardingData] = useState({
-    full_name: '',
-    date_of_birth: '',
-    grade_level: null as number | null,
-    school_id: null as string | null,
-    subjects_studying: [] as string[],
-    province: '',
-    district: '',
-    city: ''
-  });
+  const { user, userProfile, loading } = useAuth();
+  const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
 
-  // Determine which steps are required based on existing data
-  const getRequiredSteps = () => {
-    const steps = [];
-    
-    // Basic info step - required if name or DOB is missing
-    if (!onboardingData.full_name.trim() || !onboardingData.date_of_birth) {
-      steps.push(0);
-    }
-    
-    // Grade/School step - required if grade is missing
-    if (!onboardingData.grade_level) {
-      steps.push(1);
-    }
-    
-    // Subjects step - required if no subjects selected
-    if (!onboardingData.subjects_studying || onboardingData.subjects_studying.length === 0) {
-      steps.push(2);
-    }
-    
-    // Location step - required if location is missing
-    if (!onboardingData.province || !onboardingData.city.trim()) {
-      steps.push(3);
-    }
-    
-    // Welcome step - always required
-    steps.push(4);
-    
-    return steps;
-  };
-
-  const requiredSteps = getRequiredSteps();
-  const currentStep = requiredSteps[currentStepIndex] ?? 4; // Default to welcome step
-  const totalRequiredSteps = requiredSteps.length;
+  const [autoAttempted, setAutoAttempted] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('[Onboarding] State:', {
+      loading,
+      roleLoading,
+      user: user?.id ?? null,
+      userProfile: userProfile ? 'exists' : null,
+      onboarding_completed: userProfile?.onboarding_completed,
+      autoAttempted,
+    });
+
     // Redirect if not authenticated
     if (!loading && !user) {
+      console.log('[Onboarding] Not authenticated, redirecting to /');
       navigate('/');
       return;
     }
 
-    // If onboarding already completed, redirect to dashboard
-    if (userProfile?.onboarding_completed) {
-      navigate('/dashboard');
+    // If onboarding already completed, redirect appropriately
+    if (userProfile?.onboarding_completed && !roleLoading) {
+      const dest = isAdmin || isEducator ? '/admin' : '/dashboard';
+      console.log('[Onboarding] Already completed, redirecting to', dest);
+      navigate(dest);
       return;
     }
 
-    // Initialize onboarding data from existing profile
-    if (userProfile) {
-      setOnboardingData({
-        full_name: userProfile.full_name || user?.user_metadata?.full_name || '',
-        date_of_birth: userProfile.date_of_birth || '',
-        grade_level: userProfile.grade_level || null,
-        school_id: userProfile.school_id || null,
-        subjects_studying: userProfile.subjects_studying || [],
-        province: userProfile.province || '',
-        district: userProfile.district || '',
-        city: userProfile.city || ''
-      });
-    } else if (user && !userProfile) {
-      // If we have user but no profile yet, try to get name from auth metadata
-      setOnboardingData(prev => ({
-        ...prev,
-        full_name: user.user_metadata?.full_name || prev.full_name
-      }));
+    // Auto-complete onboarding for Phase 1 (temporary until Phase 3 onboarding wizard)
+    // IMPORTANT: only attempt once automatically to avoid infinite spinner loops on failure.
+    if (
+      user &&
+      userProfile &&
+      !userProfile.onboarding_completed &&
+      !roleLoading &&
+      !autoAttempted
+    ) {
+      console.log('[Onboarding] Auto-completing onboarding...');
+      setAutoAttempted(true);
+      completeOnboarding();
     }
-  }, [user, userProfile, loading, navigate]);
-
-  // Reset step index when required steps change (e.g., when data loads)
-  useEffect(() => {
-    setCurrentStepIndex(0);
-  }, [requiredSteps.length]);
-
-  const updateOnboardingData = (data: Partial<typeof onboardingData>) => {
-    setOnboardingData(prev => ({ ...prev, ...data }));
-  };
-
-  const nextStep = () => {
-    if (currentStepIndex < requiredSteps.length - 1) {
-      setCurrentStepIndex(currentStepIndex + 1);
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStepIndex > 0) {
-      setCurrentStepIndex(currentStepIndex - 1);
-    }
-  };
+  }, [
+    user,
+    userProfile,
+    loading,
+    roleLoading,
+    isAdmin,
+    isEducator,
+    navigate,
+    autoAttempted,
+  ]);
 
   const completeOnboarding = async () => {
+    if (!user) return;
+
     try {
+      setSetupError(null);
+
       const { error } = await supabase
         .from('users')
         .update({
-          ...onboardingData,
           onboarding_completed: true,
-          onboarding_completed_at: new Date().toISOString()
+          onboarding_completed_at: new Date().toISOString(),
         })
-        .eq('id', user!.id);
+        .eq('id', user.id);
 
       if (error) throw error;
 
-      await refreshProfile();
       toast.success('Welcome to EduFutura!');
-      navigate('/dashboard');
+
+      // Redirect based on role
+      if (isAdmin || isEducator) {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Error completing onboarding:', error);
+      setSetupError('We couldn\'t finish setting up your account.');
       toast.error('Failed to complete setup. Please try again.');
     }
   };
 
-  if (loading || !userProfile) {
+  if (loading || roleLoading || !userProfile) {
     return <FullPageLoader message="Setting up your account..." />;
   }
 
-  const progress = totalRequiredSteps > 0 ? ((currentStepIndex + 1) / totalRequiredSteps) * 100 : 100;
-
-  const getCurrentStepInfo = () => {
-    return STEPS[currentStep];
-  };
-
-  const currentStepInfo = getCurrentStepInfo();
-
-  const renderCurrentStep = () => {
-    switch (currentStep) {
-      case 0:
-        return (
-          <BasicInfoStep
-            data={onboardingData}
-            onUpdate={updateOnboardingData}
-            onNext={nextStep}
-          />
-        );
-      case 1:
-        return (
-          <GradeSchoolStep
-            data={onboardingData}
-            onUpdate={updateOnboardingData}
-            onNext={nextStep}
-            onPrev={prevStep}
-            userId={user?.id || ''}
-          />
-        );
-      case 2:
-        return (
-          <SubjectsStep
-            data={onboardingData}
-            onUpdate={updateOnboardingData}
-            onNext={nextStep}
-            onPrev={prevStep}
-          />
-        );
-      case 3:
-        return (
-          <LocationStep
-            data={onboardingData}
-            onUpdate={updateOnboardingData}
-            onNext={nextStep}
-            onPrev={prevStep}
-          />
-        );
-      case 4:
-        return (
-          <WelcomeStep
-            data={onboardingData}
-            onComplete={completeOnboarding}
-            onPrev={prevStep}
-          />
-        );
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl space-y-6">
-        {/* Progress Header */}
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-serif">Welcome to EduFutura</CardTitle>
-            <CardDescription>
-              {currentStepInfo.description}
-            </CardDescription>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Step {currentStepIndex + 1} of {totalRequiredSteps}</span>
-                <span>{currentStepInfo.title}</span>
-              </div>
-              <Progress value={progress} className="w-full" />
-            </div>
-          </CardHeader>
-        </Card>
-
-        {/* Current Step Content */}
-        <Card>
-          <CardContent className="p-6">
-            {renderCurrentStep()}
-          </CardContent>
-        </Card>
+  if (setupError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-4">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold text-foreground">Setup needs a retry</h1>
+            <p className="text-sm text-muted-foreground">{setupError} Tap Retry to try again.</p>
+          </div>
+          <Button className="w-full min-h-[48px]" onClick={completeOnboarding}>
+            Retry setup
+          </Button>
+          <Button variant="outline" className="w-full min-h-[48px]" onClick={() => navigate('/')}
+          >
+            Go to home
+          </Button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return <FullPageLoader message="Completing your profile..." />;
 }

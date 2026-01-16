@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -50,7 +50,8 @@ export default function ModerationDashboard() {
         description: 'You do not have permission to access this page',
         variant: 'destructive',
       });
-      navigate('/dashboard');
+      // Navigate to admin root instead of student dashboard
+      navigate('/admin');
       return;
     }
 
@@ -169,15 +170,8 @@ export default function ModerationDashboard() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-primary mb-2">Moderation Dashboard</h1>
-            <p className="text-muted-foreground">Review and manage flagged content</p>
-          </div>
-          <Shield className="w-12 h-12 text-secondary" />
-        </div>
+    <AdminLayout title="Moderation Dashboard" subtitle="Review and manage flagged content">
+      <div className="space-y-6">
 
         <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="mb-6">
           <TabsList>
@@ -266,6 +260,6 @@ export default function ModerationDashboard() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </AdminLayout>
   );
 }

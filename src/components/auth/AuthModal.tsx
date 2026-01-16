@@ -4,6 +4,8 @@ import { X } from "lucide-react";
 import { AuthMethodSelection } from "./AuthMethodSelection";
 import { EmailRegistrationForm } from "./EmailRegistrationForm";
 import { LoginForm } from "./LoginForm";
+import { PhoneRegistrationForm } from "./PhoneRegistrationForm";
+import { GoogleAuthButton } from "./GoogleAuthButton";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -24,6 +26,10 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
     switch (authView) {
       case "email-register":
         return "Create Your Account";
+      case "phone-register":
+        return "Phone Registration";
+      case "google":
+        return "Google Sign In";
       case "login":
         return "Welcome Back";
       default:
@@ -62,6 +68,20 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
             <EmailRegistrationForm
               onSuccess={handleClose}
               onSwitchToLogin={() => setAuthView("login")}
+            />
+          )}
+
+          {authView === "phone-register" && (
+            <PhoneRegistrationForm
+              onSuccess={handleClose}
+              onSwitchToLogin={() => setAuthView("login")}
+              onBack={() => setAuthView("selection")}
+            />
+          )}
+
+          {authView === "google" && (
+            <GoogleAuthButton
+              onBack={() => setAuthView("selection")}
             />
           )}
 

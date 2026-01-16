@@ -14,6 +14,228 @@ export type Database = {
   }
   public: {
     Tables: {
+      ab_experiment_results: {
+        Row: {
+          calculated_at: string | null
+          experiment_id: string | null
+          id: string
+          is_significant: boolean | null
+          p_value: number | null
+          relative_improvement: number | null
+          result_date: string
+          variant_a_conversions: number
+          variant_a_rate: number | null
+          variant_a_users: number
+          variant_b_conversions: number
+          variant_b_rate: number | null
+          variant_b_users: number
+        }
+        Insert: {
+          calculated_at?: string | null
+          experiment_id?: string | null
+          id?: string
+          is_significant?: boolean | null
+          p_value?: number | null
+          relative_improvement?: number | null
+          result_date: string
+          variant_a_conversions?: number
+          variant_a_rate?: number | null
+          variant_a_users?: number
+          variant_b_conversions?: number
+          variant_b_rate?: number | null
+          variant_b_users?: number
+        }
+        Update: {
+          calculated_at?: string | null
+          experiment_id?: string | null
+          id?: string
+          is_significant?: boolean | null
+          p_value?: number | null
+          relative_improvement?: number | null
+          result_date?: string
+          variant_a_conversions?: number
+          variant_a_rate?: number | null
+          variant_a_users?: number
+          variant_b_conversions?: number
+          variant_b_rate?: number | null
+          variant_b_users?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_experiment_results_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "ab_experiments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ab_experiments: {
+        Row: {
+          confidence_level: number | null
+          created_at: string | null
+          created_by: string | null
+          end_date: string | null
+          experiment_description: string | null
+          experiment_name: string
+          id: string
+          is_significant: boolean | null
+          p_value: number | null
+          start_date: string | null
+          status: string
+          target_audience: Json | null
+          target_metric: string
+          traffic_percentage: number
+          updated_at: string | null
+          variant_a_config: Json | null
+          variant_a_name: string
+          variant_b_config: Json | null
+          variant_b_name: string
+          winner_variant: string | null
+        }
+        Insert: {
+          confidence_level?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string | null
+          experiment_description?: string | null
+          experiment_name: string
+          id?: string
+          is_significant?: boolean | null
+          p_value?: number | null
+          start_date?: string | null
+          status?: string
+          target_audience?: Json | null
+          target_metric: string
+          traffic_percentage?: number
+          updated_at?: string | null
+          variant_a_config?: Json | null
+          variant_a_name?: string
+          variant_b_config?: Json | null
+          variant_b_name?: string
+          winner_variant?: string | null
+        }
+        Update: {
+          confidence_level?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string | null
+          experiment_description?: string | null
+          experiment_name?: string
+          id?: string
+          is_significant?: boolean | null
+          p_value?: number | null
+          start_date?: string | null
+          status?: string
+          target_audience?: Json | null
+          target_metric?: string
+          traffic_percentage?: number
+          updated_at?: string | null
+          variant_a_config?: Json | null
+          variant_a_name?: string
+          variant_b_config?: Json | null
+          variant_b_name?: string
+          winner_variant?: string | null
+        }
+        Relationships: []
+      }
+      ab_test_assignments: {
+        Row: {
+          assigned_at: string | null
+          experiment_id: string | null
+          id: string
+          user_id: string | null
+          variant: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          experiment_id?: string | null
+          id?: string
+          user_id?: string | null
+          variant: string
+        }
+        Update: {
+          assigned_at?: string | null
+          experiment_id?: string | null
+          id?: string
+          user_id?: string | null
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_test_assignments_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "ab_experiments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ab_test_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ab_test_conversions: {
+        Row: {
+          assignment_id: string | null
+          converted_at: string | null
+          experiment_id: string | null
+          id: string
+          metadata: Json | null
+          metric_name: string
+          metric_value: number
+          user_id: string | null
+          variant: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          converted_at?: string | null
+          experiment_id?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_name: string
+          metric_value?: number
+          user_id?: string | null
+          variant: string
+        }
+        Update: {
+          assignment_id?: string | null
+          converted_at?: string | null
+          experiment_id?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_name?: string
+          metric_value?: number
+          user_id?: string | null
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_test_conversions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "ab_test_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ab_test_conversions_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "ab_experiments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ab_test_conversions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       account_lockouts: {
         Row: {
           created_at: string | null
@@ -110,6 +332,102 @@ export type Database = {
           subject_name?: string | null
           timestamp?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      admin_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          created_at: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_acknowledged: boolean | null
+          severity: string | null
+          title: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type: string
+          created_at?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_acknowledged?: boolean | null
+          severity?: string | null
+          title: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          created_at?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_acknowledged?: boolean | null
+          severity?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      admin_audit_log: {
+        Row: {
+          action_description: string | null
+          action_type: string
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          new_value: Json | null
+          old_value: Json | null
+          reason: string | null
+          severity: string | null
+          target_id: string | null
+          target_type: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_description?: string | null
+          action_type: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
+          reason?: string | null
+          severity?: string | null
+          target_id?: string | null
+          target_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_description?: string | null
+          action_type?: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
+          reason?: string | null
+          severity?: string | null
+          target_id?: string | null
+          target_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -801,6 +1119,45 @@ export type Database = {
           },
         ]
       }
+      canned_responses: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          created_by: string
+          id: string
+          is_shared: boolean | null
+          title: string
+          updated_at: string | null
+          use_count: number | null
+          variables: string[] | null
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string | null
+          created_by: string
+          id?: string
+          is_shared?: boolean | null
+          title: string
+          updated_at?: string | null
+          use_count?: number | null
+          variables?: string[] | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          is_shared?: boolean | null
+          title?: string
+          updated_at?: string | null
+          use_count?: number | null
+          variables?: string[] | null
+        }
+        Relationships: []
+      }
       career_assessments: {
         Row: {
           assessment_data: Json | null
@@ -1007,6 +1364,36 @@ export type Database = {
           },
         ]
       }
+      cohort_retention: {
+        Row: {
+          calculated_at: string | null
+          cohort_month: string
+          id: string
+          month_offset: number
+          retained_users: number
+          retention_rate: number | null
+          total_users: number
+        }
+        Insert: {
+          calculated_at?: string | null
+          cohort_month: string
+          id?: string
+          month_offset: number
+          retained_users?: number
+          retention_rate?: number | null
+          total_users?: number
+        }
+        Update: {
+          calculated_at?: string | null
+          cohort_month?: string
+          id?: string
+          month_offset?: number
+          retained_users?: number
+          retention_rate?: number | null
+          total_users?: number
+        }
+        Relationships: []
+      }
       community_reports: {
         Row: {
           action_taken: string | null
@@ -1133,6 +1520,39 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      conversion_funnels: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          funnel_description: string | null
+          funnel_name: string
+          id: string
+          is_active: boolean | null
+          steps: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          funnel_description?: string | null
+          funnel_name: string
+          id?: string
+          is_active?: boolean | null
+          steps?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          funnel_description?: string | null
+          funnel_name?: string
+          id?: string
+          is_active?: boolean | null
+          steps?: Json
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1741,6 +2161,104 @@ export type Database = {
         }
         Relationships: []
       }
+      funnel_analytics: {
+        Row: {
+          analysis_date: string
+          avg_time_to_convert_minutes: number | null
+          calculated_at: string | null
+          conversion_rate: number | null
+          converted_users: number
+          drop_off_rate: number | null
+          funnel_id: string | null
+          id: string
+          step_name: string
+          step_order: number
+          total_users: number
+        }
+        Insert: {
+          analysis_date: string
+          avg_time_to_convert_minutes?: number | null
+          calculated_at?: string | null
+          conversion_rate?: number | null
+          converted_users?: number
+          drop_off_rate?: number | null
+          funnel_id?: string | null
+          id?: string
+          step_name: string
+          step_order: number
+          total_users?: number
+        }
+        Update: {
+          analysis_date?: string
+          avg_time_to_convert_minutes?: number | null
+          calculated_at?: string | null
+          conversion_rate?: number | null
+          converted_users?: number
+          drop_off_rate?: number | null
+          funnel_id?: string | null
+          id?: string
+          step_name?: string
+          step_order?: number
+          total_users?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_analytics_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "conversion_funnels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funnel_events: {
+        Row: {
+          completed_at: string | null
+          funnel_id: string | null
+          id: string
+          metadata: Json | null
+          session_id: string | null
+          step_name: string
+          step_order: number
+          user_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          funnel_id?: string | null
+          id?: string
+          metadata?: Json | null
+          session_id?: string | null
+          step_name: string
+          step_order: number
+          user_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          funnel_id?: string | null
+          id?: string
+          metadata?: Json | null
+          session_id?: string | null
+          step_name?: string
+          step_order?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_events_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "conversion_funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funnel_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grading_log: {
         Row: {
           confidence: number | null
@@ -2034,6 +2552,91 @@ export type Database = {
         }
         Relationships: []
       }
+      impersonation_actions: {
+        Row: {
+          action_description: string | null
+          action_type: string
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          impersonation_id: string
+          metadata: Json | null
+        }
+        Insert: {
+          action_description?: string | null
+          action_type: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          impersonation_id: string
+          metadata?: Json | null
+        }
+        Update: {
+          action_description?: string | null
+          action_type?: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          impersonation_id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impersonation_actions_impersonation_id_fkey"
+            columns: ["impersonation_id"]
+            isOneToOne: false
+            referencedRelation: "impersonation_log"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      impersonation_log: {
+        Row: {
+          admin_id: string
+          created_at: string | null
+          duration_minutes: number | null
+          ended_at: string | null
+          id: string
+          reason: string
+          started_at: string
+          support_ticket_id: string | null
+          target_user_id: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string | null
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          reason: string
+          started_at?: string
+          support_ticket_id?: string | null
+          target_user_id: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string | null
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          reason?: string
+          started_at?: string
+          support_ticket_id?: string | null
+          target_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impersonation_log_support_ticket_id_fkey"
+            columns: ["support_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       institution_recommendations: {
         Row: {
           admission_probability: string | null
@@ -2111,6 +2714,48 @@ export type Database = {
           item_b_id?: string
           item_type?: string
           similarity_score?: number
+        }
+        Relationships: []
+      }
+      knowledge_base_articles: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          created_by: string
+          helpful_count: number | null
+          id: string
+          is_published: boolean | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          view_count: number | null
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string | null
+          created_by: string
+          helpful_count?: number | null
+          id?: string
+          is_published?: boolean | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          created_by?: string
+          helpful_count?: number | null
+          id?: string
+          is_published?: boolean | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          view_count?: number | null
         }
         Relationships: []
       }
@@ -2624,6 +3269,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_forecasts: {
+        Row: {
+          accuracy_score: number | null
+          actual_value: number | null
+          confidence_lower: number | null
+          confidence_upper: number | null
+          created_at: string | null
+          features_used: Json | null
+          forecast_date: string
+          forecast_type: string
+          id: string
+          model_version: string | null
+          predicted_value: number
+          validated_at: string | null
+        }
+        Insert: {
+          accuracy_score?: number | null
+          actual_value?: number | null
+          confidence_lower?: number | null
+          confidence_upper?: number | null
+          created_at?: string | null
+          features_used?: Json | null
+          forecast_date: string
+          forecast_type: string
+          id?: string
+          model_version?: string | null
+          predicted_value: number
+          validated_at?: string | null
+        }
+        Update: {
+          accuracy_score?: number | null
+          actual_value?: number | null
+          confidence_lower?: number | null
+          confidence_upper?: number | null
+          created_at?: string | null
+          features_used?: Json | null
+          forecast_date?: string
+          forecast_type?: string
+          id?: string
+          model_version?: string | null
+          predicted_value?: number
+          validated_at?: string | null
+        }
+        Relationships: []
       }
       post_replies: {
         Row: {
@@ -3319,6 +4009,30 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          created_at: string | null
+          has_permission: boolean
+          id: string
+          permission_key: string
+          role_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          has_permission?: boolean
+          id?: string
+          permission_key: string
+          role_name: string
+        }
+        Update: {
+          created_at?: string | null
+          has_permission?: boolean
+          id?: string
+          permission_key?: string
+          role_name?: string
+        }
+        Relationships: []
+      }
       schools: {
         Row: {
           created_at: string | null
@@ -3476,6 +4190,68 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sla_breaches: {
+        Row: {
+          breach_type: string
+          breached_at: string | null
+          escalated_to: string | null
+          id: string
+          notes: string | null
+          ticket_id: string
+        }
+        Insert: {
+          breach_type: string
+          breached_at?: string | null
+          escalated_to?: string | null
+          id?: string
+          notes?: string | null
+          ticket_id: string
+        }
+        Update: {
+          breach_type?: string
+          breached_at?: string | null
+          escalated_to?: string | null
+          id?: string
+          notes?: string | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sla_breaches_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sla_rules: {
+        Row: {
+          created_at: string | null
+          first_response_minutes: number
+          id: string
+          is_active: boolean | null
+          priority: string
+          resolution_minutes: number
+        }
+        Insert: {
+          created_at?: string | null
+          first_response_minutes: number
+          id?: string
+          is_active?: boolean | null
+          priority: string
+          resolution_minutes: number
+        }
+        Update: {
+          created_at?: string | null
+          first_response_minutes?: number
+          id?: string
+          is_active?: boolean | null
+          priority?: string
+          resolution_minutes?: number
+        }
+        Relationships: []
       }
       spaced_repetition_items: {
         Row: {
@@ -3767,6 +4543,63 @@ export type Database = {
         }
         Relationships: []
       }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          created_at: string | null
+          description: string
+          first_response_at: string | null
+          id: string
+          priority: string
+          resolved_at: string | null
+          satisfaction_feedback: string | null
+          satisfaction_rating: number | null
+          status: string
+          subject: string
+          tags: string[] | null
+          ticket_number: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string
+          created_at?: string | null
+          description: string
+          first_response_at?: string | null
+          id?: string
+          priority?: string
+          resolved_at?: string | null
+          satisfaction_feedback?: string | null
+          satisfaction_rating?: number | null
+          status?: string
+          subject: string
+          tags?: string[] | null
+          ticket_number?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string
+          first_response_at?: string | null
+          id?: string
+          priority?: string
+          resolved_at?: string | null
+          satisfaction_feedback?: string | null
+          satisfaction_rating?: number | null
+          status?: string
+          subject?: string
+          tags?: string[] | null
+          ticket_number?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       tertiary_institutions: {
         Row: {
           accreditation: string | null
@@ -3824,6 +4657,109 @@ export type Database = {
           rankings?: Json | null
           student_support?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      ticket_assignment_history: {
+        Row: {
+          assigned_from: string | null
+          assigned_to: string
+          created_at: string | null
+          id: string
+          reason: string | null
+          ticket_id: string
+        }
+        Insert: {
+          assigned_from?: string | null
+          assigned_to: string
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          ticket_id: string
+        }
+        Update: {
+          assigned_from?: string | null
+          assigned_to?: string
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_assignment_history_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_messages: {
+        Row: {
+          attachments: Json | null
+          created_at: string | null
+          id: string
+          is_internal: boolean | null
+          message_content: string
+          sender_id: string
+          ticket_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          message_content: string
+          sender_id: string
+          ticket_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          message_content?: string
+          sender_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_access_notifications: {
+        Row: {
+          access_date: string
+          admin_id: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          access_date: string
+          admin_id: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          reason: string
+          user_id: string
+        }
+        Update: {
+          access_date?: string
+          admin_id?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          reason?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -3987,6 +4923,38 @@ export type Database = {
             columns: ["chapter_id"]
             isOneToOne: false
             referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_cohorts: {
+        Row: {
+          cohort_month: string
+          created_at: string | null
+          id: string
+          registration_date: string
+          user_id: string
+        }
+        Insert: {
+          cohort_month: string
+          created_at?: string | null
+          id?: string
+          registration_date: string
+          user_id: string
+        }
+        Update: {
+          cohort_month?: string
+          created_at?: string | null
+          id?: string
+          registration_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_cohorts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -4568,6 +5536,10 @@ export type Database = {
           template_version: number
         }[]
       }
+      has_permission: {
+        Args: { _permission_key: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -4576,6 +5548,18 @@ export type Database = {
         Returns: boolean
       }
       invalidate_cache_by_tags: { Args: { tags: string[] }; Returns: number }
+      log_admin_action: {
+        Args: {
+          _action_description: string
+          _action_type: string
+          _metadata?: Json
+          _severity?: string
+          _target_id?: string
+          _target_type?: string
+          _user_id: string
+        }
+        Returns: string
+      }
       refresh_materialized_views: { Args: never; Returns: undefined }
       update_template_metrics: {
         Args: {

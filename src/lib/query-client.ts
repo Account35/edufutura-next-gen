@@ -96,7 +96,7 @@ export function createQueryClient(): QueryClient {
         },
         refetchOnWindowFocus: false,
         refetchOnReconnect: true,
-        refetchOnMount: true,
+        refetchOnMount: false,
       },
       mutations: {
         retry: 1,

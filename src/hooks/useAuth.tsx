@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
@@ -19,6 +19,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const WARNING_TIMEOUT = 28 * 60 * 1000; // 28 minutes
 
+type ProfileLoadInFlight = {
+  userId: string;
+  promise: Promise<Tables<'users'> | null>;
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -28,24 +33,88 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [warningTimer, setWarningTimer] = useState<NodeJS.Timeout | null>(null);
   const [showWarning, setShowWarning] = useState(false);
 
-  const loadUserProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
+  // Deduplicate profile loading to avoid double-fetch (initializeAuth + onAuthStateChange)
+  const profileLoadRef = useRef<ProfileLoadInFlight | null>(null);
 
-    if (error) {
-      console.error('Error loading user profile:', error);
-      return null;
+  const loadUserProfile = async (currentUser: User) => {
+    if (profileLoadRef.current?.userId === currentUser.id) {
+      console.log('[Auth] Profile load deduplicated for', currentUser.id);
+      return profileLoadRef.current.promise;
     }
 
-    return data;
+    const promise = (async (): Promise<Tables<'users'> | null> => {
+      console.time('[Auth] loadUserProfile');
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+      console.timeEnd('[Auth] loadUserProfile');
+
+      if (error) {
+        console.error('Error loading user profile:', error);
+        return null;
+      }
+
+      // If profile exists, return it
+      if (data) {
+        console.log('[Auth] Profile fetched successfully');
+        return data;
+      }
+
+      // If profile doesn't exist yet (common cause of onboarding spinner), create a minimal record.
+      const fullNameFromMeta =
+        (currentUser.user_metadata?.full_name as string | undefined) ||
+        (currentUser.user_metadata?.name as string | undefined);
+
+      const fallbackFullName =
+        fullNameFromMeta ||
+        currentUser.email?.split('@')[0] ||
+        'Student';
+
+      const { data: created, error: createError } = await supabase
+        .from('users')
+        .insert({
+          id: currentUser.id,
+          email: currentUser.email,
+          full_name: fallbackFullName,
+          onboarding_completed: false,
+        })
+        .select('*')
+        .single();
+
+      if (createError) {
+        // If something else created it in the meantime, re-fetch once.
+        const isDuplicate = (createError as any)?.code === '23505';
+        if (isDuplicate) {
+          const { data: refetched, error: refetchError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', currentUser.id)
+            .maybeSingle();
+
+          if (refetchError) {
+            console.error('Error reloading user profile after duplicate:', refetchError);
+            return null;
+          }
+
+          return refetched;
+        }
+
+        console.error('Error creating user profile:', createError);
+        return null;
+      }
+
+      return created;
+    })();
+
+    profileLoadRef.current = { userId: currentUser.id, promise };
+    return promise;
   };
 
   const refreshProfile = async () => {
     if (user) {
-      const profile = await loadUserProfile(user.id);
+      const profile = await loadUserProfile(user);
       setUserProfile(profile);
     }
   };
@@ -79,43 +148,68 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    let mounted = true;
+    console.time('[Auth] useEffect init');
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        setSession(newSession);
-        const currentUser = newSession?.user ?? null;
-        setUser(currentUser);
+        if (!mounted) return;
+        console.log('[Auth] onAuthStateChange event:', event);
 
-        if (currentUser) {
-          // Load profile immediately without setTimeout to avoid unnecessary delays
-          const profile = await loadUserProfile(currentUser.id);
-          setUserProfile(profile);
-        } else {
-          setUserProfile(null);
+        // Clear in-flight profile promise when user changes
+        const newUser = newSession?.user ?? null;
+        if (profileLoadRef.current && profileLoadRef.current.userId !== (newUser?.id ?? null)) {
+          profileLoadRef.current = null;
         }
 
-        setLoading(false);
+        setSession(newSession);
+        setUser(newUser);
+
+        if (newUser) {
+          const profile = await loadUserProfile(newUser);
+          if (mounted) {
+            setUserProfile(profile);
+            setLoading(false);
+          }
+        } else {
+          setUserProfile(null);
+          setLoading(false);
+        }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
-      setSession(existingSession);
-      const currentUser = existingSession?.user ?? null;
-      setUser(currentUser);
+    const initializeAuth = async () => {
+      console.time('[Auth] getSession');
+      const { data: { session: existingSession } } = await supabase.auth.getSession();
+      console.timeEnd('[Auth] getSession');
 
-      if (currentUser) {
-        // Load profile immediately without setTimeout
-        loadUserProfile(currentUser.id).then(profile => {
+      if (!mounted) return;
+
+      const existingUser = existingSession?.user ?? null;
+      console.log('[Auth] existingUser:', existingUser?.id ?? 'none');
+      if (profileLoadRef.current && profileLoadRef.current.userId !== (existingUser?.id ?? null)) {
+        profileLoadRef.current = null;
+      }
+
+      setSession(existingSession);
+      setUser(existingUser);
+
+      if (existingUser) {
+        const profile = await loadUserProfile(existingUser);
+        if (mounted) {
           setUserProfile(profile);
           setLoading(false);
-        });
+        }
       } else {
         setLoading(false);
       }
-    });
+    };
 
+    initializeAuth();
     return () => {
+      mounted = false;
       subscription.unsubscribe();
       if (inactivityTimer) clearTimeout(inactivityTimer);
       if (warningTimer) clearTimeout(warningTimer);
@@ -167,7 +261,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     session,
     userProfile,
@@ -175,9 +269,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isAuthenticated: !!session,
     signOut,
     refreshProfile,
-  };
+  }), [user, session, userProfile, loading, signOut, refreshProfile]);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>; 
 };
 
 export const useAuth = () => {

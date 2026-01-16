@@ -277,3 +277,40 @@
 .animate-fade-in {
   animation: fade-in 0.3s ease-out forwards;
 }
+
+/* Safe area insets for mobile devices (notches, home indicators) */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-area-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Admin mobile optimizations */
+.admin-touch-target {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Pull to refresh indicator */
+@keyframes pull-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-pull-spin {
+  animation: pull-spin 1s linear infinite;
+}

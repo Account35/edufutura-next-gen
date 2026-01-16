@@ -92,15 +92,18 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
           <span className="text-[10px] font-medium">More</span>
         </button>
 
-        {/* Logout Button at bottom */}
-        <button
-          onClick={handleSignOut}
-          className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[56px] min-w-[56px] text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 mt-auto"
-          aria-label="Logout"
-        >
-          <LogOut className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Logout</span>
-        </button>
+        {/* Logout Button at bottom - anchored to footer so it's visible on all viewports */}
+        <div className="mt-auto w-full flex items-center justify-center pb-6 z-60">
+          <button
+            onClick={handleSignOut}
+            title="Logout"
+            className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[56px] min-w-[56px] text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200"
+            aria-label="Logout"
+          >
+            <LogOut className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Logout</span>
+          </button>
+        </div>
       </nav>
 
       {/* Mobile Bottom Navigation */}

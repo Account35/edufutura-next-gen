@@ -26,12 +26,14 @@ export function useAuthEvents() {
         if (isNewUser && !hasTriggeredWelcome.current.has(userId)) {
           hasTriggeredWelcome.current.add(userId);
           
-          // Fire welcome flow asynchronously to not block onboarding
-          supabase.functions.invoke('welcome-new-user', {
-            body: { user_id: userId, email, full_name: fullName }
-          }).catch(error => {
+          try {
+            console.log('[useAuthEvents] Triggering welcome flow for new user');
+            await supabase.functions.invoke('welcome-new-user', {
+              body: { user_id: userId, email, full_name: fullName }
+            });
+          } catch (error) {
             console.error('Error triggering welcome flow:', error);
-          });
+          }
         }
 
         // Handle user login
