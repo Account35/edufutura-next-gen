@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Loader2, Check, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const registrationSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -45,6 +45,7 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { refreshProfile } = useAuth();
 
   const {
     register,
@@ -117,6 +118,9 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
         title: "Account created successfully!",
         description: "Your account has been created and you're now logged in. Complete your profile in the onboarding wizard.",
       });
+
+      // Refresh profile to ensure it's loaded with the new user data
+      await refreshProfile();
 
       onSuccess();
     } catch (error: any) {
