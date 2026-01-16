@@ -41,21 +41,59 @@ export default function Dashboard() {
 
     if (user) {
       loadDashboardData();
-      loadSchoolData();
-      updateLastDashboardVisit();
+      // Only load school data if user has a school_id
+      if (userProfile?.school_id) {
+        loadSchoolData();
+      }
+      // Update dashboard visit asynchronously
+      updateLastDashboardVisit().catch(error => 
+        console.error('Error updating dashboard visit:', error)
+      );
     }
   }, [user, userProfile, authLoading, navigate]);
 
   const loadDashboardData = async () => {
     try {
-      // Load user progress (subjects)
-      const { data: progressData, error: progressError } = await supabase
-        .from('user_progress')
-        .select('*')
-        .eq('user_id', user!.id)
-        .order('last_accessed', { ascending: false });
+      // For new users, skip heavy queries and show empty state immediately
+      const isNewUser = !userProfile?.subjects_studying?.length;
 
-      if (progressError) throw progressError;
+      let progressData = [];
+      let activityData = [];
+      let achievementData = [];
+
+      if (!isNewUser) {
+        // Load user progress (subjects) - only for users with subjects
+        const progressResult = await supabase
+          .from('user_progress')
+          .select('*')
+          .eq('user_id', user!.id)
+          .order('last_accessed', { ascending: false });
+
+        if (progressResult.error) throw progressResult.error;
+        progressData = progressResult.data || [];
+
+        // Load recent activities and achievements in parallel for existing users
+        const [activityResult, achievementResult] = await Promise.all([
+          supabase
+            .from('activity_log')
+            .select('*')
+            .eq('user_id', user!.id)
+            .order('timestamp', { ascending: false })
+            .limit(10),
+          supabase
+            .from('achievements')
+            .select('*')
+            .eq('user_id', user!.id)
+            .order('earned_at', { ascending: false })
+            .limit(10)
+        ]);
+
+        if (activityResult.error) throw activityResult.error;
+        if (achievementResult.error) throw achievementResult.error;
+
+        activityData = activityResult.data || [];
+        achievementData = achievementResult.data || [];
+      }
 
       // Calculate overall progress
       if (progressData && progressData.length > 0) {
@@ -65,30 +103,10 @@ export default function Dashboard() {
         setOverallProgress(avgProgress);
       }
 
-      // Load recent activities
-      const { data: activityData, error: activityError } = await supabase
-        .from('activity_log')
-        .select('*')
-        .eq('user_id', user!.id)
-        .order('timestamp', { ascending: false })
-        .limit(10);
-
-      if (activityError) throw activityError;
-
-      // Load achievements
-      const { data: achievementData, error: achievementError } = await supabase
-        .from('achievements')
-        .select('*')
-        .eq('user_id', user!.id)
-        .order('earned_at', { ascending: false })
-        .limit(10);
-
-      if (achievementError) throw achievementError;
-
       setDashboardData({
-        subjects: progressData || [],
-        activities: activityData || [],
-        achievements: achievementData || [],
+        subjects: progressData,
+        activities: activityData,
+        achievements: achievementData,
       });
     } catch (error) {
       console.error('Error loading dashboard data:', error);

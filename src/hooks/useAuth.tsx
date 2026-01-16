@@ -87,11 +87,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(currentUser);
 
         if (currentUser) {
-          // Defer profile loading with setTimeout to avoid deadlock
-          setTimeout(async () => {
-            const profile = await loadUserProfile(currentUser.id);
-            setUserProfile(profile);
-          }, 0);
+          // Load profile immediately without setTimeout to avoid unnecessary delays
+          const profile = await loadUserProfile(currentUser.id);
+          setUserProfile(profile);
         } else {
           setUserProfile(null);
         }
@@ -107,13 +105,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(currentUser);
 
       if (currentUser) {
-        setTimeout(async () => {
-          const profile = await loadUserProfile(currentUser.id);
+        // Load profile immediately without setTimeout
+        loadUserProfile(currentUser.id).then(profile => {
           setUserProfile(profile);
-        }, 0);
+          setLoading(false);
+        });
+      } else {
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
     return () => {

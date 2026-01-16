@@ -21,41 +21,44 @@ serve(async (req) => {
 
     console.log(`[welcome-new-user] Processing new user: ${user_id}`);
 
-    // 1. Create default study preferences
-    const { error: prefsError } = await supabaseClient
-      .from('study_preferences')
-      .upsert({
-        user_id,
-        learning_style: 'visual',
-        study_pace: 'moderate',
-        preferred_study_time: 'evening',
-        daily_goal_minutes: 60,
-        weekly_goal_hours: 5,
-        study_reminders_enabled: true,
-        reading_font_size: 'medium',
-        dark_mode_enabled: false,
-      }, { onConflict: 'user_id' });
+    // Run initialization operations in parallel for better performance
+    const [prefsResult, repResult] = await Promise.all([
+      // 1. Create default study preferences
+      supabaseClient
+        .from('study_preferences')
+        .upsert({
+          user_id,
+          learning_style: 'visual',
+          study_pace: 'moderate',
+          preferred_study_time: 'evening',
+          daily_goal_minutes: 60,
+          weekly_goal_hours: 5,
+          study_reminders_enabled: true,
+          reading_font_size: 'medium',
+          dark_mode_enabled: false,
+        }, { onConflict: 'user_id' }),
 
-    if (prefsError) {
-      console.error('Error creating study preferences:', prefsError);
+      // 2. Initialize user reputation (Phase 8)
+      supabaseClient
+        .from('user_reputation')
+        .upsert({
+          user_id,
+          reputation_score: 0,
+          current_level: 'Newcomer',
+          helpful_posts: 0,
+          quality_resources: 0,
+          positive_ratings: 0,
+          solutions_marked: 0,
+          warnings_received: 0,
+        }, { onConflict: 'user_id' })
+    ]);
+
+    if (prefsResult.error) {
+      console.error('Error creating study preferences:', prefsResult.error);
     }
 
-    // 2. Initialize user reputation (Phase 8)
-    const { error: repError } = await supabaseClient
-      .from('user_reputation')
-      .upsert({
-        user_id,
-        reputation_score: 0,
-        current_level: 'Newcomer',
-        helpful_posts: 0,
-        quality_resources: 0,
-        positive_ratings: 0,
-        solutions_marked: 0,
-        warnings_received: 0,
-      }, { onConflict: 'user_id' });
-
-    if (repError) {
-      console.error('Error initializing reputation:', repError);
+    if (repResult.error) {
+      console.error('Error initializing reputation:', repResult.error);
     }
 
     // 3. Log signup event for analytics
