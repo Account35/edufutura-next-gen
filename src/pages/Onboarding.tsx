@@ -24,7 +24,7 @@ const STEPS = [
 export default function Onboarding() {
   const navigate = useNavigate();
   const { user, userProfile, loading, refreshProfile } = useAuth();
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0); // Index into requiredSteps array
   const [onboardingData, setOnboardingData] = useState({
     full_name: '',
     date_of_birth: '',
@@ -67,7 +67,7 @@ export default function Onboarding() {
   };
 
   const requiredSteps = getRequiredSteps();
-  const currentRequiredStepIndex = requiredSteps.indexOf(currentStep);
+  const currentStep = requiredSteps[currentStepIndex] ?? 4; // Default to welcome step
   const totalRequiredSteps = requiredSteps.length;
 
   useEffect(() => {
@@ -104,21 +104,24 @@ export default function Onboarding() {
     }
   }, [user, userProfile, loading, navigate]);
 
+  // Reset step index when required steps change (e.g., when data loads)
+  useEffect(() => {
+    setCurrentStepIndex(0);
+  }, [requiredSteps.length]);
+
   const updateOnboardingData = (data: Partial<typeof onboardingData>) => {
     setOnboardingData(prev => ({ ...prev, ...data }));
   };
 
   const nextStep = () => {
-    const currentIndex = requiredSteps.indexOf(currentStep);
-    if (currentIndex < requiredSteps.length - 1) {
-      setCurrentStep(requiredSteps[currentIndex + 1]);
+    if (currentStepIndex < requiredSteps.length - 1) {
+      setCurrentStepIndex(currentStepIndex + 1);
     }
   };
 
   const prevStep = () => {
-    const currentIndex = requiredSteps.indexOf(currentStep);
-    if (currentIndex > 0) {
-      setCurrentStep(requiredSteps[currentIndex - 1]);
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex(currentStepIndex - 1);
     }
   };
 
@@ -148,11 +151,9 @@ export default function Onboarding() {
     return <FullPageLoader message="Setting up your account..." />;
   }
 
-  const progress = totalRequiredSteps > 0 ? ((currentRequiredStepIndex + 1) / totalRequiredSteps) * 100 : 100;
+  const progress = totalRequiredSteps > 0 ? ((currentStepIndex + 1) / totalRequiredSteps) * 100 : 100;
 
   const getCurrentStepInfo = () => {
-    const stepIndex = requiredSteps.indexOf(currentStep);
-    if (stepIndex === -1) return STEPS[currentStep];
     return STEPS[currentStep];
   };
 
@@ -221,7 +222,7 @@ export default function Onboarding() {
             </CardDescription>
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Step {currentRequiredStepIndex + 1} of {totalRequiredSteps}</span>
+                <span>Step {currentStepIndex + 1} of {totalRequiredSteps}</span>
                 <span>{currentStepInfo.title}</span>
               </div>
               <Progress value={progress} className="w-full" />

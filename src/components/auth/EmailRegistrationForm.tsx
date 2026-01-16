@@ -114,6 +114,24 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
         return;
       }
 
+      // Create user profile in database
+      if (authData.user) {
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert({
+            id: authData.user.id,
+            email: data.email,
+            full_name: data.fullName,
+            onboarding_completed: false,
+            email_verified: false
+          });
+
+        if (profileError) {
+          console.error('Error creating user profile:', profileError);
+          // Don't fail registration if profile creation fails, but log it
+        }
+      }
+
       toast({
         title: "Account created successfully!",
         description: "Your account has been created and you're now logged in. Complete your profile in the onboarding wizard.",
