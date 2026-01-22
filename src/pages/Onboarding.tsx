@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { supabase } from '@/integrations/supabase/client';
 import { FullPageLoader } from '@/components/ui/loading';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { WelcomeStep } from '@/components/onboarding/WelcomeStep';
 import { ProfilePhotoStep } from '@/components/onboarding/ProfilePhotoStep';
@@ -39,10 +41,22 @@ export default function Onboarding() {
     dailyGoalMinutes: 60
   });
   const [isCompleting, setIsCompleting] = useState(false);
+  const [autoAttempted, setAutoAttempted] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('[Onboarding] State:', {
+      loading,
+      roleLoading,
+      user: user?.id ?? null,
+      userProfile: userProfile ? 'exists' : null,
+      onboarding_completed: userProfile?.onboarding_completed,
+      autoAttempted,
+    });
+
     // Redirect if not authenticated
     if (!loading && !user) {
+      console.log('[Onboarding] Not authenticated, redirecting to /');
       navigate('/');
       return;
     }
@@ -50,6 +64,7 @@ export default function Onboarding() {
     // If onboarding already completed, redirect appropriately
     if (userProfile?.onboarding_completed && !roleLoading) {
       const dest = isAdmin || isEducator ? '/admin' : '/dashboard';
+      console.log('[Onboarding] Already completed, redirecting to', dest);
       navigate(dest);
       return;
     }
@@ -188,8 +203,47 @@ export default function Onboarding() {
 
       // Clear saved progress
       localStorage.removeItem('edufutura_onboarding_progress');
+    // Auto-complete onboarding for Phase 1 (temporary until Phase 3 onboarding wizard)
+    // IMPORTANT: only attempt once automatically to avoid infinite spinner loops on failure.
+    if (
+      user &&
+      userProfile &&
+      !userProfile.onboarding_completed &&
+      !roleLoading &&
+      !autoAttempted
+    ) {
+      console.log('[Onboarding] Auto-completing onboarding...');
+      setAutoAttempted(true);
+      completeOnboarding();
+    }
+  }, [
+    user,
+    userProfile,
+    loading,
+    roleLoading,
+    isAdmin,
+    isEducator,
+    navigate,
+    autoAttempted,
+  ]);
+
+  const completeOnboarding = async () => {
+    if (!user) return;
+
+    try {
+      setSetupError(null);
+
+      const { error } = await supabase
+        .from('users')
+        .update({
+          onboarding_completed: true,
+          onboarding_completed_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
 
       toast.success('Welcome to EduFutura! Your profile is all set up.');
+
+      toast.success('Welcome to EduFutura!');
 
       // Redirect based on role
       if (isAdmin || isEducator) {
@@ -202,6 +256,8 @@ export default function Onboarding() {
       toast.error('Failed to save your profile. Please try again.');
     } finally {
       setIsCompleting(false);
+      setSetupError('We couldn\'t finish setting up your account.');
+      toast.error('Failed to complete setup. Please try again.');
     }
   };
 
@@ -284,4 +340,25 @@ export default function Onboarding() {
     default:
       return <WelcomeStep onNext={handleWelcomeNext} userName={userName} />;
   }
+  if (setupError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-4">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold text-foreground">Setup needs a retry</h1>
+            <p className="text-sm text-muted-foreground">{setupError} Tap Retry to try again.</p>
+          </div>
+          <Button className="w-full min-h-[48px]" onClick={completeOnboarding}>
+            Retry setup
+          </Button>
+          <Button variant="outline" className="w-full min-h-[48px]" onClick={() => navigate('/')}
+          >
+            Go to home
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return <FullPageLoader message="Completing your profile..." />;
 }

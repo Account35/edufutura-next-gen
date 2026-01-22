@@ -53,6 +53,10 @@ export const useAdminRole = () => {
           timeoutPromise
         ]) as any;
         
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id);
         console.timeEnd('[AdminRole] checkRoles');
 
         if (error) {
