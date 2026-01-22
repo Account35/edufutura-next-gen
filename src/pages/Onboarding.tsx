@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { supabase } from '@/integrations/supabase/client';
 import { FullPageLoader } from '@/components/ui/loading';
-import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { WelcomeStep } from '@/components/onboarding/WelcomeStep';
 import { ProfilePhotoStep } from '@/components/onboarding/ProfilePhotoStep';
@@ -41,8 +39,6 @@ export default function Onboarding() {
     dailyGoalMinutes: 60
   });
   const [isCompleting, setIsCompleting] = useState(false);
-  const [autoAttempted, setAutoAttempted] = useState(false);
-  const [setupError, setSetupError] = useState<string | null>(null);
 
   useEffect(() => {
     console.log('[Onboarding] State:', {
@@ -51,7 +47,6 @@ export default function Onboarding() {
       user: user?.id ?? null,
       userProfile: userProfile ? 'exists' : null,
       onboarding_completed: userProfile?.onboarding_completed,
-      autoAttempted,
     });
 
     // Redirect if not authenticated
@@ -203,29 +198,13 @@ export default function Onboarding() {
 
       // Clear saved progress
       localStorage.removeItem('edufutura_onboarding_progress');
-    // Auto-complete onboarding for Phase 1 (temporary until Phase 3 onboarding wizard)
-    // IMPORTANT: only attempt once automatically to avoid infinite spinner loops on failure.
-    if (
-      user &&
-      userProfile &&
-      !userProfile.onboarding_completed &&
-      !roleLoading &&
-      !autoAttempted
-    ) {
-      console.log('[Onboarding] Auto-completing onboarding...');
-      setAutoAttempted(true);
-      completeOnboarding();
+
+      toast.success('Welcome to EduFutura! Your profile is all set up.');
+    } catch (error) {
+      console.error('Error completing onboarding setup:', error);
+      toast.error('Failed to save your profile. Please try again.');
     }
-  }, [
-    user,
-    userProfile,
-    loading,
-    roleLoading,
-    isAdmin,
-    isEducator,
-    navigate,
-    autoAttempted,
-  ]);
+  };
 
   const completeOnboarding = async () => {
     if (!user) return;
