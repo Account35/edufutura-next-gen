@@ -44,8 +44,6 @@ const Index = () => {
   }, []);
 
   // Show loading state while checking auth - but add a timeout to prevent infinite loading
-  const isLoading = (loading || roleLoading) && !forceShowContent;
-  // Show loading state while checking auth - but add a timeout to prevent infinite loading
   const isLoading = loading || roleLoading;
   
   if (isLoading) {

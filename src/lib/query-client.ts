@@ -35,7 +35,8 @@ export const queryKeys = {
     userId ? ['studyGroups', userId] : ['studyGroups'],
   
   // Career
-  institutions: (filters?: object): (string | object | undefined)[] => ['institutions', filters],
+  institutions: (): string[] => ['institutions'],
+  institutionRecommendations: (userId: string): string[] => ['institutionRecommendations', userId],
   careers: (filters?: object): (string | object | undefined)[] => ['careers', filters],
   careerRecommendations: (userId: string): string[] => ['careerRecommendations', userId],
   
