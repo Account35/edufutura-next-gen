@@ -14,6 +14,7 @@ const Index = () => {
   const { user, userProfile, loading } = useAuth();
   const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
   const navigate = useNavigate();
+  const [forceShowContent, setForceShowContent] = useState(false);
 
   useEffect(() => {
     // Don't redirect while loading
@@ -32,6 +33,18 @@ const Index = () => {
     }
   }, [user, userProfile, loading, roleLoading, isAdmin, isEducator, navigate]);
 
+  // Add timeout to prevent infinite loading - show content after 15 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('[Index] Force showing content due to loading timeout');
+      setForceShowContent(true);
+    }, 15000); // 15 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Show loading state while checking auth - but add a timeout to prevent infinite loading
+  const isLoading = (loading || roleLoading) && !forceShowContent;
   // Show loading state while checking auth - but add a timeout to prevent infinite loading
   const isLoading = loading || roleLoading;
   
