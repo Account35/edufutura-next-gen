@@ -139,6 +139,69 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error('[Auth] Profile loading error:', error);
         return null;
       }
+      console.time('[Auth] loadUserProfile');
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+      console.timeEnd('[Auth] loadUserProfile');
+
+      if (error) {
+        console.error('Error loading user profile:', error);
+        return null;
+      }
+
+      // If profile exists, return it
+      if (data) {
+        console.log('[Auth] Profile fetched successfully');
+        return data;
+      }
+
+      // If profile doesn't exist yet (common cause of onboarding spinner), create a minimal record.
+      const fullNameFromMeta =
+        (currentUser.user_metadata?.full_name as string | undefined) ||
+        (currentUser.user_metadata?.name as string | undefined);
+
+      const fallbackFullName =
+        fullNameFromMeta ||
+        currentUser.email?.split('@')[0] ||
+        'Student';
+
+      const { data: created, error: createError } = await supabase
+        .from('users')
+        .insert({
+          id: currentUser.id,
+          email: currentUser.email,
+          full_name: fallbackFullName,
+          onboarding_completed: false,
+        })
+        .select('*')
+        .single();
+
+      if (createError) {
+        // If something else created it in the meantime, re-fetch once.
+        const isDuplicate = (createError as any)?.code === '23505';
+        if (isDuplicate) {
+          const { data: refetched, error: refetchError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', currentUser.id)
+            .maybeSingle();
+
+          if (refetchError) {
+            console.error('Error reloading user profile after duplicate:', refetchError);
+            return null;
+          }
+
+          return refetched;
+        }
+
+        console.error('Error creating user profile:', createError);
+        return null;
+      }
+
+      return created;
     })();
 
     profileLoadRef.current = { userId: currentUser.id, promise };
@@ -254,6 +317,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (mounted) {
           setLoading(false);
         }
+      }
+    };
+
+    // THEN check for existing session
+    const initializeAuth = async () => {
+      console.time('[Auth] getSession');
+      const { data: { session: existingSession } } = await supabase.auth.getSession();
+      console.timeEnd('[Auth] getSession');
+
+      if (!mounted) return;
+
+      const existingUser = existingSession?.user ?? null;
+      console.log('[Auth] existingUser:', existingUser?.id ?? 'none');
+      if (profileLoadRef.current && profileLoadRef.current.userId !== (existingUser?.id ?? null)) {
+        profileLoadRef.current = null;
+      }
+
+      setSession(existingSession);
+      setUser(existingUser);
+
+      if (existingUser) {
+        const profile = await loadUserProfile(existingUser);
+        if (mounted) {
+          setUserProfile(profile);
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
       }
     };
 
