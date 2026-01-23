@@ -10,7 +10,6 @@ import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
 import { AchievementDisplay } from '@/components/dashboard/AchievementDisplay';
 import { CommunityActivityWidget } from '@/components/community/CommunityActivityWidget';
 import { UpgradeBanner } from '@/components/subscription/UpgradeBanner';
-import { OnboardingReminderBanner } from '@/components/dashboard/OnboardingReminderBanner';
 import { SubscriptionModal } from '@/components/subscription/SubscriptionModal';
 import { FullPageLoader } from '@/components/ui/loading';
 import { toast } from 'sonner';
@@ -32,6 +31,11 @@ export default function Dashboard() {
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/');
+      return;
+    }
+
+    if (user && userProfile && !userProfile.onboarding_completed) {
+      navigate('/onboarding');
       return;
     }
 
@@ -145,11 +149,6 @@ export default function Dashboard() {
           overallProgress={overallProgress}
           onUpgradeClick={() => setShowUpgradeModal(true)}
         />
-
-        {/* Onboarding Reminder for users who haven't completed it */}
-        {!userProfile.onboarding_completed && (
-          <OnboardingReminderBanner userName={userProfile.full_name} />
-        )}
 
         {/* Upgrade Banner for Free Users */}
         {!isPremium && (

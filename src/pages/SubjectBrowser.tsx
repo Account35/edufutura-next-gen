@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useCurriculumData, Subject } from '@/hooks/useCurriculumData';
 import { useAuth } from '@/hooks/useAuth';
-import { useSubjects, useUserProgress } from '@/hooks/useSubjects';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Book, Calculator, Atom, Dna, Globe, Clock, CheckCircle2, Plus } from 'lucide-react';
@@ -13,8 +12,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/query-client';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const iconMap: Record<string, any> = {
   Calculator: Calculator,
@@ -30,13 +29,12 @@ type SortOption = 'name_asc' | 'name_desc' | 'grade_asc' | 'grade_desc' | 'chapt
 
 export default function SubjectBrowser() {
   const navigate = useNavigate();
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, refreshProfile } = useAuth();
+  const { fetchSubjects } = useCurriculumData();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  // Use React Query for data fetching with caching
-  const { data: subjects = [], isLoading, error } = useSubjects();
-  const { data: userProgress = [] } = useUserProgress(user?.id || '');
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Filters & controls
   const [search, setSearch] = useState('');
@@ -45,11 +43,23 @@ export default function SubjectBrowser() {
   const [sort, setSort] = useState<SortOption>('name_asc');
 
   const studying: string[] = useMemo(() => {
-    return userProgress.map(p => p.subject_name);
-  }, [userProgress]);
+    const arr = (userProfile?.subjects_studying as unknown as string[]) || [];
+    return Array.isArray(arr) ? arr : [];
+  }, [userProfile?.subjects_studying]);
 
   useEffect(() => {
     document.title = 'Browse Subjects | EduFutura';
+  }, []);
+
+  useEffect(() => {
+    const loadSubjects = async () => {
+      setLoading(true);
+      const data = await fetchSubjects(); // fetch all published subjects
+      setSubjects(data);
+      setLoading(false);
+    };
+
+    loadSubjects();
   }, []);
 
   const filtered = useMemo(() => {
@@ -107,33 +117,32 @@ export default function SubjectBrowser() {
   };
 
   const handleAddSubject = async (subject: Subject) => {
-    if (!user || studying.includes(subject.subject_name)) return;
+    if (!user || !userProfile) return;
+    if (studying.includes(subject.subject_name)) return;
 
-    try {
-      // Add to user_progress table
-      const { error } = await supabase.from('user_progress').insert({
-        user_id: user.id,
-        subject_name: subject.subject_name,
-        total_chapters: subject.total_chapters || 0,
-        chapters_completed: 0,
-        progress_percentage: 0,
-        last_accessed: new Date().toISOString(),
-      });
+    const newSubjects = [...studying, subject.subject_name];
 
-      if (error) throw error;
+    const { error } = await supabase
+      .from('users')
+      .update({ subjects_studying: newSubjects })
+      .eq('id', user.id);
 
-      // Invalidate and refetch user progress
-      await queryClient.invalidateQueries({ queryKey: queryKeys.userProgress(user.id) });
-
-      toast({ title: 'Subject added', description: `${subject.subject_name} added to your profile!` });
-    } catch (error) {
-      console.error('Error adding subject:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add subject. Please try again.',
-        variant: 'destructive'
-      });
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to add subject. Please try again.', variant: 'destructive' });
+      return;
     }
+
+    await supabase.from('user_progress').insert({
+      user_id: user.id,
+      subject_name: subject.subject_name,
+      total_chapters: subject.total_chapters || 0,
+      chapters_completed: 0,
+      progress_percentage: 0,
+      last_accessed: new Date().toISOString(),
+    });
+
+    toast({ title: 'Subject added', description: `${subject.subject_name} added to your profile!` });
+    await refreshProfile();
   };
 
   return (

@@ -14,7 +14,25 @@ import { MobileInstitutionFilters } from '@/components/career/MobileInstitutionF
 import { SwipeableCard } from '@/components/career/SwipeableCard';
 import { useOfflineCache } from '@/hooks/useOfflineCache';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useInstitutions, useInstitutionRecommendations, useToggleInstitutionSave, type Institution, type InstitutionRecommendation } from '@/hooks/useInstitutions';
+
+type Institution = {
+  id: string;
+  institution_name: string;
+  institution_type: string;
+  province: string;
+  city: string;
+  courses_offered: any;
+  institution_logo_url: string | null;
+};
+
+type InstitutionRecommendation = {
+  institution_id: string;
+  program_name: string;
+  match_score: number;
+  match_factors: any;
+  admission_probability: string;
+  saved: boolean;
+};
 
 const SA_PROVINCES = [
   'All Provinces',
@@ -55,24 +73,43 @@ export default function Universities() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-
-  // Use React Query for data fetching
-  const { data: institutions = [], isLoading: institutionsLoading } = useInstitutions();
-  const { data: recommendations = new Map(), isLoading: recommendationsLoading } = useInstitutionRecommendations(user?.id);
-  const toggleSaveMutation = useToggleInstitutionSave();
-
+  
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [recommendations, setRecommendations] = useState<Map<string, InstitutionRecommendation>>(new Map());
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [provinceFilter, setProvinceFilter] = useState('All Provinces');
   const [typeFilter, setTypeFilter] = useState('All Types');
   const [programFilter, setProgramFilter] = useState('All Programs');
   const [sortBy, setSortBy] = useState<'match' | 'location' | 'name'>('match');
-
+  
   // Infinite scroll
   const [displayCount, setDisplayCount] = useState(12);
   const observerTarget = useRef(null);
 
-  // Offline support - keeping for compatibility but institutions now come from React Query
-  const { isOnline } = useOfflineCache('institutions', async () => institutions);
+  // Offline support
+  const { data: cachedInstitutions, isCached, isOnline } = useOfflineCache(
+    'institutions',
+    async () => {
+      const { data, error } = await supabase
+        .from('tertiary_institutions')
+        .select('*')
+        .order('institution_name');
+      if (error) throw error;
+      return data || [];
+    }
+  );
+
+  useEffect(() => {
+    fetchData();
+  }, [user]);
+
+  // Update institutions from cache
+  useEffect(() => {
+    if (cachedInstitutions) {
+      setInstitutions(cachedInstitutions);
+    }
+  }, [cachedInstitutions]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -175,26 +212,55 @@ export default function Universities() {
   const handleToggleSave = async (institutionId: string) => {
     if (!user) return;
 
-    const currentRec = recommendations.get(institutionId);
+    const rec = recommendations.get(institutionId);
+    const newSavedState = !rec?.saved;
 
     try {
-      await toggleSaveMutation.mutateAsync({
-        userId: user.id,
-        institutionId,
-        currentRec,
+      if (rec) {
+        // Update existing recommendation
+        const { error } = await supabase
+          .from('institution_recommendations')
+          .update({ saved: newSavedState })
+          .eq('institution_id', institutionId)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+      } else {
+        // Create new recommendation
+        const { error } = await supabase
+          .from('institution_recommendations')
+          .insert({
+            user_id: user.id,
+            institution_id: institutionId,
+            saved: true,
+            match_score: 0,
+          });
+
+        if (error) throw error;
+      }
+
+      // Update local state
+      const updatedRecs = new Map(recommendations);
+      updatedRecs.set(institutionId, {
+        ...rec,
+        institution_id: institutionId,
+        program_name: rec?.program_name || '',
+        match_score: rec?.match_score || 0,
+        match_factors: rec?.match_factors || {},
+        admission_probability: rec?.admission_probability || '',
+        saved: newSavedState,
       });
+      setRecommendations(updatedRecs);
 
       toast({
-        title: currentRec?.saved ? 'Removed from saved' : 'Added to saved',
-        description: currentRec?.saved
-          ? 'Institution removed from your saved list.'
-          : 'Institution added to your saved list.',
+        title: newSavedState ? 'Added to shortlist' : 'Removed from shortlist',
+        description: newSavedState ? 'Institution saved to your shortlist' : 'Institution removed from shortlist',
       });
     } catch (error) {
       console.error('Error toggling save:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update saved status. Please try again.',
+        description: 'Failed to update shortlist',
         variant: 'destructive',
       });
     }
@@ -311,7 +377,7 @@ export default function Universities() {
 
         {/* Results */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          {institutionsLoading || recommendationsLoading ? (
+          {loading ? (
             <div className="col-span-full text-center py-12 text-muted-foreground">
               Loading institutions...
             </div>

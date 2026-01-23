@@ -37,22 +37,10 @@ export const useAdminRole = () => {
       try {
         setLoading(true);
         console.time('[AdminRole] checkRoles');
-        
-        // Add timeout to prevent hanging
-        const rolesPromise = supabase
+        const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id);
-        
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Roles check timeout')), 5000); // 5 second timeout
-        });
-        
-        const { data, error } = await Promise.race([
-          rolesPromise,
-          timeoutPromise
-        ]) as any;
-        
         console.timeEnd('[AdminRole] checkRoles');
 
         if (error) {
