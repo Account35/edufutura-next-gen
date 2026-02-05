@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from '@/hooks/use-toast';
 
+const AUTH_TIMEOUT_MS = 15000; // 15 second timeout for auth operations
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -142,7 +144,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
+    let authTimeoutId: NodeJS.Timeout | null = null;
     console.time('[Auth] useEffect init');
+
+    // Safety timeout to prevent infinite loading
+    authTimeoutId = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('[Auth] Auth timeout reached, forcing loading to false');
+        setLoading(false);
+      }
+    }, AUTH_TIMEOUT_MS);
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -160,10 +171,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(newUser);
 
         if (newUser) {
-          const profile = await loadUserProfile(newUser);
-          if (mounted) {
-            setUserProfile(profile);
-            setLoading(false);
+          try {
+            const profile = await loadUserProfile(newUser);
+            if (mounted) {
+              setUserProfile(profile);
+              setLoading(false);
+            }
+          } catch (error) {
+            console.error('[Auth] Error loading profile in auth change:', error);
+            if (mounted) {
+              setLoading(false);
+            }
           }
         } else {
           setUserProfile(null);
@@ -174,35 +192,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // THEN check for existing session
     const initializeAuth = async () => {
-      console.time('[Auth] getSession');
-      const { data: { session: existingSession } } = await supabase.auth.getSession();
-      console.timeEnd('[Auth] getSession');
+      try {
+        console.time('[Auth] getSession');
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        console.timeEnd('[Auth] getSession');
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      const existingUser = existingSession?.user ?? null;
-      console.log('[Auth] existingUser:', existingUser?.id ?? 'none');
-      if (profileLoadRef.current && profileLoadRef.current.userId !== (existingUser?.id ?? null)) {
-        profileLoadRef.current = null;
-      }
+        const existingUser = existingSession?.user ?? null;
+        console.log('[Auth] existingUser:', existingUser?.id ?? 'none');
+        if (profileLoadRef.current && profileLoadRef.current.userId !== (existingUser?.id ?? null)) {
+          profileLoadRef.current = null;
+        }
 
-      setSession(existingSession);
-      setUser(existingUser);
+        setSession(existingSession);
+        setUser(existingUser);
 
-      if (existingUser) {
-        const profile = await loadUserProfile(existingUser);
-        if (mounted) {
-          setUserProfile(profile);
+        if (existingUser) {
+          try {
+            const profile = await loadUserProfile(existingUser);
+            if (mounted) {
+              setUserProfile(profile);
+              setLoading(false);
+            }
+          } catch (error) {
+            console.error('[Auth] Error loading profile:', error);
+            if (mounted) {
+              setLoading(false);
+            }
+          }
+        } else {
           setLoading(false);
         }
-      } else {
-        setLoading(false);
+      } catch (error) {
+        console.error('[Auth] Error in initializeAuth:', error);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     initializeAuth();
     return () => {
       mounted = false;
+      if (authTimeoutId) clearTimeout(authTimeoutId);
       subscription.unsubscribe();
       if (inactivityTimer) clearTimeout(inactivityTimer);
       if (warningTimer) clearTimeout(warningTimer);
