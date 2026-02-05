@@ -169,12 +169,12 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister }: LoginFormProps) => 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="login-password" className="text-foreground">Password</Label>
-          <button
-            type="button"
+           <a
+             href="/auth/forgot-password"
             className="text-sm text-secondary hover:text-secondary/80 transition-colors"
           >
             Forgot password?
-          </button>
+           </a>
         </div>
         <div className="relative">
           <Input

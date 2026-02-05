@@ -21,6 +21,18 @@ import NotFound from "./pages/NotFound";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 
+ // Onboarding wizard steps
+ const OnboardingWelcome = lazy(() => import("./pages/onboarding/OnboardingWelcome"));
+ const OnboardingProfile = lazy(() => import("./pages/onboarding/OnboardingProfile"));
+ const OnboardingSubjects = lazy(() => import("./pages/onboarding/OnboardingSubjects"));
+ const OnboardingPreferences = lazy(() => import("./pages/onboarding/OnboardingPreferences"));
+ const OnboardingComplete = lazy(() => import("./pages/onboarding/OnboardingComplete"));
+
+ // Auth pages
+ const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
+ const ResetPassword = lazy(() => import("./pages/auth/ResetPassword"));
+ const VerifyEmail = lazy(() => import("./pages/auth/VerifyEmail"));
+
 // Phase 2: Profile & Settings - lazy loaded
 const Settings = lazy(() => import("./pages/Settings"));
 const Profile = lazy(() => import("./pages/Profile"));
@@ -90,6 +102,16 @@ const router = createBrowserRouter(
       
       {/* Phase 1: Auth & Onboarding */}
       <Route path="/onboarding" element={<Onboarding />} />
+       <Route path="/onboarding/welcome" element={<OnboardingWelcome />} />
+       <Route path="/onboarding/profile" element={<OnboardingProfile />} />
+       <Route path="/onboarding/subjects" element={<OnboardingSubjects />} />
+       <Route path="/onboarding/preferences" element={<OnboardingPreferences />} />
+       <Route path="/onboarding/complete" element={<OnboardingComplete />} />
+       
+       {/* Auth pages */}
+       <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+       <Route path="/auth/reset-password" element={<ResetPassword />} />
+       <Route path="/auth/verify-email" element={<VerifyEmail />} />
       
       {/* Phase 2: Dashboard & Profile */}
       <Route path="/dashboard" element={<Dashboard />} />
