@@ -6,7 +6,7 @@ export const useAdminRole = () => {
   const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isEducator, setIsEducator] = useState(false);
-  const [roleLoading, setRoleLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const lastCheckedUserId = useRef<string | null>(null);
 
   useEffect(() => {
@@ -16,27 +16,26 @@ export const useAdminRole = () => {
       return;
     }
 
-    // If no user, reset and stop loading immediately
+    // If no user, reset and stop loading
     if (!user) {
       console.log('[AdminRole] No user, resetting roles');
       setIsAdmin(false);
       setIsEducator(false);
-      setRoleLoading(false);
+      setLoading(false);
       lastCheckedUserId.current = null;
       return;
     }
 
-    // Skip if we already checked this user
+    // Skip if we already checked this user - but ensure loading is false
     if (lastCheckedUserId.current === user.id) {
       console.log('[AdminRole] Already checked user, skipping');
-      // Ensure loading is false even if we skip
-      setRoleLoading(false);
+      setLoading(false);
       return;
     }
 
     const checkRoles = async () => {
-      setRoleLoading(true);
       try {
+        setLoading(true);
         console.time('[AdminRole] checkRoles');
         const { data, error } = await supabase
           .from('user_roles')
@@ -60,20 +59,17 @@ export const useAdminRole = () => {
         setIsAdmin(false);
         setIsEducator(false);
       } finally {
-        setRoleLoading(false);
+        setLoading(false);
       }
     };
 
     checkRoles();
   }, [user, authLoading]);
 
-  // Combined loading: auth must be done AND roles must be checked
-  const loading = authLoading || roleLoading;
-
   return {
     isAdmin,
     isEducator,
     isAdminOrEducator: isAdmin || isEducator,
-    loading
+    loading: authLoading || loading
   };
 };

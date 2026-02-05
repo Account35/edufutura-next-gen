@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdminRole } from '@/hooks/useAdminRole';
 import { FullPageLoader } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { 
@@ -117,15 +118,18 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading: authLoading } = useAuth();
+  const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // Access control is handled by <AdminRoute>. AdminLayout should only handle
-    // the unauthenticated case as a safety net.
-    if (!authLoading && !user) {
-      navigate('/');
+    if (!authLoading && !roleLoading) {
+      if (!user) {
+        navigate('/');
+      } else if (!isAdmin && !isEducator) {
+        navigate('/dashboard');
+      }
     }
-  }, [user, authLoading, navigate]);
+  }, [user, isAdmin, isEducator, authLoading, roleLoading, navigate]);
 
   // Close sidebar on route change
   useEffect(() => {
@@ -141,13 +145,12 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
     navigate(path);
   }, [navigate]);
 
-  if (authLoading) {
+  if (authLoading || roleLoading) {
     return <FullPageLoader message="Loading admin panel..." />;
   }
 
-  // Show loader while redirecting unauthenticated users
-  if (!user) {
-    return <FullPageLoader message="Redirecting..." />;
+  if (!isAdmin && !isEducator) {
+    return null;
   }
 
   return (
