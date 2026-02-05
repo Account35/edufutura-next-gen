@@ -46,7 +46,7 @@ export const FloatingAIButton = ({ onClick, unreadSuggestions = 0 }: FloatingAIB
           <Button
             onClick={handleClick}
             className={cn(
-              "fixed bottom-24 right-4 md:bottom-6 md:right-6 w-14 h-14 md:w-16 md:h-16 rounded-full shadow-xl bg-secondary hover:bg-secondary/90 text-white z-40 group flex items-center justify-center transition-transform duration-200 hover:scale-110",
+              "fixed bottom-20 right-4 lg:bottom-6 lg:right-6 w-14 h-14 lg:w-16 lg:h-16 rounded-full shadow-xl bg-secondary hover:bg-secondary/90 text-white z-40 group flex items-center justify-center transition-transform duration-200 hover:scale-110",
               showPulse && "animate-[pulse_2s_ease-in-out_3]"
             )}
             size="icon"
@@ -54,12 +54,12 @@ export const FloatingAIButton = ({ onClick, unreadSuggestions = 0 }: FloatingAIB
           >
             <Sparkles className="w-6 h-6 group-hover:rotate-12 transition-transform duration-200" />
             {!isPremium && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center font-bold">
                 3
               </span>
             )}
             {unreadSuggestions > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center font-bold">
                 {unreadSuggestions}
               </span>
             )}

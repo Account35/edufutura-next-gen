@@ -6,9 +6,10 @@ import { PostCard } from '@/components/community/PostCard';
 import { PostCreationModal } from '@/components/community/PostCreationModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Plus, Search, MessageSquare, Users } from 'lucide-react';
+import { ArrowLeft, Plus, Search, MessageSquare, Users, MessageSquarePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import * as LucideIcons from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Post {
   id: string;
@@ -201,6 +202,17 @@ export default function ForumDetail() {
             onPostCreated={loadPosts}
           />
         )}
+
+        {/* Mobile FAB for new discussion - positioned to left of AI button */}
+        <Button
+          onClick={() => setShowCreateModal(true)}
+          className={cn(
+            "fixed bottom-20 right-20 z-40 shadow-lg lg:hidden",
+            "bg-primary hover:bg-primary/90 text-primary-foreground rounded-full h-14 w-14 p-0"
+          )}
+        >
+          <MessageSquarePlus className="h-6 w-6" />
+        </Button>
       </div>
     </DashboardLayout>
   );
