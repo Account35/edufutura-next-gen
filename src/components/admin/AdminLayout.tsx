@@ -149,8 +149,9 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
     return <FullPageLoader message="Loading admin panel..." />;
   }
 
-  if (!isAdmin && !isEducator) {
-    return null;
+  // Show loader while redirecting unauthenticated or unauthorized users
+  if (!user || (!isAdmin && !isEducator)) {
+    return <FullPageLoader message="Redirecting..." />;
   }
 
   return (

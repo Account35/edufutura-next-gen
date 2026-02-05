@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -141,81 +142,79 @@ export default function JobMonitoring() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold font-heading text-primary">Background Jobs</h1>
-          <p className="text-muted-foreground">Monitor and manage asynchronous tasks</p>
+    <AdminLayout title="Background Jobs" subtitle="Monitor and manage asynchronous tasks">
+      <div className="space-y-6">
+        <div className="flex justify-end">
+          <Button onClick={fetchJobs} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
-        <Button onClick={fetchJobs} disabled={loading}>
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.pending}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Processing</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.processing}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-secondary">{stats.completed}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Failed</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-destructive">{stats.failed}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Jobs Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Job Queue</CardTitle>
+            <CardDescription>Recent background jobs and their status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="all">
+              <TabsList>
+                <TabsTrigger value="all">All ({jobs.length})</TabsTrigger>
+                <TabsTrigger value="pending">Pending ({stats.pending})</TabsTrigger>
+                <TabsTrigger value="failed">Failed ({stats.failed})</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="all" className="mt-4">
+                <JobsTable jobs={filterJobs()} onRetry={retryJob} onDelete={deleteJob} getStatusBadge={getStatusBadge} />
+              </TabsContent>
+              <TabsContent value="pending" className="mt-4">
+                <JobsTable jobs={filterJobs('pending')} onRetry={retryJob} onDelete={deleteJob} getStatusBadge={getStatusBadge} />
+              </TabsContent>
+              <TabsContent value="failed" className="mt-4">
+                <JobsTable jobs={filterJobs('failed')} onRetry={retryJob} onDelete={deleteJob} getStatusBadge={getStatusBadge} />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pending}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Processing</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.processing}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Failed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{stats.failed}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Jobs Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Job Queue</CardTitle>
-          <CardDescription>Recent background jobs and their status</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="all">
-            <TabsList>
-              <TabsTrigger value="all">All ({jobs.length})</TabsTrigger>
-              <TabsTrigger value="pending">Pending ({stats.pending})</TabsTrigger>
-              <TabsTrigger value="failed">Failed ({stats.failed})</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="all" className="mt-4">
-              <JobsTable jobs={filterJobs()} onRetry={retryJob} onDelete={deleteJob} getStatusBadge={getStatusBadge} />
-            </TabsContent>
-            <TabsContent value="pending" className="mt-4">
-              <JobsTable jobs={filterJobs('pending')} onRetry={retryJob} onDelete={deleteJob} getStatusBadge={getStatusBadge} />
-            </TabsContent>
-            <TabsContent value="failed" className="mt-4">
-              <JobsTable jobs={filterJobs('failed')} onRetry={retryJob} onDelete={deleteJob} getStatusBadge={getStatusBadge} />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+    </AdminLayout>
   );
 }
 
