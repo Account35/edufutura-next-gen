@@ -105,8 +105,7 @@ export default function Forums() {
           </>
         )}
 
-        {/* Mobile FAB for new discussion */}
-        <MobileForumActions onNewDiscussion={() => navigate('/community/forums')} />
+        {/* Mobile FAB removed - AI button from DashboardLayout handles floating action */}
       </div>
     </DashboardLayout>
   );
