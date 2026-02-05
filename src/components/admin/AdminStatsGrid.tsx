@@ -48,7 +48,7 @@ const StatCard = ({ title, value, icon: Icon, trend, loading, colorClass = 'text
             <div className="flex items-center gap-2">
               <p className="text-2xl font-bold text-foreground">{value}</p>
               {trend !== undefined && (
-                <span className={`flex items-center text-xs ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <span className={`flex items-center text-xs ${trend >= 0 ? 'text-secondary' : 'text-destructive'}`}>
                   {trend >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                   {Math.abs(trend)}%
                 </span>
@@ -86,21 +86,21 @@ export const AdminStatsGrid = ({ stats, loading }: AdminStatsGridProps) => {
         value={stats.totalUsers.toLocaleString()}
         icon={Users}
         loading={loading}
-        colorClass="text-blue-600"
+        colorClass="text-primary"
       />
       <StatCard
         title="Active Today"
         value={stats.activeToday.toLocaleString()}
         icon={Activity}
         loading={loading}
-        colorClass="text-green-600"
+        colorClass="text-secondary"
       />
       <StatCard
         title="New This Week"
         value={stats.newThisWeek.toLocaleString()}
         icon={UserPlus}
         loading={loading}
-        colorClass="text-purple-600"
+        colorClass="text-accent-foreground"
       />
       <StatCard
         title="Premium Users"
@@ -114,28 +114,28 @@ export const AdminStatsGrid = ({ stats, loading }: AdminStatsGridProps) => {
         value={stats.activeQuizzes.toLocaleString()}
         icon={FileQuestion}
         loading={loading}
-        colorClass="text-indigo-600"
+        colorClass="text-primary"
       />
       <StatCard
         title="Total Chapters"
         value={stats.totalChapters.toLocaleString()}
         icon={BookOpen}
         loading={loading}
-        colorClass="text-teal-600"
+        colorClass="text-secondary"
       />
       <StatCard
         title="Pending Reviews"
         value={stats.pendingReviews.toLocaleString()}
         icon={Shield}
         loading={loading}
-        colorClass="text-orange-600"
+        colorClass="text-destructive"
       />
       <StatCard
         title="Forum Posts"
         value={stats.totalForumPosts.toLocaleString()}
         icon={MessageSquare}
         loading={loading}
-        colorClass="text-pink-600"
+        colorClass="text-muted-foreground"
       />
     </div>
   );

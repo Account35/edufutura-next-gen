@@ -54,14 +54,14 @@ export const AdminSystemHealth = ({ health, loading, onRefresh }: SystemHealthPr
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'operational':
-        return 'text-green-600 bg-green-100';
+        return 'text-secondary bg-secondary/10';
       case 'warning':
-        return 'text-orange-600 bg-orange-100';
+        return 'text-secondary bg-secondary/10';
       case 'down':
       case 'critical':
-        return 'text-red-600 bg-red-100';
+        return 'text-destructive bg-destructive/10';
       default:
-        return 'text-gray-600 bg-gray-100';
+        return 'text-muted-foreground bg-muted';
     }
   };
 
@@ -132,7 +132,7 @@ export const AdminSystemHealth = ({ health, loading, onRefresh }: SystemHealthPr
             <div className="pt-2 border-t">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Last Backup</span>
-                <span className="text-green-600">
+                <span className="text-secondary">
                   {formatDistanceToNow(new Date(health.lastBackup), { addSuffix: true })}
                 </span>
               </div>

@@ -31,24 +31,24 @@ const getSeverityStyles = (severity: string) => {
   switch (severity) {
     case 'critical':
       return {
-        bg: 'bg-red-50 border-red-200',
+        bg: 'bg-destructive/10 border-destructive/30',
         icon: XCircle,
-        iconColor: 'text-red-600',
-        badge: 'bg-red-100 text-red-700'
+        iconColor: 'text-destructive',
+        badge: 'bg-destructive/10 text-destructive'
       };
     case 'warning':
       return {
-        bg: 'bg-orange-50 border-orange-200',
+        bg: 'bg-secondary/10 border-secondary/30',
         icon: AlertTriangle,
-        iconColor: 'text-orange-600',
-        badge: 'bg-orange-100 text-orange-700'
+        iconColor: 'text-secondary',
+        badge: 'bg-secondary/10 text-secondary'
       };
     default:
       return {
-        bg: 'bg-blue-50 border-blue-200',
+        bg: 'bg-primary/10 border-primary/30',
         icon: Info,
-        iconColor: 'text-blue-600',
-        badge: 'bg-blue-100 text-blue-700'
+        iconColor: 'text-primary',
+        badge: 'bg-primary/10 text-primary'
       };
   }
 };
@@ -93,8 +93,8 @@ export const AdminAlerts = ({ alerts, loading, onAcknowledge }: AdminAlertsProps
         <ScrollArea className="h-[300px] px-6">
           {alerts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="p-3 rounded-full bg-green-100 mb-4">
-                <Info className="h-6 w-6 text-green-600" />
+              <div className="p-3 rounded-full bg-secondary/10 mb-4">
+                <Info className="h-6 w-6 text-secondary" />
               </div>
               <p className="text-muted-foreground">All clear! No active alerts.</p>
             </div>

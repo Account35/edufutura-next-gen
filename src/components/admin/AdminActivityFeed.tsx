@@ -49,12 +49,12 @@ const getActionIcon = (actionType: string) => {
 const getSeverityColor = (severity: string) => {
   switch (severity) {
     case 'critical':
-      return 'text-red-600 bg-red-100';
+      return 'text-destructive bg-destructive/10';
     case 'warning':
-      return 'text-orange-600 bg-orange-100';
+      return 'text-secondary bg-secondary/10';
     case 'info':
     default:
-      return 'text-blue-600 bg-blue-100';
+      return 'text-primary bg-primary/10';
   }
 };
 
