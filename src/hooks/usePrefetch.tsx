@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+ import { useLocation } from 'react-router-dom';
 
 // Prefetch route modules on hover for faster navigation
 const routeModules: Record<string, () => Promise<unknown>> = {
@@ -15,6 +16,11 @@ const routeModules: Record<string, () => Promise<unknown>> = {
   '/career-guidance/universities': () => import('@/pages/Universities'),
   '/career-guidance/quiz': () => import('@/pages/CareerQuiz'),
   '/certificates': () => import('@/pages/Certificates'),
+   '/onboarding/welcome': () => import('@/pages/onboarding/OnboardingWelcome'),
+   '/onboarding/profile': () => import('@/pages/onboarding/OnboardingProfile'),
+   '/onboarding/subjects': () => import('@/pages/onboarding/OnboardingSubjects'),
+   '/onboarding/preferences': () => import('@/pages/onboarding/OnboardingPreferences'),
+   '/admin': () => import('@/pages/AdminDashboard'),
 };
 
 // Cache for prefetched modules
@@ -68,4 +74,31 @@ export const prefetchRoutes = (paths: string[]) => {
   });
 };
 
+ // Prefetch related routes based on current location
+ export const usePrefetchRelated = () => {
+   const location = useLocation();
+   const { prefetchRoute } = usePrefetch();
+ 
+   useCallback(() => {
+     const path = location.pathname;
+     
+     // Prefetch related routes based on current page
+     if (path === '/dashboard') {
+       prefetchRoutes(['/subjects', '/profile', '/community/forums']);
+     } else if (path.startsWith('/curriculum/')) {
+       prefetchRoutes(['/subjects', '/bookmarks']);
+     } else if (path.startsWith('/community/')) {
+       prefetchRoutes(['/community/forums', '/community/resources', '/community/study-buddies']);
+     } else if (path.startsWith('/onboarding/')) {
+       // Prefetch next onboarding steps
+       prefetchRoutes([
+         '/onboarding/profile',
+         '/onboarding/subjects', 
+         '/onboarding/preferences',
+         '/dashboard'
+       ]);
+     }
+   }, [location.pathname, prefetchRoute]);
+ };
+ 
 export default usePrefetch;

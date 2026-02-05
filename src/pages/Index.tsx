@@ -8,6 +8,7 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { Loader2 } from "lucide-react";
+ import { prefetchRoutes } from "@/hooks/usePrefetch";
 
 const Index = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -21,6 +22,14 @@ const Index = () => {
 
     // If user is authenticated, redirect to appropriate page
     if (user && userProfile) {
+       // Check for stored redirect destination
+       const storedRedirect = sessionStorage.getItem('redirectAfterLogin');
+       if (storedRedirect) {
+         sessionStorage.removeItem('redirectAfterLogin');
+         navigate(storedRedirect);
+         return;
+       }
+ 
       if (!userProfile.onboarding_completed) {
         navigate('/onboarding');
       } else if (isAdmin || isEducator) {
@@ -31,20 +40,20 @@ const Index = () => {
       }
     }
   }, [user, userProfile, loading, roleLoading, isAdmin, isEducator, navigate]);
+ 
+   // Prefetch likely routes on landing page load
+   useEffect(() => {
+     // Prefetch dashboard and onboarding after short delay
+     const timer = setTimeout(() => {
+       prefetchRoutes(['/dashboard', '/onboarding/welcome']);
+     }, 2000);
+     return () => clearTimeout(timer);
+   }, []);
 
   // Show loading state while checking auth - but add a timeout to prevent infinite loading
   const isLoading = loading || roleLoading;
   
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // If user is authenticated, show loading while redirect happens
-  if (user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

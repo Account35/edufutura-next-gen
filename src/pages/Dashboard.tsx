@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+ import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +15,6 @@ import { OnboardingDashboardCard } from '@/components/onboarding';
 import { toast } from 'sonner';
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const { user, userProfile, loading: authLoading } = useAuth();
   const { isPremium, isLoading: subLoading } = useSubscription();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -29,28 +27,17 @@ export default function Dashboard() {
   const [schoolData, setSchoolData] = useState<{ school_name?: string; province?: string }>({});
   const [overallProgress, setOverallProgress] = useState(0);
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/');
-      return;
-    }
-
-    if (user && userProfile && !userProfile.onboarding_completed) {
-      navigate('/onboarding');
-      return;
-    }
-
-    // Note: Admins can view the student dashboard if they navigate here directly
-    // Only auto-redirect from Index page, not from Dashboard
-
+   // Load dashboard data when user is available
+   useEffect(() => {
     if (user) {
       loadDashboardData();
       loadSchoolData();
       updateLastDashboardVisit();
     }
-  }, [user, userProfile, authLoading, navigate]);
+   }, [user]);
 
-  const loadDashboardData = async () => {
+   const loadDashboardData = useCallback(async () => {
+     if (!user) return;
     try {
       // Load user progress (subjects)
       const { data: progressData, error: progressError } = await supabase
@@ -98,9 +85,9 @@ export default function Dashboard() {
       console.error('Error loading dashboard data:', error);
       toast.error('Failed to load dashboard data');
     }
-  };
+   }, [user]);
 
-  const loadSchoolData = async () => {
+   const loadSchoolData = useCallback(async () => {
     if (!userProfile?.school_id) return;
     
     try {
@@ -117,9 +104,10 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error loading school data:', error);
     }
-  };
+   }, [userProfile?.school_id]);
 
-  const updateLastDashboardVisit = async () => {
+   const updateLastDashboardVisit = useCallback(async () => {
+     if (!user) return;
     try {
       await supabase
         .from('users')
@@ -128,11 +116,17 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error updating last visit:', error);
     }
-  };
+   }, [user]);
 
-  if (authLoading || subLoading || !userProfile) {
+   // Show loading state during data fetch
+   if (authLoading || subLoading) {
     return <FullPageLoader message="Loading your dashboard..." />;
   }
+ 
+   // Handle edge case where profile might still be loading
+   if (!userProfile) {
+     return <FullPageLoader message="Loading your profile..." />;
+   }
 
   return (
     <DashboardLayout>
