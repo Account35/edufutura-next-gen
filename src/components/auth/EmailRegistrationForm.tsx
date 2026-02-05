@@ -72,9 +72,9 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
     if (/[0-9]/.test(password)) strength++;
     if (/[^A-Za-z0-9]/.test(password)) strength++;
 
-    if (strength <= 2) return { strength, label: "Weak", color: "bg-red-500" };
-    if (strength === 3) return { strength, label: "Medium", color: "bg-yellow-500" };
-    return { strength, label: "Strong", color: "bg-green-500" };
+    if (strength <= 2) return { strength, label: "Weak", color: "bg-destructive" };
+    if (strength === 3) return { strength, label: "Medium", color: "bg-secondary/70" };
+    return { strength, label: "Strong", color: "bg-secondary" };
   };
 
   const passwordStrength = getPasswordStrength();
@@ -143,10 +143,10 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
           autoCapitalize="none"
           placeholder="your.email@example.com"
           {...register("email")}
-          className={errors.email ? "border-red-500 min-h-[44px]" : "min-h-[44px]"}
+          className={errors.email ? "border-destructive min-h-[44px]" : "min-h-[44px]"}
         />
         {errors.email && (
-          <p className="text-sm text-red-500 flex items-center gap-1">
+          <p className="text-sm text-destructive flex items-center gap-1">
             <X className="w-3 h-3" />
             {errors.email.message}
           </p>
@@ -162,10 +162,10 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
           autoComplete="name"
           placeholder="John Doe"
           {...register("fullName")}
-          className={errors.fullName ? "border-red-500 min-h-[44px]" : "min-h-[44px]"}
+          className={errors.fullName ? "border-destructive min-h-[44px]" : "min-h-[44px]"}
         />
         {errors.fullName && (
-          <p className="text-sm text-red-500 flex items-center gap-1">
+          <p className="text-sm text-destructive flex items-center gap-1">
             <X className="w-3 h-3" />
             {errors.fullName.message}
           </p>
@@ -182,7 +182,7 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
             autoComplete="new-password"
             placeholder="••••••••"
             {...register("password")}
-            className={errors.password ? "border-red-500 pr-10 min-h-[44px]" : "pr-10 min-h-[44px]"}
+            className={errors.password ? "border-destructive pr-10 min-h-[44px]" : "pr-10 min-h-[44px]"}
           />
           <button
             type="button"
@@ -206,7 +206,7 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
           </div>
         )}
         {errors.password && (
-          <p className="text-sm text-red-500 flex items-center gap-1">
+          <p className="text-sm text-destructive flex items-center gap-1">
             <X className="w-3 h-3" />
             {errors.password.message}
           </p>
@@ -223,7 +223,7 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
             autoComplete="new-password"
             placeholder="••••••••"
             {...register("confirmPassword")}
-            className={errors.confirmPassword ? "border-red-500 pr-10 min-h-[44px]" : "pr-10 min-h-[44px]"}
+            className={errors.confirmPassword ? "border-destructive pr-10 min-h-[44px]" : "pr-10 min-h-[44px]"}
           />
           <button
             type="button"
@@ -234,7 +234,7 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
           </button>
         </div>
         {errors.confirmPassword && (
-          <p className="text-sm text-red-500 flex items-center gap-1">
+          <p className="text-sm text-destructive flex items-center gap-1">
             <X className="w-3 h-3" />
             {errors.confirmPassword.message}
           </p>
@@ -251,7 +251,7 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
               id="acceptTerms"
               checked={field.value}
               onCheckedChange={field.onChange}
-              className={errors.acceptTerms ? "border-red-500" : ""}
+              className={errors.acceptTerms ? "border-destructive" : ""}
             />
           )}
         />
@@ -261,7 +261,7 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
         </label>
       </div>
       {errors.acceptTerms && (
-        <p className="text-sm text-red-500">{errors.acceptTerms.message}</p>
+        <p className="text-sm text-destructive">{errors.acceptTerms.message}</p>
       )}
 
       {/* Marketing checkbox */}

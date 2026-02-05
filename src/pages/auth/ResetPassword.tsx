@@ -52,9 +52,9 @@
      if (/[0-9]/.test(password)) strength++;
      if (/[^A-Za-z0-9]/.test(password)) strength++;
  
-     if (strength <= 2) return { strength, label: 'Weak', color: 'bg-red-500' };
-     if (strength === 3) return { strength, label: 'Medium', color: 'bg-yellow-500' };
-     return { strength, label: 'Strong', color: 'bg-green-500' };
+      if (strength <= 2) return { strength, label: 'Weak', color: 'bg-destructive' };
+      if (strength === 3) return { strength, label: 'Medium', color: 'bg-secondary/70' };
+      return { strength, label: 'Strong', color: 'bg-secondary' };
    };
  
    const passwordStrength = getPasswordStrength();
@@ -99,8 +99,8 @@
            animate={{ opacity: 1 }}
            className="w-full max-w-md text-center space-y-6"
          >
-           <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto">
-             <AlertCircle className="w-8 h-8 text-red-600" />
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+              <AlertCircle className="w-8 h-8 text-destructive" />
            </div>
  
            <div>
@@ -129,8 +129,8 @@
            animate={{ opacity: 1, scale: 1 }}
            className="w-full max-w-md text-center space-y-6"
          >
-           <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto">
-             <CheckCircle className="w-8 h-8 text-green-600" />
+            <div className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center mx-auto">
+              <CheckCircle className="w-8 h-8 text-secondary" />
            </div>
  
            <div>
@@ -230,7 +230,7 @@
                required
              />
              {confirmPassword && password !== confirmPassword && (
-               <p className="text-xs text-red-500">Passwords do not match</p>
+            <p className="text-xs text-destructive">Passwords do not match</p>
              )}
            </div>
  

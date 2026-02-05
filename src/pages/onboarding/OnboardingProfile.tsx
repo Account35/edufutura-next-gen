@@ -125,6 +125,7 @@
            grade_level: parseInt(gradeLevel),
            province: province || null,
            profile_picture_url: profilePicture,
+              bio: bio || null,
            onboarding_step: 2,
          })
          .eq('id', user.id);
@@ -287,8 +288,8 @@
              </Button>
            </div>
  
-           <p className="text-xs text-muted-foreground text-center">
-             Step 1 of 4 • Profile Setup
+            <p className="text-xs text-muted-foreground text-center">
+              Step 1 of 4 • Profile
            </p>
          </motion.div>
        </div>

@@ -94,9 +94,9 @@
              Let's Get Started
            </Button>
  
-           {/* Step indicator */}
-           <p className="text-xs text-muted-foreground">
-             Step 1 of 4 • Profile Setup
+            {/* Step indicator - Welcome is step 0 (intro) */}
+            <p className="text-xs text-muted-foreground">
+              Welcome • 4 steps to complete
            </p>
          </motion.div>
        </div>
