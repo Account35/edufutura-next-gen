@@ -1,108 +1,105 @@
  import { useState, useEffect } from 'react';
  import { AdminLayout } from '@/components/admin/AdminLayout';
  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
- import { Button } from '@/components/ui/button';
- import { Badge } from '@/components/ui/badge';
- import { Progress } from '@/components/ui/progress';
- import { Skeleton } from '@/components/ui/skeleton';
  import { supabase } from '@/integrations/supabase/client';
- import { Users, CheckCircle, Clock, AlertTriangle, RefreshCw, TrendingUp, Mail, UserX } from 'lucide-react';
- import { toast } from 'sonner';
+ import { Loader2, Users, Clock, CheckCircle, XCircle, Mail, TrendingUp } from 'lucide-react';
+ import { Progress } from '@/components/ui/progress';
  
  interface OnboardingStats {
-   total_started: number;
-   total_completed: number;
-   completion_rate: number;
-   avg_completion_time_hours: number;
-   abandoned_24h: number;
-   abandoned_72h: number;
-   abandoned_7d: number;
- }
- 
- interface IncompleteUser {
-   user_id: string;
-   email: string;
-   full_name: string;
-   onboarding_started_at: string;
-   onboarding_step: number | null;
- }
- 
- interface ReminderLog {
-   id: string;
-   reminder_type: string;
-   channel: string;
-   sent_at: string;
-   success: boolean;
-   clicked_at: string | null;
-   completed_after: boolean;
+   totalUsers: number;
+   completedOnboarding: number;
+   inProgress: number;
+   abandoned24h: number;
+   abandoned72h: number;
+   abandoned7d: number;
+   completionRate: number;
+   avgCompletionTime: number;
  }
  
  export default function AdminOnboardingAnalytics() {
    const [stats, setStats] = useState<OnboardingStats | null>(null);
-   const [incompleteUsers, setIncompleteUsers] = useState<IncompleteUser[]>([]);
-   const [recentReminders, setRecentReminders] = useState<ReminderLog[]>([]);
-   const [isLoading, setIsLoading] = useState(true);
-   const [isSendingReminders, setIsSendingReminders] = useState(false);
+   const [recentReminders, setRecentReminders] = useState<any[]>([]);
+   const [loading, setLoading] = useState(true);
  
-   const fetchData = async () => {
-     setIsLoading(true);
+   useEffect(() => {
+     loadStats();
+     loadRecentReminders();
+   }, []);
+ 
+   const loadStats = async () => {
      try {
-       const { data: statsData } = await supabase.rpc('get_onboarding_stats');
-       if (statsData?.[0]) setStats(statsData[0] as OnboardingStats);
+       // Fetch onboarding stats using RPC if available, otherwise calculate
+       const { data: usersData, error } = await supabase
+         .from('users')
+         .select('id, onboarding_completed, onboarding_started_at, created_at');
  
-       const { data: usersData } = await supabase.rpc('get_incomplete_onboarding_users', {
-         hours_since_start: 24,
-         max_reminders_per_day: 1,
+       if (error) throw error;
+ 
+       const now = new Date();
+       const h24Ago = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+       const h72Ago = new Date(now.getTime() - 72 * 60 * 60 * 1000);
+       const d7Ago = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+ 
+       const total = usersData?.length || 0;
+       const completed = usersData?.filter(u => u.onboarding_completed).length || 0;
+       const inProgress = usersData?.filter(u => !u.onboarding_completed && u.onboarding_started_at).length || 0;
+ 
+       // Users who started but didn't complete within timeframes
+       const abandoned24h = usersData?.filter(u => {
+         if (u.onboarding_completed) return false;
+         const started = u.onboarding_started_at ? new Date(u.onboarding_started_at) : new Date(u.created_at);
+         return started < h24Ago;
+       }).length || 0;
+ 
+       const abandoned72h = usersData?.filter(u => {
+         if (u.onboarding_completed) return false;
+         const started = u.onboarding_started_at ? new Date(u.onboarding_started_at) : new Date(u.created_at);
+         return started < h72Ago;
+       }).length || 0;
+ 
+       const abandoned7d = usersData?.filter(u => {
+         if (u.onboarding_completed) return false;
+         const started = u.onboarding_started_at ? new Date(u.onboarding_started_at) : new Date(u.created_at);
+         return started < d7Ago;
+       }).length || 0;
+ 
+       setStats({
+         totalUsers: total,
+         completedOnboarding: completed,
+         inProgress,
+         abandoned24h,
+         abandoned72h,
+         abandoned7d,
+         completionRate: total > 0 ? (completed / total) * 100 : 0,
+         avgCompletionTime: 0, // Would need more data to calculate
        });
-       setIncompleteUsers((usersData || []) as IncompleteUser[]);
+     } catch (error) {
+       console.error('Error loading onboarding stats:', error);
+     } finally {
+       setLoading(false);
+     }
+   };
  
-       const { data: remindersData } = await supabase
-         .from('onboarding_reminder_log' as any)
-         .select('*')
+   const loadRecentReminders = async () => {
+     try {
+       const { data, error } = await supabase
+         .from('onboarding_reminder_log')
+         .select('*, users(full_name, email)')
          .order('sent_at', { ascending: false })
          .limit(20);
-       setRecentReminders((remindersData || []) as unknown as ReminderLog[]);
-     } catch (error) {
-       console.error('Error fetching onboarding analytics:', error);
-       toast.error('Failed to load analytics');
-     } finally {
-       setIsLoading(false);
-     }
-   };
  
-   useEffect(() => { fetchData(); }, []);
- 
-   const handleSendReminders = async () => {
-     setIsSendingReminders(true);
-     try {
-       const { data, error } = await supabase.functions.invoke('send-onboarding-reminders', {
-         body: { hours_since_start: 24, dry_run: false },
-       });
        if (error) throw error;
-       toast.success(`Processed ${data?.processed || 0} users`);
-       fetchData();
+       setRecentReminders(data || []);
      } catch (error) {
-       toast.error('Failed to send reminders');
-     } finally {
-       setIsSendingReminders(false);
+       console.error('Error loading reminders:', error);
      }
    };
  
-   const formatTimeAgo = (dateStr: string) => {
-     const diffHours = Math.floor((Date.now() - new Date(dateStr).getTime()) / 3600000);
-     if (diffHours < 1) return 'Less than 1 hour ago';
-     if (diffHours < 24) return `${diffHours} hours ago`;
-     return `${Math.floor(diffHours / 24)} days ago`;
-   };
- 
-   if (isLoading) {
+   if (loading) {
      return (
        <AdminLayout>
-         <div className="space-y-6">
-           <Skeleton className="h-8 w-64" />
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32" />)}
-           </div>
+         <div className="flex items-center justify-center min-h-[400px]">
+           <Loader2 className="h-8 w-8 animate-spin text-primary" />
          </div>
        </AdminLayout>
      );
@@ -111,99 +108,134 @@
    return (
      <AdminLayout>
        <div className="space-y-6">
-         <div className="flex items-center justify-between">
-           <div>
-             <h1 className="text-2xl font-bold text-foreground">Onboarding Analytics</h1>
-             <p className="text-muted-foreground">Monitor user onboarding completion</p>
-           </div>
-           <div className="flex gap-2">
-             <Button variant="outline" onClick={fetchData}><RefreshCw className="w-4 h-4 mr-2" />Refresh</Button>
-             <Button onClick={handleSendReminders} disabled={isSendingReminders}>
-               <Mail className="w-4 h-4 mr-2" />{isSendingReminders ? 'Sending...' : 'Send Reminders'}
-             </Button>
-           </div>
+         <div>
+           <h1 className="text-2xl font-bold text-foreground">Onboarding Analytics</h1>
+           <p className="text-muted-foreground">Track student onboarding completion and engagement</p>
          </div>
  
+         {/* Stats Grid */}
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
            <Card>
-             <CardHeader className="flex flex-row items-center justify-between pb-2">
-               <CardTitle className="text-sm font-medium">Total Started</CardTitle>
-               <Users className="w-4 h-4 text-muted-foreground" />
+             <CardHeader className="pb-2">
+               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                 <Users className="h-4 w-4" />
+                 Total Users
+               </CardTitle>
              </CardHeader>
              <CardContent>
-               <div className="text-2xl font-bold">{stats?.total_started || 0}</div>
+               <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
              </CardContent>
            </Card>
+ 
            <Card>
-             <CardHeader className="flex flex-row items-center justify-between pb-2">
-               <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
-               <TrendingUp className="w-4 h-4 text-muted-foreground" />
+             <CardHeader className="pb-2">
+               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                 <CheckCircle className="h-4 w-4 text-green-500" />
+                 Completed
+               </CardTitle>
              </CardHeader>
              <CardContent>
-               <div className="text-2xl font-bold">{stats?.completion_rate || 0}%</div>
-               <Progress value={stats?.completion_rate || 0} className="h-2 mt-2" />
+               <div className="text-2xl font-bold text-green-600">{stats?.completedOnboarding || 0}</div>
+               <div className="mt-2">
+                 <Progress value={stats?.completionRate || 0} className="h-2" />
+                 <p className="text-xs text-muted-foreground mt-1">{stats?.completionRate.toFixed(1)}% completion rate</p>
+               </div>
              </CardContent>
            </Card>
+ 
            <Card>
-             <CardHeader className="flex flex-row items-center justify-between pb-2">
-               <CardTitle className="text-sm font-medium">Avg. Time</CardTitle>
-               <Clock className="w-4 h-4 text-muted-foreground" />
+             <CardHeader className="pb-2">
+               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                 <Clock className="h-4 w-4 text-amber-500" />
+                 In Progress
+               </CardTitle>
              </CardHeader>
              <CardContent>
-               <div className="text-2xl font-bold">{stats?.avg_completion_time_hours ? `${stats.avg_completion_time_hours.toFixed(1)}h` : 'N/A'}</div>
+               <div className="text-2xl font-bold text-amber-600">{stats?.inProgress || 0}</div>
              </CardContent>
            </Card>
+ 
            <Card>
-             <CardHeader className="flex flex-row items-center justify-between pb-2">
-               <CardTitle className="text-sm font-medium">Abandoned (7d)</CardTitle>
-               <UserX className="w-4 h-4 text-muted-foreground" />
+             <CardHeader className="pb-2">
+               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                 <XCircle className="h-4 w-4 text-red-500" />
+                 Abandoned (7d+)
+               </CardTitle>
              </CardHeader>
              <CardContent>
-               <div className="text-2xl font-bold text-destructive">{stats?.abandoned_7d || 0}</div>
+               <div className="text-2xl font-bold text-red-600">{stats?.abandoned7d || 0}</div>
              </CardContent>
            </Card>
          </div>
  
-         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-           <Card>
-             <CardHeader>
-               <CardTitle className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-destructive" />Users Needing Reminders</CardTitle>
-             </CardHeader>
-             <CardContent>
-               {incompleteUsers.length === 0 ? (
-                 <div className="text-center py-8 text-muted-foreground"><CheckCircle className="w-12 h-12 mx-auto mb-2 text-primary/30" /><p>All caught up!</p></div>
-               ) : (
-                 <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                   {incompleteUsers.map((u) => (
-                     <div key={u.user_id} className="flex justify-between p-2 bg-muted/50 rounded">
-                       <div><p className="font-medium truncate">{u.full_name || 'Unknown'}</p><p className="text-xs text-muted-foreground">{u.email}</p></div>
-                       <Badge variant="outline">Step {u.onboarding_step || 0}</Badge>
+         {/* Abandonment Breakdown */}
+         <Card>
+           <CardHeader>
+             <CardTitle className="flex items-center gap-2">
+               <TrendingUp className="h-5 w-5" />
+               Abandonment Timeline
+             </CardTitle>
+             <CardDescription>Users who haven't completed onboarding</CardDescription>
+           </CardHeader>
+           <CardContent>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+               <div className="text-center p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
+                 <div className="text-3xl font-bold text-amber-600">{stats?.abandoned24h || 0}</div>
+                 <p className="text-sm text-muted-foreground">After 24 hours</p>
+               </div>
+               <div className="text-center p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+                 <div className="text-3xl font-bold text-orange-600">{stats?.abandoned72h || 0}</div>
+                 <p className="text-sm text-muted-foreground">After 72 hours</p>
+               </div>
+               <div className="text-center p-4 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                 <div className="text-3xl font-bold text-red-600">{stats?.abandoned7d || 0}</div>
+                 <p className="text-sm text-muted-foreground">After 7 days</p>
+               </div>
+             </div>
+           </CardContent>
+         </Card>
+ 
+         {/* Recent Reminders */}
+         <Card>
+           <CardHeader>
+             <CardTitle className="flex items-center gap-2">
+               <Mail className="h-5 w-5" />
+               Recent Reminder Emails
+             </CardTitle>
+             <CardDescription>Last 20 onboarding reminder emails sent</CardDescription>
+           </CardHeader>
+           <CardContent>
+             {recentReminders.length === 0 ? (
+               <p className="text-muted-foreground text-center py-8">No reminders sent yet</p>
+             ) : (
+               <div className="space-y-2">
+                 {recentReminders.map((reminder) => (
+                   <div
+                     key={reminder.id}
+                     className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                   >
+                     <div>
+                       <p className="font-medium">{reminder.users?.full_name || 'Unknown User'}</p>
+                       <p className="text-sm text-muted-foreground">{reminder.users?.email}</p>
                      </div>
-                   ))}
-                 </div>
-               )}
-             </CardContent>
-           </Card>
-           <Card>
-             <CardHeader>
-               <CardTitle className="flex items-center gap-2"><Mail className="w-5 h-5 text-primary" />Recent Reminders</CardTitle>
-             </CardHeader>
-             <CardContent>
-               {recentReminders.length === 0 ? (
-                 <div className="text-center py-8 text-muted-foreground"><Mail className="w-12 h-12 mx-auto mb-2 text-primary/30" /><p>No reminders yet</p></div>
-               ) : (
-                 <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                   {recentReminders.map((r) => (
-                     <div key={r.id} className="flex justify-between p-2 bg-muted/50 rounded">
-                       <div><Badge variant={r.success ? 'default' : 'destructive'}>{r.reminder_type}</Badge><p className="text-xs text-muted-foreground mt-1">{formatTimeAgo(r.sent_at)}</p></div>
-                       {r.clicked_at && <Badge variant="secondary">Clicked</Badge>}
+                     <div className="text-right">
+                       <span className={`px-2 py-1 text-xs rounded-full ${
+                         reminder.status === 'sent' 
+                           ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                           : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                       }`}>
+                         {reminder.status}
+                       </span>
+                       <p className="text-xs text-muted-foreground mt-1">
+                         {new Date(reminder.sent_at).toLocaleDateString()}
+                       </p>
                      </div>
-                   ))}
-                 </div>
-               )}
-             </CardContent>
-           </Card>
-         </div>
+                   </div>
+                 ))}
+               </div>
+             )}
+           </CardContent>
+         </Card>
        </div>
      </AdminLayout>
    );
