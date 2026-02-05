@@ -88,18 +88,27 @@ export function createQueryClient(): QueryClient {
         staleTime: 5 * 60 * 1000, // 5 minutes default
         gcTime: 30 * 60 * 1000, // 30 minutes garbage collection
         retry: (failureCount, error) => {
-          // Don't retry on 4xx errors
-          if (error instanceof Error && error.message.includes('40')) {
-            return false;
+          // Don't retry on 4xx errors (client errors)
+          if (error instanceof Error) {
+            const message = error.message.toLowerCase();
+            if (message.includes('401') || message.includes('403') || message.includes('404')) {
+              return false;
+            }
           }
           return failureCount < 2;
         },
         refetchOnWindowFocus: false,
         refetchOnReconnect: true,
         refetchOnMount: false,
+        // Enable background refetching for stale data
+        refetchInterval: false,
+        // Network mode - pause queries when offline
+        networkMode: 'offlineFirst',
       },
       mutations: {
         retry: 1,
+        // Better timeout for mutations
+        networkMode: 'offlineFirst',
         onError: (error) => {
           console.error('Mutation error:', error);
         },
