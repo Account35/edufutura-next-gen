@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
@@ -110,13 +110,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     profileLoadRef.current = { userId: currentUser.id, promise };
     return promise;
-  };
-
-  const refreshProfile = async () => {
-    if (user) {
-      const profile = await loadUserProfile(user);
-      setUserProfile(profile);
-    }
   };
 
   const resetInactivityTimer = () => {
@@ -260,6 +253,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
     }
   };
+
+  const refreshProfile = useCallback(async () => {
+    if (user) {
+      const profile = await loadUserProfile(user);
+      setUserProfile(profile);
+    }
+  }, [user]);
 
   const value = useMemo(() => ({
     user,

@@ -298,8 +298,8 @@
              </Button>
            </div>
  
-           <p className="text-xs text-muted-foreground text-center pb-6">
-             Step 3 of 4 • Learning Preferences
+            <p className="text-xs text-muted-foreground text-center pb-6">
+              Step 3 of 4 • Preferences
            </p>
          </motion.div>
        </div>

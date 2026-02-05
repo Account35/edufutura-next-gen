@@ -138,15 +138,15 @@
                </p>
                <ul className="text-sm text-muted-foreground space-y-1">
                  <li className="flex items-center gap-2">
-                   <Check className="w-3 h-3 text-green-500" />
+                    <Check className="w-3 h-3 text-secondary" />
                    {selectedSubjects.length} subjects selected
                  </li>
                  <li className="flex items-center gap-2">
-                   <Check className="w-3 h-3 text-green-500" />
+                    <Check className="w-3 h-3 text-secondary" />
                    Personalized learning preferences saved
                  </li>
                  <li className="flex items-center gap-2">
-                   <Check className="w-3 h-3 text-green-500" />
+                    <Check className="w-3 h-3 text-secondary" />
                    AI tutor ready to help
                  </li>
                </ul>
@@ -189,8 +189,8 @@
              )}
            </Button>
  
-           <p className="text-xs text-muted-foreground">
-             Step 4 of 4 • Complete!
+            <p className="text-xs text-muted-foreground">
+              Step 4 of 4 • Done!
            </p>
          </motion.div>
        </div>

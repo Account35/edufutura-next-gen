@@ -158,10 +158,10 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister }: LoginFormProps) => 
           autoCapitalize="none"
           placeholder="your.email@example.com"
           {...register("email")}
-          className={errors.email ? "border-red-500 min-h-[44px]" : "min-h-[44px]"}
+          className={errors.email ? "border-destructive min-h-[44px]" : "min-h-[44px]"}
         />
         {errors.email && (
-          <p className="text-sm text-red-500">{errors.email.message}</p>
+          <p className="text-sm text-destructive">{errors.email.message}</p>
         )}
       </div>
 
@@ -183,7 +183,7 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister }: LoginFormProps) => 
             autoComplete="current-password"
             placeholder="••••••••"
             {...register("password")}
-            className={errors.password ? "border-red-500 pr-10 min-h-[44px]" : "pr-10 min-h-[44px]"}
+            className={errors.password ? "border-destructive pr-10 min-h-[44px]" : "pr-10 min-h-[44px]"}
           />
           <button
             type="button"
@@ -194,7 +194,7 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister }: LoginFormProps) => 
           </button>
         </div>
         {errors.password && (
-          <p className="text-sm text-red-500">{errors.password.message}</p>
+          <p className="text-sm text-destructive">{errors.password.message}</p>
         )}
       </div>
 

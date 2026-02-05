@@ -220,8 +220,8 @@
              </Button>
            </div>
  
-           <p className="text-xs text-muted-foreground text-center pb-4">
-             Step 2 of 4 • Subject Selection
+            <p className="text-xs text-muted-foreground text-center pb-4">
+              Step 2 of 4 • Subjects
            </p>
          </motion.div>
        </div>
