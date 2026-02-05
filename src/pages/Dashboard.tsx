@@ -12,6 +12,7 @@ import { CommunityActivityWidget } from '@/components/community/CommunityActivit
 import { UpgradeBanner } from '@/components/subscription/UpgradeBanner';
 import { SubscriptionModal } from '@/components/subscription/SubscriptionModal';
 import { FullPageLoader } from '@/components/ui/loading';
+import { OnboardingDashboardCard } from '@/components/onboarding';
 import { toast } from 'sonner';
 
 export default function Dashboard() {
@@ -168,6 +169,9 @@ export default function Dashboard() {
 
           {/* Sidebar - Takes 1 column on large screens */}
           <div className="space-y-6">
+            {/* Onboarding Reminder Card */}
+            <OnboardingDashboardCard />
+
             {/* Community Activity Widget */}
             <CommunityActivityWidget />
 

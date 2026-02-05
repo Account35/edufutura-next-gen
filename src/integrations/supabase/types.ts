@@ -3064,6 +3064,48 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_reminder_log: {
+        Row: {
+          channel: string
+          clicked_at: string | null
+          completed_after: boolean | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          opened_at: string | null
+          reminder_type: string
+          sent_at: string
+          success: boolean
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          clicked_at?: string | null
+          completed_after?: boolean | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          opened_at?: string | null
+          reminder_type: string
+          sent_at?: string
+          success?: boolean
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          clicked_at?: string | null
+          completed_after?: boolean | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          opened_at?: string | null
+          reminder_type?: string
+          sent_at?: string
+          success?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       peer_benchmarks: {
         Row: {
           calculated_at: string | null
@@ -5257,6 +5299,7 @@ export type Database = {
           last_dashboard_visit: string | null
           last_login: string | null
           last_login_at: string | null
+          last_onboarding_reminder_sent_at: string | null
           last_payment_date: string | null
           last_study_date: string | null
           location_lat: number | null
@@ -5264,6 +5307,8 @@ export type Database = {
           next_payment_date: string | null
           onboarding_completed: boolean | null
           onboarding_completed_at: string | null
+          onboarding_skipped_steps: string[] | null
+          onboarding_started_at: string | null
           onboarding_step: number | null
           payfast_subscription_token: string | null
           payment_method: string | null
@@ -5305,6 +5350,7 @@ export type Database = {
           last_dashboard_visit?: string | null
           last_login?: string | null
           last_login_at?: string | null
+          last_onboarding_reminder_sent_at?: string | null
           last_payment_date?: string | null
           last_study_date?: string | null
           location_lat?: number | null
@@ -5312,6 +5358,8 @@ export type Database = {
           next_payment_date?: string | null
           onboarding_completed?: boolean | null
           onboarding_completed_at?: string | null
+          onboarding_skipped_steps?: string[] | null
+          onboarding_started_at?: string | null
           onboarding_step?: number | null
           payfast_subscription_token?: string | null
           payment_method?: string | null
@@ -5353,6 +5401,7 @@ export type Database = {
           last_dashboard_visit?: string | null
           last_login?: string | null
           last_login_at?: string | null
+          last_onboarding_reminder_sent_at?: string | null
           last_payment_date?: string | null
           last_study_date?: string | null
           location_lat?: number | null
@@ -5360,6 +5409,8 @@ export type Database = {
           next_payment_date?: string | null
           onboarding_completed?: boolean | null
           onboarding_completed_at?: string | null
+          onboarding_skipped_steps?: string[] | null
+          onboarding_started_at?: string | null
           onboarding_step?: number | null
           payfast_subscription_token?: string | null
           payment_method?: string | null
@@ -5534,6 +5585,30 @@ export type Database = {
           temperature: number
           template_name: string
           template_version: number
+        }[]
+      }
+      get_incomplete_onboarding_users: {
+        Args: { hours_since_start?: number; max_reminders_per_day?: number }
+        Returns: {
+          email: string
+          full_name: string
+          last_reminder_sent: string
+          onboarding_started_at: string
+          onboarding_step: number
+          phone_number: string
+          user_id: string
+        }[]
+      }
+      get_onboarding_stats: {
+        Args: never
+        Returns: {
+          abandoned_24h: number
+          abandoned_72h: number
+          abandoned_7d: number
+          avg_completion_time_hours: number
+          completion_rate: number
+          total_completed: number
+          total_started: number
         }[]
       }
       has_permission: {

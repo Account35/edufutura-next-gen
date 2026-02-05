@@ -5,6 +5,7 @@ import { FloatingAIButton } from "@/components/ai/FloatingAIButton";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { MobileMoreSheet } from "./MobileMoreSheet";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { OnboardingReminderBanner } from "@/components/onboarding";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -16,6 +17,9 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Onboarding Reminder Banner */}
+      <OnboardingReminderBanner />
+
       {/* Notification Bell - Fixed position on desktop */}
       <div className="fixed top-4 right-4 z-30 hidden lg:block">
         <NotificationBell />
