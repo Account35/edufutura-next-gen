@@ -17,19 +17,29 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Don't redirect while loading
-    if (loading || roleLoading) return;
+    // Don't redirect while auth is still loading
+    if (loading) return;
+    
+    // If user exists but profile is still loading, wait a bit more
+    // But add a timeout to prevent infinite loading
+    if (user && !userProfile) {
+      // Profile is being created/loaded - wait for it
+      return;
+    }
+    
+    // Don't redirect while role is loading (only if user exists)
+    if (user && roleLoading) return;
 
-    // If user is authenticated, redirect to appropriate page
+    // If user is authenticated and profile is loaded, redirect
     if (user && userProfile) {
-       // Check for stored redirect destination
-       const storedRedirect = sessionStorage.getItem('redirectAfterLogin');
-       if (storedRedirect) {
-         sessionStorage.removeItem('redirectAfterLogin');
-         navigate(storedRedirect);
-         return;
-       }
- 
+      // Check for stored redirect destination
+      const storedRedirect = sessionStorage.getItem('redirectAfterLogin');
+      if (storedRedirect) {
+        sessionStorage.removeItem('redirectAfterLogin');
+        navigate(storedRedirect);
+        return;
+      }
+
       if (!userProfile.onboarding_completed) {
         navigate('/onboarding');
       } else if (isAdmin || isEducator) {
@@ -50,13 +60,22 @@ const Index = () => {
      return () => clearTimeout(timer);
    }, []);
 
-  // Show loading state while checking auth - but add a timeout to prevent infinite loading
-  const isLoading = loading || roleLoading;
+  // Show loading state while checking auth
+  // Only show loading if:
+  // 1. Auth is loading, OR
+  // 2. User exists but profile is still being created/loaded, OR
+  // 3. User exists and role is loading
+  const isLoading = loading || (user && !userProfile) || (user && roleLoading);
   
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">
+            {user && !userProfile ? 'Setting up your account...' : 'Loading...'}
+          </p>
+        </div>
       </div>
     );
   }
