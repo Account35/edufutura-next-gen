@@ -115,6 +115,8 @@ const SidebarContent = ({ currentPath, onNavigate, onSignOut }: SidebarContentPr
   );
 };
 
+const ADMIN_LAYOUT_TIMEOUT_MS = 6000; // 6 second timeout for admin layout
+
 export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -122,23 +124,48 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
   const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasCheckedAccess, setHasCheckedAccess] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
+
+  // Safety timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!hasCheckedAccess) {
+        console.warn('[AdminLayout] Safety timeout reached');
+        setTimedOut(true);
+      }
+    }, ADMIN_LAYOUT_TIMEOUT_MS);
+    
+    return () => clearTimeout(timeout);
+  }, [hasCheckedAccess]);
 
   useEffect(() => {
-    // Wait for both auth and role to finish loading
-    if (authLoading || roleLoading) {
+    // If timed out without access, redirect to dashboard
+    if (timedOut && !hasCheckedAccess) {
+      console.warn('[AdminLayout] Timed out, redirecting to dashboard');
+      navigate('/dashboard', { replace: true });
+      return;
+    }
+
+    // Wait for auth to finish loading (but respect timeout)
+    if (authLoading && !timedOut) {
+      return;
+    }
+
+    // Wait for role to finish loading (but respect timeout)
+    if (roleLoading && !timedOut) {
       return;
     }
 
     // Now we can check access
     if (!user) {
-      navigate('/');
+      navigate('/', { replace: true });
     } else if (!isAdmin && !isEducator) {
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     } else {
       // User has access
       setHasCheckedAccess(true);
     }
-  }, [user, isAdmin, isEducator, authLoading, roleLoading, navigate]);
+  }, [user, isAdmin, isEducator, authLoading, roleLoading, navigate, timedOut, hasCheckedAccess]);
 
   // Close sidebar on route change
   useEffect(() => {
@@ -154,8 +181,8 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
     navigate(path);
   }, [navigate]);
 
-  // Show loader while checking access
-  if (authLoading || roleLoading || !hasCheckedAccess) {
+  // Show loader while checking access (but not if timed out)
+  if ((authLoading || roleLoading || !hasCheckedAccess) && !timedOut) {
     return <FullPageLoader message="Loading admin panel..." />;
   }
 
