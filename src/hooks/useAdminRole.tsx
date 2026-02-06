@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
-const ROLE_CHECK_TIMEOUT_MS = 5000; // 5 second timeout for role checks
+const ROLE_CHECK_TIMEOUT_MS = 4000; // 4 second timeout for role checks (reduced for faster fallback)
 
 export const useAdminRole = () => {
   const { user, loading: authLoading } = useAuth();
@@ -11,6 +11,7 @@ export const useAdminRole = () => {
   const [loading, setLoading] = useState(true);
   const lastCheckedUserId = useRef<string | null>(null);
   const roleCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasCompletedCheck = useRef(false);
 
   useEffect(() => {
     // Clear any pending timeout
@@ -32,24 +33,22 @@ export const useAdminRole = () => {
       setIsEducator(false);
       setLoading(false);
       lastCheckedUserId.current = null;
+      hasCompletedCheck.current = false;
       return;
     }
 
     // Skip if we already checked this user and have valid results
-    if (lastCheckedUserId.current === user.id) {
+    if (lastCheckedUserId.current === user.id && hasCompletedCheck.current) {
       console.log('[AdminRole] Already checked user, skipping');
-      // Ensure loading is false if we're reusing cached results
       if (loading) setLoading(false);
       return;
     }
 
-    // Immediately set loading true for new checks
+    // Start loading for new checks
     setLoading(true);
 
     const checkRoles = async () => {
       try {
-        setLoading(true);
-        
         // Set a timeout to prevent infinite loading
         roleCheckTimeoutRef.current = setTimeout(() => {
           console.warn('[AdminRole] Role check timeout, defaulting to non-admin');
@@ -57,6 +56,7 @@ export const useAdminRole = () => {
           setIsEducator(false);
           setLoading(false);
           lastCheckedUserId.current = user.id;
+          hasCompletedCheck.current = true;
         }, ROLE_CHECK_TIMEOUT_MS);
 
         console.time('[AdminRole] checkRoles');
@@ -83,10 +83,12 @@ export const useAdminRole = () => {
           setIsEducator(roles.includes('educator'));
         }
         lastCheckedUserId.current = user.id;
+        hasCompletedCheck.current = true;
       } catch (error) {
         console.error('Error checking roles:', error);
         setIsAdmin(false);
         setIsEducator(false);
+        hasCompletedCheck.current = true;
       } finally {
         setLoading(false);
       }

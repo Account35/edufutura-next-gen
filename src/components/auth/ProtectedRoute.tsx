@@ -1,39 +1,77 @@
- import { ReactNode, useEffect, useState } from 'react';
- import { useNavigate, useLocation } from 'react-router-dom';
- import { useAuth } from '@/hooks/useAuth';
- import { useAdminRole } from '@/hooks/useAdminRole';
- import { DashboardSkeleton, OnboardingSkeleton, GenericPageSkeleton } from '@/components/ui/PageSkeletons';
+import { ReactNode, useEffect, useState, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useAdminRole } from '@/hooks/useAdminRole';
+import { DashboardSkeleton, OnboardingSkeleton, GenericPageSkeleton } from '@/components/ui/PageSkeletons';
+
+// Safety timeouts to prevent infinite loading
+const PROTECTED_ROUTE_TIMEOUT_MS = 8000; // 8 seconds max wait for all checks
+const PROFILE_WAIT_TIMEOUT_MS = 5000; // 5 seconds max wait for profile after auth
+
+interface ProtectedRouteProps {
+  children: ReactNode;
+  requireOnboarding?: boolean;
+  requireAdmin?: boolean;
+  requireEducator?: boolean;
+  allowGuest?: boolean;
+}
+
+/**
+ * Centralized route protection with:
+ * - Authentication checks
+ * - Onboarding completion guards
+ * - Role-based access control
+ * - Proper redirect handling
+ * - Safety timeouts to prevent infinite loading
+ */
+export const ProtectedRoute = ({
+  children,
+  requireOnboarding = true,
+  requireAdmin = false,
+  requireEducator = false,
+  allowGuest = false,
+}: ProtectedRouteProps) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, userProfile, loading: authLoading } = useAuth();
+  const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [checkComplete, setCheckComplete] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
+  const mountTimeRef = useRef(Date.now());
  
- interface ProtectedRouteProps {
-   children: ReactNode;
-   requireOnboarding?: boolean;
-   requireAdmin?: boolean;
-   requireEducator?: boolean;
-   allowGuest?: boolean;
- }
- 
- /**
-  * Centralized route protection with:
-  * - Authentication checks
-  * - Onboarding completion guards
-  * - Role-based access control
-  * - Proper redirect handling
-  */
- export const ProtectedRoute = ({
-   children,
-   requireOnboarding = true,
-   requireAdmin = false,
-   requireEducator = false,
-   allowGuest = false,
- }: ProtectedRouteProps) => {
-   const navigate = useNavigate();
-   const location = useLocation();
-   const { user, userProfile, loading: authLoading } = useAuth();
-   const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
-   const [isAuthorized, setIsAuthorized] = useState(false);
-   const [checkComplete, setCheckComplete] = useState(false);
- 
+  // Global safety timeout to prevent infinite loading
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!checkComplete) {
+        console.warn('[ProtectedRoute] Safety timeout reached, forcing completion');
+        setTimedOut(true);
+      }
+    }, PROTECTED_ROUTE_TIMEOUT_MS);
+    
+    return () => clearTimeout(timeout);
+  }, [checkComplete]);
+
+  // Profile-specific timeout when user exists but profile is missing
+  useEffect(() => {
+    if (!authLoading && user && !userProfile && !checkComplete) {
+      const profileTimeout = setTimeout(() => {
+        console.warn('[ProtectedRoute] Profile wait timeout, proceeding with checks');
+        setTimedOut(true);
+      }, PROFILE_WAIT_TIMEOUT_MS);
+      
+      return () => clearTimeout(profileTimeout);
+    }
+  }, [authLoading, user, userProfile, checkComplete]);
+
+  useEffect(() => {
+    // If we've timed out, force redirect to landing to break the loop
+    if (timedOut && !checkComplete) {
+      console.warn('[ProtectedRoute] Timed out, redirecting to landing');
+      navigate('/', { replace: true });
+      return;
+    }
+
     // Wait for auth to complete loading
     if (authLoading) {
       return;
@@ -52,16 +90,21 @@
       return;
     }
 
-    // For admin/educator routes, wait for role loading
-    if ((requireAdmin || requireEducator) && roleLoading) {
+    // For admin/educator routes, wait for role loading (with timeout protection)
+    if ((requireAdmin || requireEducator) && roleLoading && !timedOut) {
       return;
     }
 
-    // For non-admin routes, we can proceed even without profile for basic checks
-    // But for onboarding checks, we need the profile
-    if (requireOnboarding && !userProfile) {
-      // If we have a user but no profile after auth finished, wait briefly
-      // The profile should be created/loaded by useAuth
+    // For non-admin routes that need onboarding check, wait for profile (with timeout)
+    // But don't wait forever - if profile isn't loading, proceed
+    if (requireOnboarding && !userProfile && !timedOut) {
+      // If we've been waiting too long, just redirect to onboarding
+      const waitTime = Date.now() - mountTimeRef.current;
+      if (waitTime > PROFILE_WAIT_TIMEOUT_MS) {
+        console.warn('[ProtectedRoute] Profile not loaded, redirecting to onboarding');
+        navigate('/onboarding', { replace: true });
+        return;
+      }
       return;
     }
 
@@ -74,14 +117,14 @@
       }
     }
 
-    // Check admin role
-    if (requireAdmin && !isAdmin) {
+    // Check admin role (with fallback if timed out)
+    if (requireAdmin && !isAdmin && !timedOut) {
       navigate('/dashboard', { replace: true });
       return;
     }
 
-    // Check educator role
-    if (requireEducator && !isAdmin && !isEducator) {
+    // Check educator role (with fallback if timed out)
+    if (requireEducator && !isAdmin && !isEducator && !timedOut) {
       navigate('/dashboard', { replace: true });
       return;
     }
@@ -102,12 +145,13 @@
     allowGuest,
     navigate,
     location,
+    timedOut,
   ]);
- 
+
   // Show appropriate skeleton while loading
   // Only show skeleton if we haven't completed our checks AND relevant loading is happening
   const needsRoleCheck = requireAdmin || requireEducator;
-  const isStillLoading = !checkComplete && (
+  const isStillLoading = !checkComplete && !timedOut && (
     authLoading || 
     (needsRoleCheck && user && roleLoading) ||
     (requireOnboarding && user && !userProfile)
