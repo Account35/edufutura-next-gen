@@ -35,12 +35,16 @@ export const useAdminRole = () => {
       return;
     }
 
-    // Skip if we already checked this user
+    // Skip if we already checked this user and have valid results
     if (lastCheckedUserId.current === user.id) {
       console.log('[AdminRole] Already checked user, skipping');
-      setLoading(false);
+      // Ensure loading is false if we're reusing cached results
+      if (loading) setLoading(false);
       return;
     }
+
+    // Immediately set loading true for new checks
+    setLoading(true);
 
     const checkRoles = async () => {
       try {
