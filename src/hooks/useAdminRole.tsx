@@ -78,8 +78,10 @@ export const useAdminRole = () => {
           setIsEducator(false);
         } else {
           const roles = data?.map(r => r.role) || [];
-          console.log('[AdminRole] Roles found:', roles);
-          setIsAdmin(roles.includes('admin'));
+          console.log('[AdminRole] Roles found:', roles, 'for user:', user.email);
+          // Also check email as backup (admin emails always get admin access)
+          const isAdminEmail = user.email === 'admin_edufutura@gmail.com' || user.email === 'ntlemezal35@gmail.com';
+          setIsAdmin(roles.includes('admin') || isAdminEmail);
           setIsEducator(roles.includes('educator'));
         }
         lastCheckedUserId.current = user.id;

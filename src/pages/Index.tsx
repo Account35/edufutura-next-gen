@@ -55,8 +55,12 @@ const Index = () => {
       return;
     }
     
-    // Don't redirect while role is loading (only if user exists and has profile)
-    if (user && userProfile && roleLoading) return;
+    // CRITICAL: Wait for role check to COMPLETE before redirecting
+    // This prevents redirecting to /dashboard before we know if user is admin
+    if (user && roleLoading) {
+      console.log('[Index] Waiting for role check to complete...');
+      return;
+    }
 
     // If user is authenticated and profile is loaded, redirect
     if (user && userProfile) {
@@ -74,8 +78,10 @@ const Index = () => {
         navigate('/onboarding');
       } else if (isAdmin || isEducator) {
         // Redirect admins/educators to admin dashboard
+        console.log('[Index] Redirecting admin/educator to /admin');
         navigate('/admin');
       } else {
+        console.log('[Index] Redirecting student to /dashboard');
         navigate('/dashboard');
       }
     }
