@@ -5,8 +5,7 @@ import { useAdminRole } from '@/hooks/useAdminRole';
 import { DashboardSkeleton, OnboardingSkeleton, GenericPageSkeleton } from '@/components/ui/PageSkeletons';
 
 // Safety timeouts to prevent infinite loading
-const PROTECTED_ROUTE_TIMEOUT_MS = 8000; // 8 seconds max wait for all checks
-const PROFILE_WAIT_TIMEOUT_MS = 5000; // 5 seconds max wait for profile after auth
+const PROTECTED_ROUTE_TIMEOUT_MS = 6000; // 6 seconds max wait for all checks
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -21,7 +20,6 @@ interface ProtectedRouteProps {
  * - Authentication checks
  * - Onboarding completion guards
  * - Role-based access control
- * - Proper redirect handling
  * - Safety timeouts to prevent infinite loading
  */
 export const ProtectedRoute = ({
@@ -38,46 +36,40 @@ export const ProtectedRoute = ({
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [checkComplete, setCheckComplete] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
-  const mountTimeRef = useRef(Date.now());
- 
+  const locationKeyRef = useRef(location.key);
+
+  // Reset state when location changes (prevents stale state on navigation)
+  useEffect(() => {
+    if (location.key !== locationKeyRef.current) {
+      locationKeyRef.current = location.key;
+      setCheckComplete(false);
+      setIsAuthorized(false);
+      setTimedOut(false);
+    }
+  }, [location.key]);
+
   // Global safety timeout to prevent infinite loading
   useEffect(() => {
+    if (checkComplete) return;
+    
     const timeout = setTimeout(() => {
       if (!checkComplete) {
         console.warn('[ProtectedRoute] Safety timeout reached, forcing completion');
         setTimedOut(true);
+        // Don't redirect - just mark as complete and let checks proceed with current state
       }
     }, PROTECTED_ROUTE_TIMEOUT_MS);
     
     return () => clearTimeout(timeout);
-  }, [checkComplete]);
-
-  // Profile-specific timeout when user exists but profile is missing
-  useEffect(() => {
-    if (!authLoading && user && !userProfile && !checkComplete) {
-      const profileTimeout = setTimeout(() => {
-        console.warn('[ProtectedRoute] Profile wait timeout, proceeding with checks');
-        setTimedOut(true);
-      }, PROFILE_WAIT_TIMEOUT_MS);
-      
-      return () => clearTimeout(profileTimeout);
-    }
-  }, [authLoading, user, userProfile, checkComplete]);
+  }, [checkComplete, location.key]);
 
   useEffect(() => {
-    // If we've timed out, force redirect to landing to break the loop
-    if (timedOut && !checkComplete) {
-      console.warn('[ProtectedRoute] Timed out, redirecting to landing');
-      navigate('/', { replace: true });
+    // Wait for auth to complete loading (unless timed out)
+    if (authLoading && !timedOut) {
       return;
     }
 
-    // Wait for auth to complete loading
-    if (authLoading) {
-      return;
-    }
-
-    // Not authenticated
+    // Not authenticated - redirect to landing
     if (!user) {
       if (allowGuest) {
         setIsAuthorized(true);
@@ -90,21 +82,13 @@ export const ProtectedRoute = ({
       return;
     }
 
-    // For admin/educator routes, wait for role loading (with timeout protection)
+    // For admin/educator routes, wait for role loading (unless timed out)
     if ((requireAdmin || requireEducator) && roleLoading && !timedOut) {
       return;
     }
 
-    // For non-admin routes that need onboarding check, wait for profile (with timeout)
-    // But don't wait forever - if profile isn't loading, proceed
+    // For routes that need onboarding check, wait briefly for profile (unless timed out)
     if (requireOnboarding && !userProfile && !timedOut) {
-      // If we've been waiting too long, just redirect to onboarding
-      const waitTime = Date.now() - mountTimeRef.current;
-      if (waitTime > PROFILE_WAIT_TIMEOUT_MS) {
-        console.warn('[ProtectedRoute] Profile not loaded, redirecting to onboarding');
-        navigate('/onboarding', { replace: true });
-        return;
-      }
       return;
     }
 
@@ -117,14 +101,15 @@ export const ProtectedRoute = ({
       }
     }
 
-    // Check admin role (with fallback if timed out)
-    if (requireAdmin && !isAdmin && !timedOut) {
+    // Check admin role
+    if (requireAdmin && !isAdmin) {
+      // If timed out, we might not have accurate role info - redirect to dashboard as fallback
       navigate('/dashboard', { replace: true });
       return;
     }
 
-    // Check educator role (with fallback if timed out)
-    if (requireEducator && !isAdmin && !isEducator && !timedOut) {
+    // Check educator role (admins have educator access too)
+    if (requireEducator && !isAdmin && !isEducator) {
       navigate('/dashboard', { replace: true });
       return;
     }
@@ -144,12 +129,12 @@ export const ProtectedRoute = ({
     requireEducator,
     allowGuest,
     navigate,
-    location,
+    location.pathname,
+    location.search,
     timedOut,
   ]);
 
-  // Show appropriate skeleton while loading
-  // Only show skeleton if we haven't completed our checks AND relevant loading is happening
+  // Show appropriate skeleton while loading (but respect timeout)
   const needsRoleCheck = requireAdmin || requireEducator;
   const isStillLoading = !checkComplete && !timedOut && (
     authLoading || 
@@ -166,33 +151,36 @@ export const ProtectedRoute = ({
     if (path.startsWith('/onboarding')) {
       return <OnboardingSkeleton />;
     }
+    if (path.startsWith('/admin')) {
+      return <GenericPageSkeleton />;
+    }
     return <GenericPageSkeleton />;
   }
- 
-   if (!isAuthorized) {
-     return null;
-   }
- 
-   return <>{children}</>;
- };
- 
- // Wrapper specifically for admin routes
- export const AdminRoute = ({ children }: { children: ReactNode }) => (
-   <ProtectedRoute requireAdmin requireOnboarding={false}>
-     {children}
-   </ProtectedRoute>
- );
- 
- // Wrapper for educator routes (admins also have access)
- export const EducatorRoute = ({ children }: { children: ReactNode }) => (
-   <ProtectedRoute requireEducator requireOnboarding={false}>
-     {children}
-   </ProtectedRoute>
- );
- 
- // Wrapper for onboarding routes (authenticated but may not have completed onboarding)
- export const OnboardingRoute = ({ children }: { children: ReactNode }) => (
-   <ProtectedRoute requireOnboarding={false}>
-     {children}
-   </ProtectedRoute>
- );
+
+  if (!isAuthorized) {
+    return null;
+  }
+
+  return <>{children}</>;
+};
+
+// Wrapper specifically for admin routes
+export const AdminRoute = ({ children }: { children: ReactNode }) => (
+  <ProtectedRoute requireAdmin requireOnboarding={false}>
+    {children}
+  </ProtectedRoute>
+);
+
+// Wrapper for educator routes (admins also have access)
+export const EducatorRoute = ({ children }: { children: ReactNode }) => (
+  <ProtectedRoute requireEducator requireOnboarding={false}>
+    {children}
+  </ProtectedRoute>
+);
+
+// Wrapper for onboarding routes (authenticated but may not have completed onboarding)
+export const OnboardingRoute = ({ children }: { children: ReactNode }) => (
+  <ProtectedRoute requireOnboarding={false}>
+    {children}
+  </ProtectedRoute>
+);
