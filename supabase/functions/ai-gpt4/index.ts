@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
@@ -13,10 +13,16 @@ serve(async (req) => {
   }
 
   try {
-    const { query, systemPrompt, userId, careerContext } = await req.json();
+    const requestBody = await req.json();
+    const { query, systemPrompt, userId, careerContext, messages, temperature, max_tokens } = requestBody;
 
-    if (!query) {
-      throw new Error('Query is required');
+    // Support two formats:
+    // 1. Chat format: { messages: [...] } - used by quiz grading
+    // 2. Simple format: { query, systemPrompt } - used by AI chat modal
+    const isMessageFormat = Array.isArray(messages) && messages.length > 0;
+    
+    if (!isMessageFormat && !query) {
+      throw new Error('Either "messages" array or "query" string is required');
     }
 
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
@@ -24,15 +30,22 @@ serve(async (req) => {
       throw new Error('OPENAI_API_KEY is not configured');
     }
 
-    console.log(`[GPT-4] Processing query for user ${userId}`);
+    console.log(`[GPT-4] Processing request for user ${userId || 'anonymous'}, format: ${isMessageFormat ? 'messages' : 'query'}`);
     const startTime = Date.now();
 
-    // Build career-aware system prompt if context provided
-    let finalSystemPrompt = systemPrompt;
-    if (careerContext) {
-      const { strongSubjects, careerRecommendations, gradeLevel, province, savedInstitutions } = careerContext;
+    let finalMessages;
+
+    if (isMessageFormat) {
+      // Use messages array directly (for quiz grading, etc.)
+      finalMessages = messages;
+    } else {
+      // Build messages from query/systemPrompt (for AI chat)
+      let finalSystemPrompt = systemPrompt || 'You are a helpful AI assistant.';
       
-      finalSystemPrompt = `You are an expert South African career counselor and educational assistant helping a Grade ${gradeLevel} student in ${province}. 
+      if (careerContext) {
+        const { strongSubjects, careerRecommendations, gradeLevel, province, savedInstitutions } = careerContext;
+        
+        finalSystemPrompt = `You are an expert South African career counselor and educational assistant helping a Grade ${gradeLevel} student in ${province}. 
 
 STUDENT CONTEXT:
 - Strong subjects: ${strongSubjects?.join(', ') || 'Not yet determined'}
@@ -50,6 +63,12 @@ GUIDANCE PRINCIPLES:
 8. Reference CAPS curriculum subjects and APS scores
 
 When students excel in certain subjects, proactively mention relevant career opportunities. Be encouraging but realistic about entry requirements and career prospects.`;
+      }
+
+      finalMessages = [
+        { role: 'system', content: finalSystemPrompt },
+        { role: 'user', content: query }
+      ];
     }
 
     // Call OpenAI GPT-4 API
@@ -61,12 +80,9 @@ When students excel in certain subjects, proactively mention relevant career opp
       },
       body: JSON.stringify({
         model: 'gpt-4-turbo-preview',
-        messages: [
-          { role: 'system', content: finalSystemPrompt },
-          { role: 'user', content: query }
-        ],
-        temperature: 0.8,
-        max_tokens: 1500,
+        messages: finalMessages,
+        temperature: temperature ?? 0.8,
+        max_tokens: max_tokens ?? 1500,
       }),
     });
 
@@ -80,6 +96,18 @@ When students excel in certain subjects, proactively mention relevant career opp
     const responseTime = Date.now() - startTime;
 
     console.log(`[GPT-4] Response generated in ${responseTime}ms`);
+
+    // Return in format compatible with both use cases
+    // For messages format: return full OpenAI response structure (for quiz grading)
+    // For query format: return simplified response (for AI chat)
+    if (isMessageFormat) {
+      return new Response(
+        JSON.stringify(data),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
     return new Response(
       JSON.stringify({
