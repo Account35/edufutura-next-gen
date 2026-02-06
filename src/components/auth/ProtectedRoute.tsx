@@ -52,20 +52,23 @@
       return;
     }
 
-    // Wait for role loading only when checking admin/educator permissions
+    // For admin/educator routes, wait for role loading
     if ((requireAdmin || requireEducator) && roleLoading) {
       return;
     }
 
-    // If user exists but profile is still loading, wait
-    if (!userProfile) {
+    // For non-admin routes, we can proceed even without profile for basic checks
+    // But for onboarding checks, we need the profile
+    if (requireOnboarding && !userProfile) {
+      // If we have a user but no profile after auth finished, wait briefly
+      // The profile should be created/loaded by useAuth
       return;
     }
 
     // Check onboarding completion (skip for onboarding routes themselves)
     const isOnboardingRoute = location.pathname.startsWith('/onboarding');
-    if (requireOnboarding && !isOnboardingRoute) {
-      if (!userProfile?.onboarding_completed) {
+    if (requireOnboarding && !isOnboardingRoute && userProfile) {
+      if (!userProfile.onboarding_completed) {
         navigate('/onboarding', { replace: true });
         return;
       }
@@ -102,7 +105,13 @@
   ]);
  
   // Show appropriate skeleton while loading
-  const isStillLoading = !checkComplete || authLoading || (user && !userProfile) || ((requireAdmin || requireEducator) && user && roleLoading);
+  // Only show skeleton if we haven't completed our checks AND relevant loading is happening
+  const needsRoleCheck = requireAdmin || requireEducator;
+  const isStillLoading = !checkComplete && (
+    authLoading || 
+    (needsRoleCheck && user && roleLoading) ||
+    (requireOnboarding && user && !userProfile)
+  );
   
   if (isStillLoading) {
     const path = location.pathname;

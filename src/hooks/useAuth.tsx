@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from '@/hooks/use-toast';
 
-const AUTH_TIMEOUT_MS = 15000; // 15 second timeout for auth operations
+const AUTH_TIMEOUT_MS = 10000; // 10 second timeout for auth operations
 
 interface AuthContextType {
   user: User | null;
@@ -33,6 +33,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
   const [warningTimer, setWarningTimer] = useState<NodeJS.Timeout | null>(null);
+  const initCompleteRef = useRef(false);
   const [showWarning, setShowWarning] = useState(false);
 
   // Deduplicate profile loading to avoid double-fetch (initializeAuth + onAuthStateChange)
@@ -155,43 +156,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }, AUTH_TIMEOUT_MS);
 
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        if (!mounted) return;
-        console.log('[Auth] onAuthStateChange event:', event);
-
-        // Clear in-flight profile promise when user changes
-        const newUser = newSession?.user ?? null;
-        if (profileLoadRef.current && profileLoadRef.current.userId !== (newUser?.id ?? null)) {
-          profileLoadRef.current = null;
-        }
-
-        setSession(newSession);
-        setUser(newUser);
-
-        if (newUser) {
-          try {
-            const profile = await loadUserProfile(newUser);
-            if (mounted) {
-              setUserProfile(profile);
-              setLoading(false);
-            }
-          } catch (error) {
-            console.error('[Auth] Error loading profile in auth change:', error);
-            if (mounted) {
-              setLoading(false);
-            }
-          }
-        } else {
-          setUserProfile(null);
-          setLoading(false);
-        }
-      }
-    );
-
-    // THEN check for existing session
+    // FIRST check for existing session (synchronous-first approach)
     const initializeAuth = async () => {
+      if (initCompleteRef.current) return;
+      
       try {
         console.time('[Auth] getSession');
         const { data: { session: existingSession } } = await supabase.auth.getSession();
@@ -201,6 +169,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const existingUser = existingSession?.user ?? null;
         console.log('[Auth] existingUser:', existingUser?.id ?? 'none');
+        
+        // Clear stale profile promise if user changed
         if (profileLoadRef.current && profileLoadRef.current.userId !== (existingUser?.id ?? null)) {
           profileLoadRef.current = null;
         }
@@ -213,26 +183,70 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const profile = await loadUserProfile(existingUser);
             if (mounted) {
               setUserProfile(profile);
-              setLoading(false);
             }
           } catch (error) {
             console.error('[Auth] Error loading profile:', error);
-            if (mounted) {
-              setLoading(false);
-            }
           }
-        } else {
+        }
+        
+        // Always set loading false after init completes
+        if (mounted) {
           setLoading(false);
+          initCompleteRef.current = true;
         }
       } catch (error) {
         console.error('[Auth] Error in initializeAuth:', error);
         if (mounted) {
           setLoading(false);
+          initCompleteRef.current = true;
         }
       }
     };
 
+    // Set up auth state listener for subsequent changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        if (!mounted) return;
+        console.log('[Auth] onAuthStateChange event:', event);
+
+        // Skip initial session event if we already initialized
+        if (event === 'INITIAL_SESSION' && initCompleteRef.current) {
+          console.log('[Auth] Skipping duplicate INITIAL_SESSION');
+          return;
+        }
+
+        const newUser = newSession?.user ?? null;
+        
+        // Clear in-flight profile promise when user changes
+        if (profileLoadRef.current && profileLoadRef.current.userId !== (newUser?.id ?? null)) {
+          profileLoadRef.current = null;
+        }
+
+        setSession(newSession);
+        setUser(newUser);
+
+        if (newUser) {
+          try {
+            const profile = await loadUserProfile(newUser);
+            if (mounted) {
+              setUserProfile(profile);
+            }
+          } catch (error) {
+            console.error('[Auth] Error loading profile in auth change:', error);
+          }
+        } else {
+          setUserProfile(null);
+        }
+        
+        // Ensure loading is false after any auth state change
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    );
+
     initializeAuth();
+    
     return () => {
       mounted = false;
       if (authTimeoutId) clearTimeout(authTimeoutId);
