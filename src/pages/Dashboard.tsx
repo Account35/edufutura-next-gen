@@ -118,29 +118,38 @@ export default function Dashboard() {
     }
    }, [user]);
 
-   // Show loading state during data fetch
-   if (authLoading || subLoading) {
+  // Show loading state during initial data fetch (with timeout protection)
+  // Only show loader briefly - don't block indefinitely
+  if (authLoading) {
     return <FullPageLoader message="Loading your dashboard..." />;
   }
- 
-   // Handle edge case where profile might still be loading
-   if (!userProfile) {
-     return <FullPageLoader message="Loading your profile..." />;
-   }
+
+  // If subscription is loading, show content anyway (subscription will update when ready)
+  // Don't block the entire page for subscription status
+
+  // Handle edge case where profile might still be loading - show dashboard with defaults
+  const displayProfile = userProfile || {
+    full_name: 'Student',
+    grade_level: null,
+    profile_picture_url: null,
+    total_study_hours: 0,
+    study_streak_days: 0,
+    school_id: null,
+  };
 
   return (
     <DashboardLayout>
       <div className="space-y-6 pb-20 lg:pb-6">
         {/* Welcome Banner */}
         <WelcomeBanner
-          userName={userProfile.full_name}
-          gradeLevel={userProfile.grade_level}
+          userName={displayProfile.full_name}
+          gradeLevel={displayProfile.grade_level}
           schoolName={schoolData.school_name}
           province={schoolData.province}
-          profilePicture={userProfile.profile_picture_url}
+          profilePicture={displayProfile.profile_picture_url}
           isPremium={isPremium}
-          totalStudyHours={userProfile.total_study_hours || 0}
-          studyStreakDays={userProfile.study_streak_days || 0}
+          totalStudyHours={displayProfile.total_study_hours || 0}
+          studyStreakDays={displayProfile.study_streak_days || 0}
           overallProgress={overallProgress}
           onUpgradeClick={() => setShowUpgradeModal(true)}
         />
