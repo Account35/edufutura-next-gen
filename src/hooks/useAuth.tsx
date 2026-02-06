@@ -1,10 +1,21 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  ReactNode,
+} from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from '@/hooks/use-toast';
+import { withTimeout } from '@/lib/async';
 
 const AUTH_TIMEOUT_MS = 10000; // 10 second timeout for auth operations
+const PROFILE_LOAD_TIMEOUT_MS = 8000; // fail-fast: prevent auth/profile deadlocks
 
 interface AuthContextType {
   user: User | null;
@@ -35,6 +46,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [warningTimer, setWarningTimer] = useState<NodeJS.Timeout | null>(null);
   const initCompleteRef = useRef(false);
   const [showWarning, setShowWarning] = useState(false);
+
+  // Track the currently active user so deferred async work can’t set stale profile state.
+  const activeUserIdRef = useRef<string | null>(null);
 
   // Deduplicate profile loading to avoid double-fetch (initializeAuth + onAuthStateChange)
   const profileLoadRef = useRef<ProfileLoadInFlight | null>(null);
@@ -71,9 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         (currentUser.user_metadata?.name as string | undefined);
 
       const fallbackFullName =
-        fullNameFromMeta ||
-        currentUser.email?.split('@')[0] ||
-        'Student';
+        fullNameFromMeta || currentUser.email?.split('@')[0] || 'Student';
 
       const { data: created, error: createError } = await supabase
         .from('users')
@@ -124,7 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const warning = setTimeout(() => {
         setShowWarning(true);
         toast({
-          title: "Inactivity Warning",
+          title: 'Inactivity Warning',
           description: "You'll be logged out in 2 minutes due to inactivity.",
           duration: 120000,
         });
@@ -133,7 +145,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const timeout = setTimeout(async () => {
         await signOut();
         toast({
-          title: "Logged Out",
+          title: 'Logged Out',
           description: "You've been logged out due to inactivity.",
         });
       }, INACTIVITY_TIMEOUT);
@@ -159,19 +171,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // FIRST check for existing session (synchronous-first approach)
     const initializeAuth = async () => {
       if (initCompleteRef.current) return;
-      
+
       try {
         console.time('[Auth] getSession');
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        const {
+          data: { session: existingSession },
+        } = await supabase.auth.getSession();
         console.timeEnd('[Auth] getSession');
 
         if (!mounted) return;
 
         const existingUser = existingSession?.user ?? null;
+        activeUserIdRef.current = existingUser?.id ?? null;
+
         console.log('[Auth] existingUser:', existingUser?.id ?? 'none');
-        
+
         // Clear stale profile promise if user changed
-        if (profileLoadRef.current && profileLoadRef.current.userId !== (existingUser?.id ?? null)) {
+        if (
+          profileLoadRef.current &&
+          profileLoadRef.current.userId !== (existingUser?.id ?? null)
+        ) {
           profileLoadRef.current = null;
         }
 
@@ -180,15 +199,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (existingUser) {
           try {
-            const profile = await loadUserProfile(existingUser);
-            if (mounted) {
+            const profile = await withTimeout(
+              loadUserProfile(existingUser),
+              PROFILE_LOAD_TIMEOUT_MS,
+              'Profile load'
+            );
+            if (mounted && activeUserIdRef.current === existingUser.id) {
               setUserProfile(profile);
             }
           } catch (error) {
             console.error('[Auth] Error loading profile:', error);
           }
         }
-        
+
         // Always set loading false after init completes
         if (mounted) {
           setLoading(false);
@@ -204,49 +227,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     // Set up auth state listener for subsequent changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        if (!mounted) return;
-        console.log('[Auth] onAuthStateChange event:', event);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (!mounted) return;
+      console.log('[Auth] onAuthStateChange event:', event);
 
-        // Skip initial session event if we already initialized
-        if (event === 'INITIAL_SESSION' && initCompleteRef.current) {
-          console.log('[Auth] Skipping duplicate INITIAL_SESSION');
-          return;
-        }
-
-        const newUser = newSession?.user ?? null;
-        
-        // Clear in-flight profile promise when user changes
-        if (profileLoadRef.current && profileLoadRef.current.userId !== (newUser?.id ?? null)) {
-          profileLoadRef.current = null;
-        }
-
-        setSession(newSession);
-        setUser(newUser);
-
-        if (newUser) {
-          try {
-            const profile = await loadUserProfile(newUser);
-            if (mounted) {
-              setUserProfile(profile);
-            }
-          } catch (error) {
-            console.error('[Auth] Error loading profile in auth change:', error);
-          }
-        } else {
-          setUserProfile(null);
-        }
-        
-        // Ensure loading is false after any auth state change
-        if (mounted) {
-          setLoading(false);
-        }
+      // Skip initial session event if we already initialized
+      if (event === 'INITIAL_SESSION' && initCompleteRef.current) {
+        console.log('[Auth] Skipping duplicate INITIAL_SESSION');
+        return;
       }
-    );
+
+      const newUser = newSession?.user ?? null;
+      activeUserIdRef.current = newUser?.id ?? null;
+
+      // Clear in-flight profile promise when user changes
+      if (profileLoadRef.current && profileLoadRef.current.userId !== (newUser?.id ?? null)) {
+        profileLoadRef.current = null;
+      }
+
+      // IMPORTANT: keep this callback synchronous to avoid auth deadlocks.
+      setSession(newSession);
+      setUser(newUser);
+
+      if (newUser) {
+        // Defer profile loading to the next tick (no Supabase calls inside auth callback)
+        setTimeout(() => {
+          void withTimeout(loadUserProfile(newUser), PROFILE_LOAD_TIMEOUT_MS, 'Profile load')
+            .then(profile => {
+              if (mounted && activeUserIdRef.current === newUser.id) {
+                setUserProfile(profile);
+              }
+            })
+            .catch(err => {
+              console.error('[Auth] Deferred profile load failed:', err);
+            });
+        }, 0);
+      } else {
+        setUserProfile(null);
+      }
+
+      // Ensure loading is false after any auth state change
+      if (mounted) {
+        setLoading(false);
+      }
+    });
 
     initializeAuth();
-    
+
     return () => {
       mounted = false;
       if (authTimeoutId) clearTimeout(authTimeoutId);
@@ -261,7 +290,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!session) return;
 
     const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
-    
+
     events.forEach(event => {
       window.addEventListener(event, resetInactivityTimer);
     });
@@ -283,42 +312,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setSession(null);
       setUserProfile(null);
+      activeUserIdRef.current = null;
 
       if (inactivityTimer) clearTimeout(inactivityTimer);
       if (warningTimer) clearTimeout(warningTimer);
 
       toast({
-        title: "Logged Out",
+        title: 'Logged Out',
         description: "You've been logged out successfully.",
       });
     } catch (error) {
       console.error('Error signing out:', error);
       toast({
-        title: "Error",
-        description: "Failed to log out. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to log out. Please try again.',
+        variant: 'destructive',
       });
     }
   };
 
   const refreshProfile = useCallback(async () => {
     if (user) {
-      const profile = await loadUserProfile(user);
+      const profile = await withTimeout(loadUserProfile(user), PROFILE_LOAD_TIMEOUT_MS, 'Profile load').catch(
+        () => null
+      );
       setUserProfile(profile);
     }
   }, [user]);
 
-  const value = useMemo(() => ({
-    user,
-    session,
-    userProfile,
-    loading,
-    isAuthenticated: !!session,
-    signOut,
-    refreshProfile,
-  }), [user, session, userProfile, loading, signOut, refreshProfile]);
+  const value = useMemo(
+    () => ({
+      user,
+      session,
+      userProfile,
+      loading,
+      isAuthenticated: !!session,
+      signOut,
+      refreshProfile,
+    }),
+    [user, session, userProfile, loading, signOut, refreshProfile]
+  );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>; 
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
