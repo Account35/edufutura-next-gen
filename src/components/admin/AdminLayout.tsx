@@ -18,12 +18,13 @@ import {
   Headphones,
   ScrollText,
   Menu,
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { AdminMobileNav } from './mobile/AdminMobileNav';
+import { BackButton } from '@/components/ui/BackButton';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -117,7 +118,7 @@ const SidebarContent = ({ currentPath, onNavigate, onSignOut }: SidebarContentPr
 export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasCheckedAccess, setHasCheckedAccess] = useState(false);
@@ -145,9 +146,9 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
   }, [location.pathname]);
 
   const handleSignOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    await signOut();
     navigate('/');
-  }, [navigate]);
+  }, [signOut, navigate]);
 
   const handleNavigate = useCallback((path: string) => {
     navigate(path);
@@ -179,7 +180,7 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
         {/* Mobile Header */}
         <header className="lg:hidden bg-primary text-primary-foreground p-4 sticky top-0 z-40">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {/* Hamburger Menu */}
               <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
                 <SheetTrigger asChild>
@@ -216,11 +217,18 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
                 </SheetContent>
               </Sheet>
 
+              {/* Back Button for Mobile */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-primary-foreground h-10 w-10"
+                onClick={() => navigate(-1)}
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-                  <GraduationCap className="w-5 h-5 text-secondary-foreground" />
-                </div>
-                <span className="font-bold">{title || 'Admin'}</span>
+                <span className="font-bold truncate max-w-[150px]">{title || 'Admin'}</span>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -246,9 +254,12 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
 
         {/* Page Header - Desktop only */}
         {(title || subtitle) && (
-          <div className="hidden lg:block bg-background border-b px-6 py-4">
-            {title && <h1 className="text-2xl font-bold text-foreground">{title}</h1>}
-            {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
+          <div className="hidden lg:flex items-center gap-4 bg-background border-b px-6 py-4">
+            <BackButton fallbackPath="/admin" />
+            <div>
+              {title && <h1 className="text-2xl font-bold text-foreground">{title}</h1>}
+              {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
+            </div>
           </div>
         )}
 
