@@ -115,57 +115,67 @@ const SidebarContent = ({ currentPath, onNavigate, onSignOut }: SidebarContentPr
   );
 };
 
-const ADMIN_LAYOUT_TIMEOUT_MS = 6000; // 6 second timeout for admin layout
+const ADMIN_LAYOUT_TIMEOUT_MS = 8000; // 8 second timeout for admin layout
 
 export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading: authLoading, signOut } = useAuth();
-  const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
+  const { isAdmin, isEducator, loading: roleLoading, hasChecked } = useAdminRole();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasCheckedAccess, setHasCheckedAccess] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
 
   // Safety timeout to prevent infinite loading
   useEffect(() => {
+    if (hasCheckedAccess) return;
+    
     const timeout = setTimeout(() => {
-      if (!hasCheckedAccess) {
-        console.warn('[AdminLayout] Safety timeout reached');
-        setTimedOut(true);
-      }
+      console.warn('[AdminLayout] Safety timeout reached');
+      setTimedOut(true);
     }, ADMIN_LAYOUT_TIMEOUT_MS);
     
     return () => clearTimeout(timeout);
   }, [hasCheckedAccess]);
 
   useEffect(() => {
-    // If timed out without access, redirect to dashboard
-    if (timedOut && !hasCheckedAccess) {
-      console.warn('[AdminLayout] Timed out, redirecting to dashboard');
-      navigate('/dashboard', { replace: true });
-      return;
-    }
-
     // Wait for auth to finish loading (but respect timeout)
     if (authLoading && !timedOut) {
       return;
     }
 
-    // Wait for role to finish loading (but respect timeout)
+    // No user - redirect to landing
+    if (!user) {
+      navigate('/', { replace: true });
+      return;
+    }
+
+    // Wait for role check to complete (but respect timeout)
     if (roleLoading && !timedOut) {
       return;
     }
 
-    // Now we can check access
-    if (!user) {
-      navigate('/', { replace: true });
-    } else if (!isAdmin && !isEducator) {
-      navigate('/dashboard', { replace: true });
-    } else {
-      // User has access
-      setHasCheckedAccess(true);
+    // Role check completed or timed out - now check access
+    if (hasChecked || timedOut) {
+      if (isAdmin || isEducator) {
+        // User has admin/educator access
+        setHasCheckedAccess(true);
+      } else if (timedOut) {
+        // Timed out without confirmed access - check by email as last resort
+        const isAdminEmail = user.email === 'admin_edufutura@gmail.com' || user.email === 'ntlemezal35@gmail.com';
+        if (isAdminEmail) {
+          console.log('[AdminLayout] Timeout fallback: granting access based on email');
+          setHasCheckedAccess(true);
+        } else {
+          console.warn('[AdminLayout] Timed out, no admin access, redirecting to dashboard');
+          navigate('/dashboard', { replace: true });
+        }
+      } else {
+        // Role check completed but no admin/educator role found
+        navigate('/dashboard', { replace: true });
+      }
     }
-  }, [user, isAdmin, isEducator, authLoading, roleLoading, navigate, timedOut, hasCheckedAccess]);
+  }, [user, isAdmin, isEducator, authLoading, roleLoading, hasChecked, navigate, timedOut]);
 
   // Close sidebar on route change
   useEffect(() => {
