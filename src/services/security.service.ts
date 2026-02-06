@@ -113,11 +113,18 @@ export const checkAccountLockout = async (email: string): Promise<{
   unlockAt?: Date;
 }> => {
   try {
-    const { data } = await supabase
+    // Use .maybeSingle() instead of .single() to avoid 406 error when no rows exist
+    const { data, error } = await supabase
       .from('account_lockouts')
       .select('unlock_at')
       .eq('email', email)
-      .single();
+      .maybeSingle();
+
+    // If there's a PGRST116 error (no rows), just return not locked
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error checking account lockout:', error);
+      return { isLocked: false };
+    }
 
     if (data) {
       const unlockTime = new Date(data.unlock_at);
