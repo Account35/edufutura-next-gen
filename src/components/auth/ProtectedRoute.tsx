@@ -5,7 +5,10 @@ import { useAdminRole } from '@/hooks/useAdminRole';
 import { DashboardSkeleton, OnboardingSkeleton, GenericPageSkeleton } from '@/components/ui/PageSkeletons';
 
 // Safety timeouts to prevent infinite loading
-const PROTECTED_ROUTE_TIMEOUT_MS = 6000; // 6 seconds max wait for all checks
+const PROTECTED_ROUTE_TIMEOUT_MS = 8000; // 8 seconds max wait for all checks
+
+// Known admin emails for fallback
+const ADMIN_EMAILS = ['admin_edufutura@gmail.com', 'ntlemezal35@gmail.com'];
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -32,7 +35,7 @@ export const ProtectedRoute = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { user, userProfile, loading: authLoading } = useAuth();
-  const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
+  const { isAdmin, isEducator, loading: roleLoading, hasChecked } = useAdminRole();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [checkComplete, setCheckComplete] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
@@ -102,16 +105,21 @@ export const ProtectedRoute = ({
     }
 
     // Check admin role
-    if (requireAdmin && !isAdmin) {
-      // If timed out, we might not have accurate role info - redirect to dashboard as fallback
-      navigate('/dashboard', { replace: true });
-      return;
+    if (requireAdmin) {
+      const hasAdminAccess = isAdmin || (timedOut && user?.email && ADMIN_EMAILS.includes(user.email));
+      if (!hasAdminAccess) {
+        navigate('/dashboard', { replace: true });
+        return;
+      }
     }
 
     // Check educator role (admins have educator access too)
-    if (requireEducator && !isAdmin && !isEducator) {
-      navigate('/dashboard', { replace: true });
-      return;
+    if (requireEducator) {
+      const hasEducatorAccess = isAdmin || isEducator || (timedOut && user?.email && ADMIN_EMAILS.includes(user.email));
+      if (!hasEducatorAccess) {
+        navigate('/dashboard', { replace: true });
+        return;
+      }
     }
 
     // All checks passed

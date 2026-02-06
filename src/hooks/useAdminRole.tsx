@@ -2,16 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
-const ROLE_CHECK_TIMEOUT_MS = 4000; // 4 second timeout for role checks (reduced for faster fallback)
+const ROLE_CHECK_TIMEOUT_MS = 5000; // 5 second timeout for role checks
 
 export const useAdminRole = () => {
   const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isEducator, setIsEducator] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [hasChecked, setHasChecked] = useState(false);
   const lastCheckedUserId = useRef<string | null>(null);
   const roleCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const hasCompletedCheck = useRef(false);
 
   useEffect(() => {
     // Clear any pending timeout
@@ -32,13 +32,13 @@ export const useAdminRole = () => {
       setIsAdmin(false);
       setIsEducator(false);
       setLoading(false);
+      setHasChecked(true);
       lastCheckedUserId.current = null;
-      hasCompletedCheck.current = false;
       return;
     }
 
-    // Skip if we already checked this user and have valid results
-    if (lastCheckedUserId.current === user.id && hasCompletedCheck.current) {
+    // Skip if we already checked this user
+    if (lastCheckedUserId.current === user.id && hasChecked) {
       console.log('[AdminRole] Already checked user, skipping');
       if (loading) setLoading(false);
       return;
@@ -49,14 +49,12 @@ export const useAdminRole = () => {
 
     const checkRoles = async () => {
       try {
-        // Set a timeout to prevent infinite loading
+        // Set a timeout to prevent infinite loading - but DON'T default to non-admin
         roleCheckTimeoutRef.current = setTimeout(() => {
-          console.warn('[AdminRole] Role check timeout, defaulting to non-admin');
-          setIsAdmin(false);
-          setIsEducator(false);
+          console.warn('[AdminRole] Role check timeout, completing with current state');
           setLoading(false);
+          setHasChecked(true);
           lastCheckedUserId.current = user.id;
-          hasCompletedCheck.current = true;
         }, ROLE_CHECK_TIMEOUT_MS);
 
         console.time('[AdminRole] checkRoles');
@@ -74,7 +72,9 @@ export const useAdminRole = () => {
 
         if (error) {
           console.error('Error fetching roles:', error);
-          setIsAdmin(false);
+          // On error, check if user email is admin email as fallback
+          const isAdminEmail = user.email === 'admin_edufutura@gmail.com' || user.email === 'ntlemezal35@gmail.com';
+          setIsAdmin(isAdminEmail);
           setIsEducator(false);
         } else {
           const roles = data?.map(r => r.role) || [];
@@ -83,12 +83,14 @@ export const useAdminRole = () => {
           setIsEducator(roles.includes('educator'));
         }
         lastCheckedUserId.current = user.id;
-        hasCompletedCheck.current = true;
+        setHasChecked(true);
       } catch (error) {
         console.error('Error checking roles:', error);
-        setIsAdmin(false);
+        // On error, check email as fallback
+        const isAdminEmail = user.email === 'admin_edufutura@gmail.com' || user.email === 'ntlemezal35@gmail.com';
+        setIsAdmin(isAdminEmail);
         setIsEducator(false);
-        hasCompletedCheck.current = true;
+        setHasChecked(true);
       } finally {
         setLoading(false);
       }
@@ -107,6 +109,7 @@ export const useAdminRole = () => {
     isAdmin,
     isEducator,
     isAdminOrEducator: isAdmin || isEducator,
-    loading: authLoading || loading
+    loading: authLoading || loading,
+    hasChecked
   };
 };
