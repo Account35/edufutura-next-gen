@@ -120,14 +120,22 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hasCheckedAccess, setHasCheckedAccess] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !roleLoading) {
-      if (!user) {
-        navigate('/');
-      } else if (!isAdmin && !isEducator) {
-        navigate('/dashboard');
-      }
+    // Wait for both auth and role to finish loading
+    if (authLoading || roleLoading) {
+      return;
+    }
+
+    // Now we can check access
+    if (!user) {
+      navigate('/');
+    } else if (!isAdmin && !isEducator) {
+      navigate('/dashboard');
+    } else {
+      // User has access
+      setHasCheckedAccess(true);
     }
   }, [user, isAdmin, isEducator, authLoading, roleLoading, navigate]);
 
@@ -145,10 +153,12 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
     navigate(path);
   }, [navigate]);
 
-  if (authLoading || roleLoading) {
+  // Show loader while checking access
+  if (authLoading || roleLoading || !hasCheckedAccess) {
     return <FullPageLoader message="Loading admin panel..." />;
   }
 
+  // This shouldn't render because we navigate away, but just in case
   if (!isAdmin && !isEducator) {
     return null;
   }
