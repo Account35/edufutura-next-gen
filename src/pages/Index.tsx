@@ -10,25 +10,41 @@ import { useAdminRole } from "@/hooks/useAdminRole";
 import { Loader2 } from "lucide-react";
  import { prefetchRoutes } from "@/hooks/usePrefetch";
 
+const INDEX_LOADING_TIMEOUT_MS = 5000; // 5 second timeout for index page loading
+
 const Index = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   const { user, userProfile, loading } = useAuth();
   const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
   const navigate = useNavigate();
+
+  // Safety timeout for the loading state on the index page
+  useEffect(() => {
+    if (!loading && user && !userProfile) {
+      const timeout = setTimeout(() => {
+        console.warn('[Index] Profile loading timed out, showing landing page');
+        setLoadingTimedOut(true);
+      }, INDEX_LOADING_TIMEOUT_MS);
+      return () => clearTimeout(timeout);
+    }
+    // Reset timeout flag if profile loads
+    if (userProfile) {
+      setLoadingTimedOut(false);
+    }
+  }, [loading, user, userProfile]);
 
   useEffect(() => {
     // Don't redirect while auth is still loading
     if (loading) return;
     
-    // If user exists but profile is still loading, wait a bit more
-    // But add a timeout to prevent infinite loading
-    if (user && !userProfile) {
-      // Profile is being created/loaded - wait for it
+    // If user exists but profile is still loading, wait briefly (unless timed out)
+    if (user && !userProfile && !loadingTimedOut) {
       return;
     }
     
-    // Don't redirect while role is loading (only if user exists)
-    if (user && roleLoading) return;
+    // Don't redirect while role is loading (only if user exists and has profile)
+    if (user && userProfile && roleLoading) return;
 
     // If user is authenticated and profile is loaded, redirect
     if (user && userProfile) {
@@ -49,7 +65,7 @@ const Index = () => {
         navigate('/dashboard');
       }
     }
-  }, [user, userProfile, loading, roleLoading, isAdmin, isEducator, navigate]);
+  }, [user, userProfile, loading, roleLoading, isAdmin, isEducator, navigate, loadingTimedOut]);
  
    // Prefetch likely routes on landing page load
    useEffect(() => {
@@ -63,9 +79,9 @@ const Index = () => {
   // Show loading state while checking auth
   // Only show loading if:
   // 1. Auth is loading, OR
-  // 2. User exists but profile is still being created/loaded, OR
-  // 3. User exists and role is loading
-  const isLoading = loading || (user && !userProfile) || (user && roleLoading);
+  // 2. User exists but profile is still being created/loaded (and not timed out), OR
+  // 3. User exists with profile and role is loading
+  const isLoading = loading || (user && !userProfile && !loadingTimedOut) || (user && userProfile && roleLoading);
   
   if (isLoading) {
     return (
