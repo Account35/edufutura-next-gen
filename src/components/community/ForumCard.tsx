@@ -73,7 +73,7 @@ export function ForumCard({ forum }: ForumCardProps) {
         </div>
 
         <Button 
-          className="w-full bg-secondary hover:bg-secondary/90 text-white"
+          className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground"
           onClick={handleEnterForum}
         >
           Enter Forum

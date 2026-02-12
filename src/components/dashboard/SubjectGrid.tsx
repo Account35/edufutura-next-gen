@@ -60,7 +60,7 @@ export const SubjectGrid = ({ subjects, isPremium, onUpgrade }: SubjectGridProps
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-serif font-bold text-primary">Your Subjects</h2>
-        <Button variant="outline" disabled className="border-secondary hover:bg-secondary/10">
+        <Button variant="outline" className="border-secondary hover:bg-secondary/10" onClick={() => navigate('/subjects')}>
           Add Subject
         </Button>
       </div>

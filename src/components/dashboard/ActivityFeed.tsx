@@ -34,7 +34,7 @@ export const ActivityFeed = ({ activities }: ActivityFeedProps) => {
   const getActivityColor = (type: string) => {
     switch (type) {
       case 'chapter_completed':
-        return 'text-green-600';
+        return 'text-secondary';
       case 'badge_earned':
         return 'text-accent';
       case 'quiz_completed':

@@ -39,7 +39,7 @@ export function PostCard({ post, forumSubject }: PostCardProps) {
   const borderColor = post.is_pinned 
     ? 'border-l-secondary' 
     : hasSolution 
-    ? 'border-l-green-500' 
+    ? 'border-l-accent' 
     : 'border-l-border';
 
   return (
@@ -50,7 +50,7 @@ export function PostCard({ post, forumSubject }: PostCardProps) {
       <div className="flex gap-4">
         <Avatar className="w-10 h-10 flex-shrink-0">
           <AvatarImage src={post.users.profile_picture_url || undefined} />
-          <AvatarFallback className="bg-secondary text-white">
+          <AvatarFallback className="bg-secondary text-secondary-foreground">
             {authorInitials}
           </AvatarFallback>
         </Avatar>
@@ -64,7 +64,7 @@ export function PostCard({ post, forumSubject }: PostCardProps) {
               {post.post_title}
             </h3>
             {hasSolution && (
-              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-1" />
+              <CheckCircle className="w-5 h-5 text-accent flex-shrink-0 mt-1" />
             )}
           </div>
 

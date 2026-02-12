@@ -119,7 +119,7 @@ export function ReplyCard({
         <div className="flex gap-4">
           <Avatar className="w-10 h-10 flex-shrink-0">
             <AvatarImage src={reply.users.profile_picture_url || undefined} />
-            <AvatarFallback className="bg-secondary text-white">
+            <AvatarFallback className="bg-secondary text-secondary-foreground">
               {authorInitials}
             </AvatarFallback>
           </Avatar>
@@ -139,7 +139,7 @@ export function ReplyCard({
                 </div>
               </div>
               {reply.is_solution && (
-                <Badge className="bg-green-500 text-white">
+                <Badge className="bg-accent text-accent-foreground">
                   <CheckCircle className="w-3 h-3 mr-1" />
                   Solution
                 </Badge>

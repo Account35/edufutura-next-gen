@@ -24,7 +24,7 @@ const premiumTierFeatures = [
 
 export const PricingSection = ({ onGetStarted }: PricingSectionProps) => {
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background to-muted/20">
+    <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background to-muted/20">
       <div className="container mx-auto">
         {/* Section header */}
         <div className="text-center mb-16 space-y-4">
