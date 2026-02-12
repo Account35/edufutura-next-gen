@@ -72,10 +72,44 @@ const VerifyCertificate = () => {
     setCertificate(null);
 
     try {
-      // Phase 6 not implemented yet - certificates table doesn't exist
-      // Always show invalid for now
-      setVerificationState("invalid");
-      
+      // Check the achievements table for the badge_id match
+      const { data, error } = await supabase
+        .from('achievements')
+        .select('id, badge_id, badge_name, badge_type, badge_description, subject_name, icon_url, earned_at, user_id')
+        .eq('badge_id', code)
+        .eq('badge_type', 'certificate')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Certificate verification error:', error);
+        setVerificationState("invalid");
+      } else if (data) {
+        // Fetch student info
+        const { data: studentData } = await supabase
+          .from('users')
+          .select('full_name, grade_level')
+          .eq('id', data.user_id)
+          .maybeSingle();
+
+        setCertificate({
+          id: data.id,
+          certificate_type: data.badge_type,
+          subject_name: data.subject_name,
+          achievement_title: data.badge_name,
+          issue_date: data.earned_at,
+          verification_code: data.badge_id,
+          certificate_pdf_url: data.icon_url,
+          status: 'valid',
+          metadata: { description: data.badge_description },
+          student_name: studentData?.full_name || 'Student',
+          student_grade: studentData?.grade_level || null,
+          school_name: null,
+        });
+        setVerificationState("valid");
+      } else {
+        setVerificationState("invalid");
+      }
+
       setSearchParams((prev) => {
         const params = new URLSearchParams(prev);
         params.set("code", code);
