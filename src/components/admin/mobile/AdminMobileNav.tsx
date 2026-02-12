@@ -29,8 +29,10 @@ const priorityItems = [
 // Additional items shown in "More" sheet
 const moreItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/curriculum', label: 'Curriculum', icon: BookOpen },
+  { href: '/admin/content', label: 'Content', icon: BookOpen },
+  { href: '/admin/curriculum', label: 'Curriculum', icon: GraduationCap },
   { href: '/admin/quizzes', label: 'Quizzes', icon: FileQuestion },
+  { href: '/admin/onboarding', label: 'Onboarding', icon: GraduationCap },
   { href: '/admin/audit-log', label: 'Audit Log', icon: ScrollText },
   { href: '/admin/jobs', label: 'Jobs', icon: Briefcase },
   { href: '/admin/settings', label: 'Settings', icon: Settings },

@@ -121,13 +121,13 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
       >
         {/* Handle Bar (mobile only) */}
         <div className="flex justify-center pt-3 pb-2 lg:hidden">
-          <div className="w-12 h-1 bg-gray-300 rounded-full" />
+          <div className="w-12 h-1 bg-muted-foreground/30 rounded-full" />
         </div>
 
         {/* Header */}
-        <div className="px-6 pb-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-6 pb-4 border-b border-border flex items-center justify-between">
           <h2 className="text-lg font-semibold text-primary">More</h2>
-          <button onClick={onClose} className="lg:flex hidden p-2 hover:bg-gray-100 rounded-full">
+          <button onClick={onClose} className="lg:flex hidden p-2 hover:bg-muted rounded-full">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -157,10 +157,10 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
           </div>
 
           {/* Logout */}
-          <div className="pt-4 border-t border-gray-100 mt-4">
+          <div className="pt-4 border-t border-border mt-4">
             <button
               onClick={handleSignOut}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-red-50 text-red-600"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-destructive/10 text-destructive"
             >
               <LogOut className="h-5 w-5 flex-shrink-0" />
               <span className="flex-1 text-left font-medium">Logout</span>

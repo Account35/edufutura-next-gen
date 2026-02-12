@@ -63,7 +63,7 @@ export const CareerBuddySection = () => {
     <Card className="mt-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <GraduationCap className="h-5 w-5 text-orange-500" />
+          <GraduationCap className="h-5 w-5 text-secondary" />
           Application Buddies
         </CardTitle>
         <p className="text-sm text-muted-foreground">
@@ -74,12 +74,12 @@ export const CareerBuddySection = () => {
         {buddies.map((buddy) => (
           <div
             key={buddy.id}
-            className="p-4 rounded-lg border hover:border-orange-300 transition-colors cursor-pointer"
-            onClick={() => navigate(`/profile/${buddy.user_id}`)}
+            className="p-4 rounded-lg border hover:border-secondary/50 transition-colors cursor-pointer"
+            onClick={() => navigate('/profile')}
           >
             <div className="flex items-start gap-3">
-              <div className="h-12 w-12 rounded-full bg-orange-100 flex items-center justify-center">
-                <GraduationCap className="h-6 w-6 text-orange-500" />
+              <div className="h-12 w-12 rounded-full bg-secondary/10 flex items-center justify-center">
+                <GraduationCap className="h-6 w-6 text-secondary" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -91,7 +91,7 @@ export const CareerBuddySection = () => {
                 <p className="text-sm text-muted-foreground">Grade {buddy.grade_level}</p>
                 {buddy.common_institutions.length > 0 && (
                   <div className="flex items-center gap-1 mt-2">
-                    <MapPin className="h-3 w-3 text-orange-500" />
+                    <MapPin className="h-3 w-3 text-secondary" />
                     <p className="text-xs text-muted-foreground">
                       Also applying to {buddy.common_institutions.join(', ')}
                     </p>
