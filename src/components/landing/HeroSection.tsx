@@ -46,6 +46,9 @@ export const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
               <Button 
                 size="lg" 
                 variant="outline"
+                onClick={() => {
+                  document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+                }}
                 className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground font-semibold text-lg px-8 py-6 rounded-lg transition-all duration-300"
               >
                 How It Works

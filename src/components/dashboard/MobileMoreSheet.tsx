@@ -106,7 +106,7 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
       <div
         ref={sheetRef}
         className={cn(
-          'fixed bg-white shadow-2xl transition-transform duration-300 ease-out',
+          'fixed bg-background shadow-2xl transition-transform duration-300 ease-out',
           'lg:bottom-20 lg:left-4 lg:w-80 lg:rounded-2xl',
           'bottom-0 left-0 right-0 rounded-t-3xl lg:translate-y-0',
           isOpen && dragY === 0 ? 'translate-y-0' : 'translate-y-full'
@@ -146,7 +146,7 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
                   <button
                     key={item.id}
                     onClick={item.action}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-secondary/10 text-gray-700"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-secondary/10 text-foreground"
                   >
                     <Icon className="h-5 w-5 flex-shrink-0" />
                     <span className="flex-1 text-left font-medium">{item.label}</span>

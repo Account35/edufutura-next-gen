@@ -54,7 +54,7 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
   return (
     <>
       {/* Desktop Side Navigation */}
-      <nav className="hidden lg:flex fixed left-0 top-0 bottom-0 w-20 bg-white border-r border-border z-50 flex-col items-center py-6 gap-4">
+      <nav className="hidden lg:flex fixed left-0 top-0 bottom-0 w-20 bg-background border-r border-border z-50 flex-col items-center py-6 gap-4">
         {allNavItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
@@ -67,7 +67,7 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
                 'flex flex-col items-center gap-1 p-2 rounded-lg min-h-[56px] min-w-[56px] transition-all duration-200',
                 active 
                   ? 'bg-secondary/10 text-secondary' 
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-foreground'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
               aria-label={item.label}
             >
@@ -85,7 +85,7 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
         {/* More Menu Button for desktop */}
         <button
           onClick={onMoreClick}
-          className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[56px] min-w-[56px] text-gray-600 hover:bg-gray-100 hover:text-foreground transition-all duration-200"
+          className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[56px] min-w-[56px] text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200"
           aria-label="More Options"
         >
           <Menu className="h-5 w-5" />
@@ -97,7 +97,7 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
           <button
             onClick={handleSignOut}
             title="Logout"
-            className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[56px] min-w-[56px] text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200"
+            className="flex flex-col items-center gap-1 p-2 rounded-lg min-h-[56px] min-w-[56px] text-destructive hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
             aria-label="Logout"
           >
             <LogOut className="h-5 w-5" />
@@ -107,7 +107,7 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
       </nav>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-border z-50 lg:hidden bottom-nav safe-area-pb">
+      <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 lg:hidden bottom-nav safe-area-pb">
         <div className="flex items-center justify-around py-2">
           {primaryNavItems.map((item) => {
             const Icon = item.icon;
@@ -121,7 +121,7 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
                   'relative flex flex-col items-center gap-1 px-4 py-2 min-h-[44px] transition-colors duration-200 active:scale-95',
                   active 
                     ? 'text-secondary' 
-                    : 'text-gray-600 hover:text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 )}
                 aria-label={item.label}
               >
@@ -144,7 +144,7 @@ export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
           {/* Hamburger Menu for mobile */}
           <button
             onClick={onMoreClick}
-            className="relative flex flex-col items-center gap-1 px-4 py-2 min-h-[44px] text-gray-600 hover:text-foreground transition-colors duration-200 active:scale-95"
+            className="relative flex flex-col items-center gap-1 px-4 py-2 min-h-[44px] text-muted-foreground hover:text-foreground transition-colors duration-200 active:scale-95"
             aria-label="More"
           >
             <Menu className="h-6 w-6" />

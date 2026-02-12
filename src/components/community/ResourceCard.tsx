@@ -51,7 +51,7 @@ export default function ResourceCard({ resource }: ResourceCardProps) {
   return (
     <div
       onClick={() => navigate(`/community/resources/${resource.id}`)}
-      className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer border-t-4 overflow-hidden"
+      className="bg-card rounded-xl shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer border-t-4 overflow-hidden"
       style={{ borderTopColor: SUBJECT_COLORS[resource.subject_name] || '#6B7280' }}
     >
       {/* Preview Thumbnail */}

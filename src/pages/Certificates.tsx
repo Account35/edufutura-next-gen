@@ -59,14 +59,12 @@ const Certificates = () => {
   };
 
   const handleDownload = async (certificate: Certificate) => {
-    // For now, open the verification page which shows the certificate
-    // In a full implementation, this would download the PDF from storage
-    const verificationUrl = `/verify-certificate/${certificate.badge_id}`;
-    window.open(verificationUrl, '_blank');
+    // Open the verification page which shows the certificate
+    window.open(`/verify/${certificate.badge_id}`, '_blank');
   };
 
   const handleVerify = (certificate: Certificate) => {
-    navigate(`/verify-certificate/${certificate.badge_id}`);
+    navigate(`/verify/${certificate.badge_id}`);
   };
 
   if (loading) {
