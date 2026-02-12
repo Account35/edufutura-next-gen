@@ -27,16 +27,16 @@ import { cn } from '@/lib/utils';
 
 const getNotificationIcon = (type: string, iconName: string) => {
   const iconMap: Record<string, React.ReactNode> = {
-    achievement: <Trophy className="h-5 w-5 text-yellow-500" />,
-    quiz_reminder: <BookOpen className="h-5 w-5 text-blue-500" />,
-    forum_reply: <MessageSquare className="h-5 w-5 text-green-500" />,
-    study_streak: <Flame className="h-5 w-5 text-orange-500" />,
-    buddy_request: <Users className="h-5 w-5 text-purple-500" />,
-    group_message: <Users className="h-5 w-5 text-indigo-500" />,
-    career_deadline: <GraduationCap className="h-5 w-5 text-red-500" />,
-    admin_announcement: <AlertCircle className="h-5 w-5 text-red-600" />,
-    system: <Info className="h-5 w-5 text-gray-500" />,
-    calendar: <Calendar className="h-5 w-5 text-teal-500" />,
+    achievement: <Trophy className="h-5 w-5 text-secondary" />,
+    quiz_reminder: <BookOpen className="h-5 w-5 text-primary" />,
+    forum_reply: <MessageSquare className="h-5 w-5 text-accent" />,
+    study_streak: <Flame className="h-5 w-5 text-destructive" />,
+    buddy_request: <Users className="h-5 w-5 text-primary" />,
+    group_message: <Users className="h-5 w-5 text-primary" />,
+    career_deadline: <GraduationCap className="h-5 w-5 text-destructive" />,
+    admin_announcement: <AlertCircle className="h-5 w-5 text-destructive" />,
+    system: <Info className="h-5 w-5 text-muted-foreground" />,
+    calendar: <Calendar className="h-5 w-5 text-accent" />,
   };
 
   return iconMap[type] || iconMap[iconName] || <Bell className="h-5 w-5 text-muted-foreground" />;
@@ -45,9 +45,9 @@ const getNotificationIcon = (type: string, iconName: string) => {
 const getPriorityStyles = (priority: string) => {
   switch (priority) {
     case 'urgent':
-      return 'border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950/20';
+      return 'border-l-4 border-l-destructive bg-destructive/5';
     case 'high':
-      return 'border-l-4 border-l-orange-500 bg-orange-50 dark:bg-orange-950/20';
+      return 'border-l-4 border-l-accent bg-accent/5';
     default:
       return '';
   }

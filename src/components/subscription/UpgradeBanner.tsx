@@ -25,7 +25,7 @@ export const UpgradeBanner = ({ onUpgrade }: UpgradeBannerProps) => {
         </div>
         <Button
           onClick={onUpgrade}
-          className="bg-accent hover:bg-accent/90 text-white shadow-lg"
+          className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg"
         >
           Upgrade Now
         </Button>

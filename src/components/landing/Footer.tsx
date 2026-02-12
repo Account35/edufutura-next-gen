@@ -58,7 +58,7 @@ export const Footer = () => {
         {/* Bottom bar */}
         <div className="border-t border-primary-foreground/20 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-sm text-primary-foreground/60">
-            © 2024 EduFutura. All rights reserved.
+            © {new Date().getFullYear()} EduFutura. All rights reserved.
           </p>
           <div className="flex gap-6">
             <a href="#" className="text-primary-foreground/60 hover:text-secondary transition-colors">

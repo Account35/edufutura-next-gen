@@ -97,7 +97,7 @@ export const GradeSelector = ({ userId, currentGrade, currentSchoolId }: GradeSe
             variant={grade === currentGrade ? 'default' : 'outline'}
             className={`min-h-[44px] ${
               grade === currentGrade
-                ? 'bg-secondary text-white hover:bg-secondary/90'
+                ? 'bg-secondary text-secondary-foreground hover:bg-secondary/90'
                 : 'hover:border-primary'
             }`}
             onClick={() => handleGradeClick(grade)}

@@ -23,7 +23,7 @@ export const CAPSBadge = ({
   if (!aligned && !code) return null;
 
   const badge = (
-    <Badge className={`bg-secondary text-white hover:bg-secondary/90 ${className}`}>
+    <Badge className={`bg-secondary text-secondary-foreground hover:bg-secondary/90 ${className}`}>
       <CheckCircle className="h-3 w-3 mr-1" />
       {code ? `CAPS ${code}` : 'CAPS Aligned'}
     </Badge>

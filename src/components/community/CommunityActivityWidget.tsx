@@ -178,7 +178,7 @@ export const CommunityActivityWidget = () => {
         {activity.unreadMessages > 0 && (
           <div 
             className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
-            onClick={() => navigate('/community/groups')}
+            onClick={() => navigate('/community/forums')}
           >
             <div className="flex items-center gap-3">
               <MessageSquare className="h-5 w-5 text-primary" />
@@ -187,7 +187,7 @@ export const CommunityActivityWidget = () => {
                 <p className="text-xs text-muted-foreground">In your study groups</p>
               </div>
             </div>
-            <Badge className="bg-secondary text-white">{activity.unreadMessages}</Badge>
+            <Badge className="bg-secondary text-secondary-foreground">{activity.unreadMessages}</Badge>
           </div>
         )}
 
@@ -203,7 +203,7 @@ export const CommunityActivityWidget = () => {
                 <p className="text-xs text-muted-foreground">Accept or decline</p>
               </div>
             </div>
-            <Badge className="bg-secondary text-white">{activity.buddyRequests}</Badge>
+            <Badge className="bg-secondary text-secondary-foreground">{activity.buddyRequests}</Badge>
           </div>
         )}
 
@@ -232,7 +232,7 @@ export const CommunityActivityWidget = () => {
               <div
                 key={mention.id}
                 className="p-2 rounded-lg bg-muted/30 hover:bg-muted cursor-pointer transition-colors"
-                onClick={() => navigate(`/community/forums/post/${mention.id}`)}
+                onClick={() => navigate(`/community/forums`)}
               >
                 <p className="text-sm line-clamp-1">{mention.post_title}</p>
                 <p className="text-xs text-muted-foreground">

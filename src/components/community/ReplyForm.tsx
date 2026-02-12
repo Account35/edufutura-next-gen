@@ -76,7 +76,7 @@ export function ReplyForm({
         <Button 
           onClick={handleSubmit}
           disabled={submitting || content.trim().length < 10}
-          className="bg-secondary hover:bg-secondary/90 text-white"
+          className="bg-secondary hover:bg-secondary/90 text-secondary-foreground"
         >
           {submitting ? 'Posting...' : 'Post Reply'}
         </Button>

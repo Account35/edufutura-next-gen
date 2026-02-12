@@ -43,7 +43,7 @@ export function OfflineBanner() {
           exit={{ opacity: 0, y: -20 }}
           className={`fixed top-0 left-0 right-0 z-50 px-4 py-3 ${
             isOnline 
-              ? 'bg-green-600 text-white' 
+              ? 'bg-accent text-accent-foreground' 
               : 'bg-amber-500 text-amber-950'
           }`}
         >

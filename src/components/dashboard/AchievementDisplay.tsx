@@ -142,7 +142,7 @@ export const AchievementDisplay = ({ achievements }: AchievementDisplayProps) =>
         <Button 
           variant="link" 
           className="w-full text-secondary hover:underline mt-4"
-          onClick={() => window.location.href = '/achievements'}
+          onClick={() => window.location.href = '/certificates'}
         >
           View All Achievements
         </Button>
