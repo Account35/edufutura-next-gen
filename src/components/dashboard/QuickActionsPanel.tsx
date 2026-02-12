@@ -99,15 +99,15 @@ export const QuickActionsPanel = ({
       label: 'Explore Community',
       description: 'Connect with students',
       isPremium: false,
-      onClick: () => window.location.href = '/community/forums',
+      onClick: onStudyGroup,
     },
     {
       id: 'study-group',
       icon: Users,
-      label: 'Study Groups',
+      label: 'Study Buddies',
       description: 'Learn together',
       isPremium: false,
-      onClick: () => window.location.href = '/community/groups',
+      onClick: onStudyGroup,
     },
     {
       id: 'assessment',

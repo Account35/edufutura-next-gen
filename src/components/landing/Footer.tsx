@@ -23,7 +23,7 @@ export const Footer = () => {
             <ul className="space-y-2 text-sm text-primary-foreground/80">
               <li><a href="#features" className="hover:text-secondary transition-colors">Features</a></li>
               <li><a href="#pricing" className="hover:text-secondary transition-colors">Pricing</a></li>
-              <li><a href="#" className="hover:text-secondary transition-colors">Curriculum</a></li>
+              <li><a href="#features" className="hover:text-secondary transition-colors">Curriculum</a></li>
               <li>
                 <Link to="/install" className="hover:text-secondary transition-colors flex items-center gap-1">
                   <Download className="w-3 h-3" />

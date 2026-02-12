@@ -34,11 +34,13 @@ interface AdminLayoutProps {
 
 const sidebarItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/curriculum', label: 'Curriculum', icon: BookOpen },
+  { href: '/admin/content', label: 'Content', icon: BookOpen },
+  { href: '/admin/curriculum', label: 'Curriculum', icon: GraduationCap },
   { href: '/admin/quizzes', label: 'Quizzes', icon: FileQuestion },
   { href: '/admin/moderation', label: 'Moderation', icon: Shield },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/onboarding', label: 'Onboarding', icon: Users },
   { href: '/admin/support', label: 'Support', icon: Headphones },
   { href: '/admin/audit-log', label: 'Audit Log', icon: ScrollText },
   { href: '/admin/jobs', label: 'Jobs', icon: Briefcase },
