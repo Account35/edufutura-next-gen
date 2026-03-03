@@ -59,72 +59,81 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return profileLoadRef.current.promise;
     }
 
-    const promise = (async (): Promise<Tables<'users'> | null> => {
-      console.time('[Auth] loadUserProfile');
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', currentUser.id)
-        .maybeSingle();
-      console.timeEnd('[Auth] loadUserProfile');
+    let inFlightPromise: Promise<Tables<'users'> | null>;
 
-      if (error) {
-        console.error('Error loading user profile:', error);
-        return null;
-      }
+    inFlightPromise = (async (): Promise<Tables<'users'> | null> => {
+      try {
+        console.time('[Auth] loadUserProfile');
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', currentUser.id)
+          .maybeSingle();
+        console.timeEnd('[Auth] loadUserProfile');
 
-      // If profile exists, return it
-      if (data) {
-        console.log('[Auth] Profile fetched successfully');
-        return data;
-      }
-
-      // If profile doesn't exist yet (common cause of onboarding spinner), create a minimal record.
-      const fullNameFromMeta =
-        (currentUser.user_metadata?.full_name as string | undefined) ||
-        (currentUser.user_metadata?.name as string | undefined);
-
-      const fallbackFullName =
-        fullNameFromMeta || currentUser.email?.split('@')[0] || 'Student';
-
-      const { data: created, error: createError } = await supabase
-        .from('users')
-        .insert({
-          id: currentUser.id,
-          email: currentUser.email,
-          full_name: fallbackFullName,
-          onboarding_completed: false,
-        })
-        .select('*')
-        .single();
-
-      if (createError) {
-        // If something else created it in the meantime, re-fetch once.
-        const isDuplicate = (createError as any)?.code === '23505';
-        if (isDuplicate) {
-          const { data: refetched, error: refetchError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', currentUser.id)
-            .maybeSingle();
-
-          if (refetchError) {
-            console.error('Error reloading user profile after duplicate:', refetchError);
-            return null;
-          }
-
-          return refetched;
+        if (error) {
+          console.error('Error loading user profile:', error);
+          return null;
         }
 
-        console.error('Error creating user profile:', createError);
-        return null;
-      }
+        // If profile exists, return it
+        if (data) {
+          console.log('[Auth] Profile fetched successfully');
+          return data;
+        }
 
-      return created;
+        // If profile doesn't exist yet (common cause of onboarding spinner), create a minimal record.
+        const fullNameFromMeta =
+          (currentUser.user_metadata?.full_name as string | undefined) ||
+          (currentUser.user_metadata?.name as string | undefined);
+
+        const fallbackFullName =
+          fullNameFromMeta || currentUser.email?.split('@')[0] || 'Student';
+
+        const { data: created, error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: currentUser.id,
+            email: currentUser.email,
+            full_name: fallbackFullName,
+            onboarding_completed: false,
+          })
+          .select('*')
+          .single();
+
+        if (createError) {
+          // If something else created it in the meantime, re-fetch once.
+          const isDuplicate = (createError as any)?.code === '23505';
+          if (isDuplicate) {
+            const { data: refetched, error: refetchError } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', currentUser.id)
+              .maybeSingle();
+
+            if (refetchError) {
+              console.error('Error reloading user profile after duplicate:', refetchError);
+              return null;
+            }
+
+            return refetched;
+          }
+
+          console.error('Error creating user profile:', createError);
+          return null;
+        }
+
+        return created;
+      } finally {
+        // Deduplicate only while request is in-flight.
+        if (profileLoadRef.current?.promise === inFlightPromise) {
+          profileLoadRef.current = null;
+        }
+      }
     })();
 
-    profileLoadRef.current = { userId: currentUser.id, promise };
-    return promise;
+    profileLoadRef.current = { userId: currentUser.id, promise: inFlightPromise };
+    return inFlightPromise;
   };
 
   const resetInactivityTimer = () => {
@@ -313,6 +322,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(null);
       setUserProfile(null);
       activeUserIdRef.current = null;
+      profileLoadRef.current = null;
 
       if (inactivityTimer) clearTimeout(inactivityTimer);
       if (warningTimer) clearTimeout(warningTimer);
