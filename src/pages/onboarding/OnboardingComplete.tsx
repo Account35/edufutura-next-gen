@@ -18,7 +18,7 @@
  
  export default function OnboardingComplete() {
    const navigate = useNavigate();
-   const { user, userProfile, loading } = useAuth();
+   const { user, userProfile, loading, refreshProfile } = useAuth();
    const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
    const [isCompleting, setIsCompleting] = useState(false);
  
@@ -28,36 +28,39 @@
      }
    }, [user, loading, navigate]);
  
-   const handleComplete = async () => {
-     if (!user) return;
- 
-     setIsCompleting(true);
-     try {
-       const { error } = await supabase
-         .from('users')
-         .update({
-           onboarding_completed: true,
-           onboarding_completed_at: new Date().toISOString(),
-         })
-         .eq('id', user.id);
- 
-       if (error) throw error;
- 
-       toast.success('Welcome to EduFutura! 🎉');
- 
-       // Redirect based on role
-       if (isAdmin || isEducator) {
-         navigate('/admin');
-       } else {
-         navigate('/dashboard');
-       }
-     } catch (error) {
-       console.error('Complete error:', error);
-       toast.error('Something went wrong. Please try again.');
-     } finally {
-       setIsCompleting(false);
-     }
-   };
+  const handleComplete = async () => {
+    if (!user) return;
+
+    setIsCompleting(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          onboarding_completed: true,
+          onboarding_completed_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // CRITICAL: Refresh the AuthContext profile so ProtectedRoute sees updated onboarding_completed
+      await refreshProfile();
+
+      toast.success('Welcome to EduFutura! 🎉');
+
+      // Redirect based on role
+      if (isAdmin || isEducator) {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      console.error('Complete error:', error);
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setIsCompleting(false);
+    }
+  };
  
    const selectedSubjects = (userProfile?.subjects_studying as string[]) || [];
  

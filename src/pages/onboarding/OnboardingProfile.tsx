@@ -42,7 +42,7 @@
  
  export default function OnboardingProfile() {
    const navigate = useNavigate();
-   const { user, userProfile, loading } = useAuth();
+   const { user, userProfile, loading, refreshProfile } = useAuth();
  
    const [profilePicture, setProfilePicture] = useState<string | null>(null);
    const [gradeLevel, setGradeLevel] = useState<string>('');
@@ -130,9 +130,10 @@
          })
          .eq('id', user.id);
  
-       if (error) throw error;
- 
-       navigate('/onboarding/subjects');
+        if (error) throw error;
+
+        await refreshProfile();
+        navigate('/onboarding/subjects');
      } catch (error) {
        console.error('Save error:', error);
        toast.error('Failed to save profile');
