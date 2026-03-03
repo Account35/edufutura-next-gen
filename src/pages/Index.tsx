@@ -43,6 +43,13 @@ const Index = () => {
     }
   }, [loading, user, userProfile]);
 
+  // Reset redirect ref when user changes (e.g., sign out then sign in again)
+  useEffect(() => {
+    if (!user) {
+      hasRedirectedRef.current = false;
+    }
+  }, [user]);
+
   useEffect(() => {
     // Don't redirect while auth is still loading
     if (loading) return;

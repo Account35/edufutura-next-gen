@@ -40,7 +40,7 @@
  
  export default function OnboardingPreferences() {
    const navigate = useNavigate();
-   const { user, userProfile, loading } = useAuth();
+   const { user, userProfile, loading, refreshProfile } = useAuth();
  
    const [learningStyle, setLearningStyle] = useState<string>('');
    const [studyPace, setStudyPace] = useState<string>('moderate');
@@ -105,9 +105,10 @@
          .update({ onboarding_step: 4 })
          .eq('id', user.id);
  
-       if (userError) throw userError;
- 
-       navigate('/onboarding/complete');
+        if (userError) throw userError;
+
+        await refreshProfile();
+        navigate('/onboarding/complete');
      } catch (error) {
        console.error('Save error:', error);
        toast.error('Failed to save preferences');

@@ -49,7 +49,7 @@
  
  export default function OnboardingSubjects() {
    const navigate = useNavigate();
-   const { user, userProfile, loading } = useAuth();
+   const { user, userProfile, loading, refreshProfile } = useAuth();
    const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
    const [isSaving, setIsSaving] = useState(false);
  
@@ -102,9 +102,11 @@
          })
          .eq('id', user.id);
  
-       if (error) throw error;
- 
-       // Initialize user_progress for each selected subject
+        if (error) throw error;
+
+        await refreshProfile();
+
+        // Initialize user_progress for each selected subject
        const progressInserts = selectedSubjects.map((subject) => ({
          user_id: user.id,
          subject_name: subject,
