@@ -31,3 +31,29 @@ export function withTimeout<T>(
     if (timeoutId) clearTimeout(timeoutId);
   });
 }
+
+/**
+ * Retry a promise-returning function with simple exponential backoff.
+ */
+export async function retryAsync<T>(
+  fn: () => Promise<T>,
+  attempts = 3,
+  baseDelay = 300
+): Promise<T> {
+  let attempt = 0;
+  let lastError: unknown = null;
+
+  while (attempt < attempts) {
+    attempt += 1;
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      const delay = baseDelay * attempt;
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+
+  throw lastError;
+}

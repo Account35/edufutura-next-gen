@@ -23,6 +23,7 @@ import { LazyLoadFallback } from "@/components/ui/LazyLoadFallback";
  } from "@/components/ui/PageSkeletons";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { PWAUpdatePrompt } from "@/components/pwa/PWAUpdatePrompt";
+import DebugAuthOverlay from '@/components/DebugAuthOverlay';
 
 // Critical path - loaded immediately (essential screens)
 import Index from "./pages/Index";
@@ -263,6 +264,7 @@ const App = () => (
             <Sonner />
             <PWAInstallPrompt minPageViews={3} />
              <RouterProvider router={router} />
+            <DebugAuthOverlay />
           </TooltipProvider>
         </AuthEventsProvider>
       </AuthProvider>

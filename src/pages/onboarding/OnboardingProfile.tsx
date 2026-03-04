@@ -33,6 +33,7 @@
  const GRADES = [
    { value: '6', label: 'Grade 6' },
    { value: '7', label: 'Grade 7' },
+import { retryAsync } from '@/lib/async';
    { value: '8', label: 'Grade 8' },
    { value: '9', label: 'Grade 9' },
    { value: '10', label: 'Grade 10' },
@@ -83,8 +84,36 @@
        toast.error('Please upload an image file');
        return;
      }
+      if (userProfile.bio) setBio(userProfile.bio);
  
      setIsUploading(true);
+
+  // Autosave draft to localStorage
+  useEffect(() => {
+    const key = `onboarding:profile:${user?.id}`;
+    const draft = { profilePicture, gradeLevel, province, bio };
+    try {
+      if (user) localStorage.setItem(key, JSON.stringify(draft));
+    } catch {}
+
+    return () => {};
+  }, [profilePicture, gradeLevel, province, bio, user]);
+
+  useEffect(() => {
+    // Load draft if present
+    if (!user) return;
+    const key = `onboarding:profile:${user.id}`;
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.gradeLevel) setGradeLevel(parsed.gradeLevel);
+        if (parsed.province) setProvince(parsed.province);
+        if (parsed.profilePicture) setProfilePicture(parsed.profilePicture);
+        if (parsed.bio) setBio(parsed.bio);
+      }
+    } catch {}
+  }, [user]);
      try {
        const fileExt = file.name.split('.').pop();
        const filePath = `${user.id}/avatar.${fileExt}`;
@@ -96,20 +125,25 @@
        if (uploadError) throw uploadError;
  
        const { data: urlData } = supabase.storage
-         .from('profile-pictures')
-         .getPublicUrl(filePath);
- 
-       setProfilePicture(urlData.publicUrl);
-       toast.success('Photo uploaded!');
-     } catch (error) {
-       console.error('Upload error:', error);
-       toast.error('Failed to upload photo');
-     } finally {
-       setIsUploading(false);
-     }
-   };
- 
-   const handleContinue = async () => {
+      await retryAsync(async () => {
+        const { error } = await supabase
+          .from('users')
+          .update({
+            grade_level: parseInt(gradeLevel),
+            province: province || null,
+            profile_picture_url: profilePicture,
+            bio: bio || null,
+            onboarding_step: 2,
+          })
+          .eq('id', user.id);
+        if (error) throw error;
+        return true;
+      }, 3, 400);
+
+      await refreshProfile();
+      // Clear draft
+      try { localStorage.removeItem(`onboarding:profile:${user.id}`); } catch {}
+      navigate('/onboarding/subjects');
      if (!user) return;
  
      if (!gradeLevel) {
