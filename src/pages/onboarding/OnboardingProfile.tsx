@@ -32,9 +32,8 @@
  
  const GRADES = [
    { value: '6', label: 'Grade 6' },
-   { value: '7', label: 'Grade 7' },
-import { retryAsync } from '@/lib/async';
-   { value: '8', label: 'Grade 8' },
+  { value: '7', label: 'Grade 7' },
+  { value: '8', label: 'Grade 8' },
    { value: '9', label: 'Grade 9' },
    { value: '10', label: 'Grade 10' },
    { value: '11', label: 'Grade 11' },
@@ -71,110 +70,76 @@ import { retryAsync } from '@/lib/async';
      }
    }, [user, userProfile, loading, navigate]);
  
-   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-     const file = e.target.files?.[0];
-     if (!file || !user) return;
- 
-     if (file.size > 5 * 1024 * 1024) {
-       toast.error('Image must be less than 5MB');
-       return;
-     }
- 
-     if (!file.type.startsWith('image/')) {
-       toast.error('Please upload an image file');
-       return;
-     }
-      if (userProfile.bio) setBio(userProfile.bio);
- 
-     setIsUploading(true);
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
 
-  // Autosave draft to localStorage
-  useEffect(() => {
-    const key = `onboarding:profile:${user?.id}`;
-    const draft = { profilePicture, gradeLevel, province, bio };
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    setIsUploading(true);
     try {
-      if (user) localStorage.setItem(key, JSON.stringify(draft));
-    } catch {}
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/avatar.${fileExt}`;
 
-    return () => {};
-  }, [profilePicture, gradeLevel, province, bio, user]);
+      const { error: uploadError } = await supabase.storage
+        .from('profile-pictures')
+        .upload(filePath, file, { upsert: true });
 
-  useEffect(() => {
-    // Load draft if present
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(filePath);
+
+      setProfilePicture(urlData.publicUrl);
+      toast.success('Photo uploaded!');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload photo');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleContinue = async () => {
     if (!user) return;
-    const key = `onboarding:profile:${user.id}`;
+
+    if (!gradeLevel) {
+      toast.error('Please select your grade level');
+      return;
+    }
+
+    setIsSaving(true);
     try {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.gradeLevel) setGradeLevel(parsed.gradeLevel);
-        if (parsed.province) setProvince(parsed.province);
-        if (parsed.profilePicture) setProfilePicture(parsed.profilePicture);
-        if (parsed.bio) setBio(parsed.bio);
-      }
-    } catch {}
-  }, [user]);
-     try {
-       const fileExt = file.name.split('.').pop();
-       const filePath = `${user.id}/avatar.${fileExt}`;
- 
-       const { error: uploadError } = await supabase.storage
-         .from('profile-pictures')
-         .upload(filePath, file, { upsert: true });
- 
-       if (uploadError) throw uploadError;
- 
-       const { data: urlData } = supabase.storage
-      await retryAsync(async () => {
-        const { error } = await supabase
-          .from('users')
-          .update({
-            grade_level: parseInt(gradeLevel),
-            province: province || null,
-            profile_picture_url: profilePicture,
-            bio: bio || null,
-            onboarding_step: 2,
-          })
-          .eq('id', user.id);
-        if (error) throw error;
-        return true;
-      }, 3, 400);
+      const { error } = await supabase
+        .from('users')
+        .update({
+          grade_level: parseInt(gradeLevel),
+          province: province || null,
+          profile_picture_url: profilePicture,
+          onboarding_step: 2,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
 
       await refreshProfile();
-      // Clear draft
-      try { localStorage.removeItem(`onboarding:profile:${user.id}`); } catch {}
       navigate('/onboarding/subjects');
-     if (!user) return;
- 
-     if (!gradeLevel) {
-       toast.error('Please select your grade level');
-       return;
-     }
- 
-     setIsSaving(true);
-     try {
-       const { error } = await supabase
-         .from('users')
-         .update({
-            grade_level: parseInt(gradeLevel),
-            province: province || null,
-            profile_picture_url: profilePicture,
-            onboarding_step: 2,
-         })
-         .eq('id', user.id);
- 
-        if (error) throw error;
-
-        await refreshProfile();
-        navigate('/onboarding/subjects');
-     } catch (error) {
-       console.error('Save error:', error);
-       toast.error('Failed to save profile');
-     } finally {
-       setIsSaving(false);
-     }
-   };
- 
+    } catch (error) {
+      console.error('Save error:', error);
+      toast.error('Failed to save profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
    const getInitials = () => {
      return userProfile?.full_name
        ?.split(' ')
