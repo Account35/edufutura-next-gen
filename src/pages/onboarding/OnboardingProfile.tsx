@@ -2,8 +2,7 @@
  import { useNavigate } from 'react-router-dom';
  import { Button } from '@/components/ui/button';
  import { Input } from '@/components/ui/input';
- import { Label } from '@/components/ui/label';
- import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
  import {
    Select,
    SelectContent,
@@ -44,10 +43,10 @@
    const navigate = useNavigate();
    const { user, userProfile, loading, refreshProfile } = useAuth();
  
-   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+    const [profilePicture, setProfilePicture] = useState<string | null>(null);
    const [gradeLevel, setGradeLevel] = useState<string>('');
    const [province, setProvince] = useState<string>('');
-   const [bio, setBio] = useState('');
+   
    const [isUploading, setIsUploading] = useState(false);
    const [isSaving, setIsSaving] = useState(false);
  
@@ -247,30 +246,26 @@
              </Select>
            </div>
  
-           {/* Bio - Optional */}
-           <div className="space-y-2">
-             <Label htmlFor="bio" className="text-foreground">
-               Tell us about yourself
-             </Label>
-             <Textarea
-               id="bio"
-               placeholder="I'm passionate about science and want to become a doctor..."
-               value={bio}
-               onChange={(e) => setBio(e.target.value.slice(0, 500))}
-               className="min-h-[100px] resize-none"
-             />
-             <p className="text-xs text-muted-foreground text-right">{bio.length}/500</p>
-           </div>
+            {/* Bio - Optional (display only, not persisted) */}
  
            {/* Actions */}
-           <div className="flex gap-3 pt-4">
-             <Button
-               variant="outline"
-               onClick={() => navigate('/onboarding/subjects')}
-               className="flex-1 min-h-[48px]"
-             >
-               Skip for Now
-             </Button>
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  if (user) {
+                    await supabase
+                      .from('users')
+                      .update({ onboarding_step: 2 })
+                      .eq('id', user.id);
+                    await refreshProfile();
+                  }
+                  navigate('/onboarding/subjects');
+                }}
+                className="flex-1 min-h-[48px]"
+              >
+                Skip for Now
+              </Button>
              <Button
                onClick={handleContinue}
                disabled={isSaving || !gradeLevel}

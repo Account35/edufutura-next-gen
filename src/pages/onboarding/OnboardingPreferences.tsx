@@ -279,14 +279,23 @@ import { retryAsync } from '@/lib/async';
            </div>
  
            {/* Actions */}
-           <div className="flex gap-3 pt-4">
-             <Button
-               variant="outline"
-               onClick={() => navigate('/onboarding/complete')}
-               className="flex-1 min-h-[48px]"
-             >
-               Skip
-             </Button>
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  if (user) {
+                    await supabase
+                      .from('users')
+                      .update({ onboarding_step: 4 })
+                      .eq('id', user.id);
+                    await refreshProfile();
+                  }
+                  navigate('/onboarding/complete');
+                }}
+                className="flex-1 min-h-[48px]"
+              >
+                Skip
+              </Button>
              <Button
                onClick={handleContinue}
                disabled={isSaving || !learningStyle}

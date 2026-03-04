@@ -106,35 +106,35 @@ import { retryAsync } from '@/lib/async';
         return true;
       }, 3, 400);
 
-      await refreshProfile();
+       await refreshProfile();
 
-      // Initialize user_progress for each selected subject
-      const progressInserts = selectedSubjects.map((subject) => ({
-        user_id: user.id,
-        subject_name: subject,
-        progress_percentage: 0,
-        chapters_completed: 0,
-        current_chapter: null,
-        average_quiz_score: null,
-      }));
+       // Initialize user_progress for each selected subject (non-blocking)
+       const progressInserts = selectedSubjects.map((subject) => ({
+         user_id: user.id,
+         subject_name: subject,
+         progress_percentage: 0,
+         chapters_completed: 0,
+         current_chapter: null,
+         average_quiz_score: null,
+       }));
 
-      // Upsert to handle existing records
-      await retryAsync(async () => {
-        const { error } = await supabase.from('user_progress').upsert(progressInserts, {
-          onConflict: 'user_id,subject_name',
-          ignoreDuplicates: true,
-        });
-        if (error) throw error;
-        return true;
-      }, 3, 300);
+       // Fire and forget - don't block navigation on progress init
+       retryAsync(async () => {
+         const { error } = await supabase.from('user_progress').upsert(progressInserts, {
+           onConflict: 'user_id,subject_name',
+           ignoreDuplicates: true,
+         });
+         if (error) console.error('Progress init error (non-blocking):', error);
+         return true;
+       }, 3, 300).catch(err => console.error('Progress init failed:', err));
 
-      navigate('/onboarding/preferences');
-    } catch (error) {
-      console.error('Save error:', error);
-      toast.error('Failed to save subjects. Please check your connection and try again.');
-    } finally {
-      setIsSaving(false);
-    }
+       navigate('/onboarding/preferences');
+     } catch (error) {
+       console.error('Save error:', error);
+       toast.error('Failed to save subjects. Please check your connection and try again.');
+     } finally {
+       setIsSaving(false);
+     }
    };
  
    return (
