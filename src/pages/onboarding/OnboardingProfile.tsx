@@ -2,8 +2,7 @@
  import { useNavigate } from 'react-router-dom';
  import { Button } from '@/components/ui/button';
  import { Input } from '@/components/ui/input';
- import { Label } from '@/components/ui/label';
- import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
  import {
    Select,
    SelectContent,
@@ -32,8 +31,8 @@
  
  const GRADES = [
    { value: '6', label: 'Grade 6' },
-   { value: '7', label: 'Grade 7' },
-   { value: '8', label: 'Grade 8' },
+  { value: '7', label: 'Grade 7' },
+  { value: '8', label: 'Grade 8' },
    { value: '9', label: 'Grade 9' },
    { value: '10', label: 'Grade 10' },
    { value: '11', label: 'Grade 11' },
@@ -44,10 +43,10 @@
    const navigate = useNavigate();
    const { user, userProfile, loading, refreshProfile } = useAuth();
  
-   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+    const [profilePicture, setProfilePicture] = useState<string | null>(null);
    const [gradeLevel, setGradeLevel] = useState<string>('');
    const [province, setProvince] = useState<string>('');
-   const [bio, setBio] = useState('');
+   
    const [isUploading, setIsUploading] = useState(false);
    const [isSaving, setIsSaving] = useState(false);
  
@@ -70,78 +69,76 @@
      }
    }, [user, userProfile, loading, navigate]);
  
-   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-     const file = e.target.files?.[0];
-     if (!file || !user) return;
- 
-     if (file.size > 5 * 1024 * 1024) {
-       toast.error('Image must be less than 5MB');
-       return;
-     }
- 
-     if (!file.type.startsWith('image/')) {
-       toast.error('Please upload an image file');
-       return;
-     }
- 
-     setIsUploading(true);
-     try {
-       const fileExt = file.name.split('.').pop();
-       const filePath = `${user.id}/avatar.${fileExt}`;
- 
-       const { error: uploadError } = await supabase.storage
-         .from('profile-pictures')
-         .upload(filePath, file, { upsert: true });
- 
-       if (uploadError) throw uploadError;
- 
-       const { data: urlData } = supabase.storage
-         .from('profile-pictures')
-         .getPublicUrl(filePath);
- 
-       setProfilePicture(urlData.publicUrl);
-       toast.success('Photo uploaded!');
-     } catch (error) {
-       console.error('Upload error:', error);
-       toast.error('Failed to upload photo');
-     } finally {
-       setIsUploading(false);
-     }
-   };
- 
-   const handleContinue = async () => {
-     if (!user) return;
- 
-     if (!gradeLevel) {
-       toast.error('Please select your grade level');
-       return;
-     }
- 
-     setIsSaving(true);
-     try {
-       const { error } = await supabase
-         .from('users')
-         .update({
-           grade_level: parseInt(gradeLevel),
-           province: province || null,
-           profile_picture_url: profilePicture,
-              bio: bio || null,
-           onboarding_step: 2,
-         })
-         .eq('id', user.id);
- 
-        if (error) throw error;
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
 
-        await refreshProfile();
-        navigate('/onboarding/subjects');
-     } catch (error) {
-       console.error('Save error:', error);
-       toast.error('Failed to save profile');
-     } finally {
-       setIsSaving(false);
-     }
-   };
- 
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/avatar.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-pictures')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(filePath);
+
+      setProfilePicture(urlData.publicUrl);
+      toast.success('Photo uploaded!');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload photo');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleContinue = async () => {
+    if (!user) return;
+
+    if (!gradeLevel) {
+      toast.error('Please select your grade level');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          grade_level: parseInt(gradeLevel),
+          province: province || null,
+          profile_picture_url: profilePicture,
+          onboarding_step: 2,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      await refreshProfile();
+      navigate('/onboarding/subjects');
+    } catch (error) {
+      console.error('Save error:', error);
+      toast.error('Failed to save profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
    const getInitials = () => {
      return userProfile?.full_name
        ?.split(' ')
@@ -249,30 +246,26 @@
              </Select>
            </div>
  
-           {/* Bio - Optional */}
-           <div className="space-y-2">
-             <Label htmlFor="bio" className="text-foreground">
-               Tell us about yourself
-             </Label>
-             <Textarea
-               id="bio"
-               placeholder="I'm passionate about science and want to become a doctor..."
-               value={bio}
-               onChange={(e) => setBio(e.target.value.slice(0, 500))}
-               className="min-h-[100px] resize-none"
-             />
-             <p className="text-xs text-muted-foreground text-right">{bio.length}/500</p>
-           </div>
+            {/* Bio - Optional (display only, not persisted) */}
  
            {/* Actions */}
-           <div className="flex gap-3 pt-4">
-             <Button
-               variant="outline"
-               onClick={() => navigate('/onboarding/subjects')}
-               className="flex-1 min-h-[48px]"
-             >
-               Skip for Now
-             </Button>
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  if (user) {
+                    await supabase
+                      .from('users')
+                      .update({ onboarding_step: 2 })
+                      .eq('id', user.id);
+                    await refreshProfile();
+                  }
+                  navigate('/onboarding/subjects');
+                }}
+                className="flex-1 min-h-[48px]"
+              >
+                Skip for Now
+              </Button>
              <Button
                onClick={handleContinue}
                disabled={isSaving || !gradeLevel}

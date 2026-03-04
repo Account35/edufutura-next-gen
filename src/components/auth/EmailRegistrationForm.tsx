@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -45,6 +46,7 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -113,9 +115,25 @@ export const EmailRegistrationForm = ({ onSuccess, onSwitchToLogin }: EmailRegis
         return;
       }
 
+      // If Supabase did not return a session (email confirmation required), prompt verification
+      const sessionExists = !!(authData && (authData as any).session);
+
+      if (!sessionExists) {
+        toast({
+          title: 'Verify your email',
+          description: 'A confirmation email was sent. Please verify your address to complete sign up.',
+        });
+
+        // Close the auth modal and navigate to the verification page so the user can follow next steps
+        onSuccess();
+        navigate('/auth/verify-email');
+        return;
+      }
+
+      // We have an active session — proceed as logged in
       toast({
         title: "Account created successfully!",
-        description: "Your account has been created and you're now logged in. Complete your profile in the onboarding wizard.",
+        description: "You're now logged in. Complete your profile in the onboarding wizard.",
       });
 
       onSuccess();

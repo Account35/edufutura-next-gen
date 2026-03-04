@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
-const ROLE_CHECK_TIMEOUT_MS = 5000; // 5 second timeout for role checks
+const ROLE_CHECK_TIMEOUT_MS = 10000; // 10 second timeout for role checks (increase to reduce spurious timeouts)
 
 export const useAdminRole = () => {
   const { user, loading: authLoading } = useAuth();
@@ -49,13 +49,19 @@ export const useAdminRole = () => {
 
     const checkRoles = async () => {
       try {
-        // Set a timeout to prevent infinite loading - but DON'T default to non-admin
-        roleCheckTimeoutRef.current = setTimeout(() => {
-          console.warn('[AdminRole] Role check timeout, completing with current state');
-          setLoading(false);
-          setHasChecked(true);
-          lastCheckedUserId.current = user.id;
-        }, ROLE_CHECK_TIMEOUT_MS);
+        // Prevent scheduling duplicate timeouts
+        if (roleCheckTimeoutRef.current) {
+          console.debug('[AdminRole] Role check timeout already scheduled, skipping duplicate');
+        } else {
+          // Set a timeout to prevent infinite loading - but DON'T default to non-admin
+          roleCheckTimeoutRef.current = setTimeout(() => {
+            console.warn('[AdminRole] Role check timeout, completing with current state');
+            setLoading(false);
+            setHasChecked(true);
+            lastCheckedUserId.current = user.id;
+            roleCheckTimeoutRef.current = null;
+          }, ROLE_CHECK_TIMEOUT_MS);
+        }
 
         console.time('[AdminRole] checkRoles');
         const { data, error } = await supabase
@@ -66,7 +72,7 @@ export const useAdminRole = () => {
 
         // Clear timeout since we got a response
         if (roleCheckTimeoutRef.current) {
-          clearTimeout(roleCheckTimeoutRef.current);
+          clearTimeout(roleCheckTimeoutRef.current as NodeJS.Timeout);
           roleCheckTimeoutRef.current = null;
         }
 

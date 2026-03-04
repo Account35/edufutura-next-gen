@@ -102,7 +102,7 @@ export const PhoneRegistrationForm = ({
     try {
       setIsLoading(true);
 
-      const { error } = await supabase.auth.verifyOtp({
+      const { data, error } = await supabase.auth.verifyOtp({
         phone: formattedPhone,
         token: otpCode,
         type: 'sms'
@@ -113,8 +113,35 @@ export const PhoneRegistrationForm = ({
         throw error;
       }
 
-      toast.success('Account created successfully!');
-      onSuccess();
+      // If the verify call returned a session, proceed immediately.
+      const sessionExists = !!(data && (data as any).session);
+
+      if (sessionExists) {
+        toast.success('Account created successfully!');
+        onSuccess();
+        return;
+      }
+
+      // Otherwise poll briefly for the session (some providers may finalize asynchronously)
+      let found = false;
+      for (let i = 0; i < 5; i++) {
+        // wait 1s
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((res) => setTimeout(res, 1000));
+        // eslint-disable-next-line no-await-in-loop
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session) {
+          found = true;
+          break;
+        }
+      }
+
+      if (found) {
+        toast.success('Account created successfully!');
+        onSuccess();
+      } else {
+        toast.error('Verification succeeded but sign-in did not complete. Please try logging in.');
+      }
     } catch (error) {
       console.error('Error verifying OTP:', error);
     } finally {

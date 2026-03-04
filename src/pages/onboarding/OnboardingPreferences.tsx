@@ -9,6 +9,7 @@
  import { toast } from 'sonner';
  import { ArrowLeft, ArrowRight, Loader2, Eye, Headphones, BookOpen, Hand } from 'lucide-react';
  import { motion } from 'framer-motion';
+import { retryAsync } from '@/lib/async';
  
  interface LearningStyle {
    value: string;
@@ -80,41 +81,44 @@
        return;
      }
  
-     setIsSaving(true);
-     try {
-       // Upsert study preferences
-       const { error: prefError } = await supabase
-         .from('study_preferences')
-         .upsert(
-           {
-             user_id: user.id,
-             learning_style: learningStyle,
-             study_pace: studyPace,
-             daily_goal_minutes: dailyMinutes,
-             preferred_study_time: preferredTimes.length > 0 ? preferredTimes.join(',') : null,
-             study_reminders_enabled: true,
-           },
-           { onConflict: 'user_id' }
-         );
- 
-       if (prefError) throw prefError;
- 
-       // Update user onboarding step
-       const { error: userError } = await supabase
-         .from('users')
-         .update({ onboarding_step: 4 })
-         .eq('id', user.id);
- 
-        if (userError) throw userError;
+    setIsSaving(true);
+    try {
+      await retryAsync(async () => {
+        const { error: prefError } = await supabase
+          .from('study_preferences')
+          .upsert(
+            {
+              user_id: user.id,
+              learning_style: learningStyle,
+              study_pace: studyPace,
+              daily_goal_minutes: dailyMinutes,
+              preferred_study_time: preferredTimes.length > 0 ? preferredTimes.join(',') : null,
+              study_reminders_enabled: true,
+            },
+            { onConflict: 'user_id' }
+          );
 
-        await refreshProfile();
-        navigate('/onboarding/complete');
-     } catch (error) {
-       console.error('Save error:', error);
-       toast.error('Failed to save preferences');
-     } finally {
-       setIsSaving(false);
-     }
+        if (prefError) throw prefError;
+        return true;
+      }, 3, 300);
+
+      await retryAsync(async () => {
+        const { error: userError } = await supabase
+          .from('users')
+          .update({ onboarding_step: 4 })
+          .eq('id', user.id);
+        if (userError) throw userError;
+        return true;
+      }, 3, 300);
+
+      await refreshProfile();
+      navigate('/onboarding/complete');
+    } catch (error) {
+      console.error('Save error:', error);
+      toast.error('Failed to save preferences. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
    };
  
    return (
@@ -275,14 +279,23 @@
            </div>
  
            {/* Actions */}
-           <div className="flex gap-3 pt-4">
-             <Button
-               variant="outline"
-               onClick={() => navigate('/onboarding/complete')}
-               className="flex-1 min-h-[48px]"
-             >
-               Skip
-             </Button>
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  if (user) {
+                    await supabase
+                      .from('users')
+                      .update({ onboarding_step: 4 })
+                      .eq('id', user.id);
+                    await refreshProfile();
+                  }
+                  navigate('/onboarding/complete');
+                }}
+                className="flex-1 min-h-[48px]"
+              >
+                Skip
+              </Button>
              <Button
                onClick={handleContinue}
                disabled={isSaving || !learningStyle}

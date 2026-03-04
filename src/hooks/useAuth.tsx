@@ -194,6 +194,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         activeUserIdRef.current = existingUser?.id ?? null;
 
         console.log('[Auth] existingUser:', existingUser?.id ?? 'none');
+        console.debug('[Auth][DEBUG] initializeAuth - existingSession:', existingSession, 'profileLoadRef:', profileLoadRef.current);
 
         // Clear stale profile promise if user changed
         if (
@@ -206,15 +207,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(existingSession);
         setUser(existingUser);
 
+        console.debug('[Auth][DEBUG] setSession/setUser done - session present?', !!existingSession, 'user id', existingUser?.id ?? null);
+
         if (existingUser) {
           try {
-            const profile = await withTimeout(
-              loadUserProfile(existingUser),
-              PROFILE_LOAD_TIMEOUT_MS,
-              'Profile load'
-            );
+            // Start loading the profile but don't let a timeout prevent the eventual result
+            const profilePromise = loadUserProfile(existingUser);
+
+            // Fire-and-forget timeout watcher so we log timeouts but don't cancel the fetch
+            void withTimeout(profilePromise, PROFILE_LOAD_TIMEOUT_MS, 'Profile load').catch(err => {
+              console.error('[Auth] Profile load timed out (will continue in background):', err);
+            });
+
+            const profile = await profilePromise;
             if (mounted && activeUserIdRef.current === existingUser.id) {
               setUserProfile(profile);
+              console.debug('[Auth][DEBUG] setUserProfile completed for', existingUser.id, 'profile:', profile);
             }
           } catch (error) {
             console.error('[Auth] Error loading profile:', error);
@@ -225,12 +233,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (mounted) {
           setLoading(false);
           initCompleteRef.current = true;
+          console.debug('[Auth][DEBUG] initializeAuth complete - loading=false, initCompleteRef=true');
         }
       } catch (error) {
         console.error('[Auth] Error in initializeAuth:', error);
         if (mounted) {
           setLoading(false);
           initCompleteRef.current = true;
+          console.debug('[Auth][DEBUG] initializeAuth error - loading=false, initCompleteRef=true');
         }
       }
     };
@@ -241,6 +251,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (!mounted) return;
       console.log('[Auth] onAuthStateChange event:', event);
+      console.debug('[Auth][DEBUG] onAuthStateChange - newSession:', newSession, 'profileLoadRef:', profileLoadRef.current, 'activeUserIdRef:', activeUserIdRef.current);
 
       // Skip initial session event if we already initialized
       if (event === 'INITIAL_SESSION' && initCompleteRef.current) {
@@ -260,13 +271,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(newSession);
       setUser(newUser);
 
+      console.debug('[Auth][DEBUG] setSession/setUser in callback - newUser id:', newUser?.id ?? null, 'session present?', !!newSession);
+
       if (newUser) {
         // Defer profile loading to the next tick (no Supabase calls inside auth callback)
         setTimeout(() => {
-          void withTimeout(loadUserProfile(newUser), PROFILE_LOAD_TIMEOUT_MS, 'Profile load')
+          const profilePromise = loadUserProfile(newUser);
+
+          // Watch for timeout but don't abort the underlying fetch
+          void withTimeout(profilePromise, PROFILE_LOAD_TIMEOUT_MS, 'Profile load').catch(err => {
+            console.error('[Auth] Deferred profile load timed out (will continue in background):', err);
+          });
+
+          profilePromise
             .then(profile => {
               if (mounted && activeUserIdRef.current === newUser.id) {
                 setUserProfile(profile);
+                console.debug('[Auth][DEBUG] deferred profile load setUserProfile for', newUser.id, 'profile:', profile);
               }
             })
             .catch(err => {
@@ -280,6 +301,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Ensure loading is false after any auth state change
       if (mounted) {
         setLoading(false);
+        console.debug('[Auth][DEBUG] onAuthStateChange finished - loading=false');
       }
     });
 

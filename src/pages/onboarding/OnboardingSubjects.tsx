@@ -6,6 +6,7 @@
  import { toast } from 'sonner';
  import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
  import { motion } from 'framer-motion';
+import { retryAsync } from '@/lib/async';
  import {
    Calculator,
    Atom,
@@ -91,22 +92,23 @@
        return;
      }
  
-     setIsSaving(true);
-     try {
-       // Update user's subjects
-       const { error } = await supabase
-         .from('users')
-         .update({
-           subjects_studying: selectedSubjects,
-           onboarding_step: 3,
-         })
-         .eq('id', user.id);
- 
+    setIsSaving(true);
+    try {
+      await retryAsync(async () => {
+        const { error } = await supabase
+          .from('users')
+          .update({
+            subjects_studying: selectedSubjects,
+            onboarding_step: 3,
+          })
+          .eq('id', user.id);
         if (error) throw error;
+        return true;
+      }, 3, 400);
 
-        await refreshProfile();
+       await refreshProfile();
 
-        // Initialize user_progress for each selected subject
+       // Initialize user_progress for each selected subject (non-blocking)
        const progressInserts = selectedSubjects.map((subject) => ({
          user_id: user.id,
          subject_name: subject,
@@ -115,17 +117,21 @@
          current_chapter: null,
          average_quiz_score: null,
        }));
- 
-       // Upsert to handle existing records
-       await supabase.from('user_progress').upsert(progressInserts, {
-         onConflict: 'user_id,subject_name',
-         ignoreDuplicates: true,
-       });
- 
+
+       // Fire and forget - don't block navigation on progress init
+       retryAsync(async () => {
+         const { error } = await supabase.from('user_progress').upsert(progressInserts, {
+           onConflict: 'user_id,subject_name',
+           ignoreDuplicates: true,
+         });
+         if (error) console.error('Progress init error (non-blocking):', error);
+         return true;
+       }, 3, 300).catch(err => console.error('Progress init failed:', err));
+
        navigate('/onboarding/preferences');
      } catch (error) {
        console.error('Save error:', error);
-       toast.error('Failed to save subjects');
+       toast.error('Failed to save subjects. Please check your connection and try again.');
      } finally {
        setIsSaving(false);
      }
