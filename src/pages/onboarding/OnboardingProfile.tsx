@@ -122,11 +122,10 @@
        const { error } = await supabase
          .from('users')
          .update({
-           grade_level: parseInt(gradeLevel),
-           province: province || null,
-           profile_picture_url: profilePicture,
-              bio: bio || null,
-           onboarding_step: 2,
+            grade_level: parseInt(gradeLevel),
+            province: province || null,
+            profile_picture_url: profilePicture,
+            onboarding_step: 2,
          })
          .eq('id', user.id);
  
