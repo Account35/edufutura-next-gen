@@ -61,6 +61,15 @@ const Index = () => {
     if (user && !userProfile && !loadingTimedOut) {
       return;
     }
+
+    // If profile load timed out but we still have an authenticated session,
+    // send the user to the onboarding entry point so they keep moving forward
+    // instead of showing the landing page.
+    if (user && !userProfile && loadingTimedOut) {
+      hasRedirectedRef.current = true;
+      navigate('/onboarding');
+      return;
+    }
     
     // CRITICAL: Wait for role check to COMPLETE before redirecting
     // This prevents redirecting to /dashboard before we know if user is admin
