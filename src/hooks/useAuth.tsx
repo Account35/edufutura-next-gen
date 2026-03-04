@@ -211,11 +211,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (existingUser) {
           try {
-            const profile = await withTimeout(
-              loadUserProfile(existingUser),
-              PROFILE_LOAD_TIMEOUT_MS,
-              'Profile load'
-            );
+            // Start loading the profile but don't let a timeout prevent the eventual result
+            const profilePromise = loadUserProfile(existingUser);
+
+            // Fire-and-forget timeout watcher so we log timeouts but don't cancel the fetch
+            void withTimeout(profilePromise, PROFILE_LOAD_TIMEOUT_MS, 'Profile load').catch(err => {
+              console.error('[Auth] Profile load timed out (will continue in background):', err);
+            });
+
+            const profile = await profilePromise;
             if (mounted && activeUserIdRef.current === existingUser.id) {
               setUserProfile(profile);
               console.debug('[Auth][DEBUG] setUserProfile completed for', existingUser.id, 'profile:', profile);
@@ -272,7 +276,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (newUser) {
         // Defer profile loading to the next tick (no Supabase calls inside auth callback)
         setTimeout(() => {
-          void withTimeout(loadUserProfile(newUser), PROFILE_LOAD_TIMEOUT_MS, 'Profile load')
+          const profilePromise = loadUserProfile(newUser);
+
+          // Watch for timeout but don't abort the underlying fetch
+          void withTimeout(profilePromise, PROFILE_LOAD_TIMEOUT_MS, 'Profile load').catch(err => {
+            console.error('[Auth] Deferred profile load timed out (will continue in background):', err);
+          });
+
+          profilePromise
             .then(profile => {
               if (mounted && activeUserIdRef.current === newUser.id) {
                 setUserProfile(profile);
