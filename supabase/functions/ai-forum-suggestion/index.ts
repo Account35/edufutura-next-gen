@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { OPENROUTER_BASE_URL, getOpenRouterHeaders, mapModel } from "../_shared/openrouter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,42 +26,31 @@ serve(async (req) => {
 
     const { subject_name, chapter_title, draft_question, draft_title } = await req.json();
 
-    // Fetch the forum suggestion template
     const { data: templateData } = await supabaseClient
       .rpc('get_active_template', { p_template_name: 'forum_post_improvement' });
 
     const template = templateData?.[0];
-    if (!template) {
-      throw new Error('Forum suggestion template not found');
-    }
+    if (!template) throw new Error('Forum suggestion template not found');
 
-    // Prepare template variables
     const variables = {
       subject_name: subject_name || 'General',
       chapter_title: chapter_title || 'General Discussion',
       draft_question_text: `Title: ${draft_title || 'No title'}\n\nQuestion: ${draft_question}`,
     };
 
-    // Interpolate template
     let prompt = template.prompt_text;
     for (const [key, value] of Object.entries(variables)) {
       prompt = prompt.replace(new RegExp(`\\{${key}\\}`, 'g'), String(value));
     }
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key not configured');
-    }
+    const openRouterHeaders = getOpenRouterHeaders();
 
     const startTime = Date.now();
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    const aiResponse = await fetch(OPENROUTER_BASE_URL, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
+      headers: openRouterHeaders,
       body: JSON.stringify({
-        model: template.model_name || 'gpt-4o-mini',
+        model: mapModel(template.model_name || 'gpt-4o-mini'),
         messages: [
           { role: 'system', content: template.system_context || '' },
           { role: 'user', content: prompt }
@@ -70,35 +60,30 @@ serve(async (req) => {
       }),
     });
 
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text();
-      console.error('OpenAI API error:', errorText);
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('OpenRouter API error:', errorText);
       throw new Error('AI suggestion service unavailable');
     }
 
-    const openaiData = await openaiResponse.json();
+    const aiData = await aiResponse.json();
     const responseTime = Date.now() - startTime;
-    const aiResponse = openaiData.choices[0].message.content;
-    const tokensUsed = openaiData.usage?.total_tokens || 0;
+    const aiContent = aiData.choices[0].message.content;
+    const tokensUsed = aiData.usage?.total_tokens || 0;
 
-    // Parse the response
     let suggestion;
     try {
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         suggestion = JSON.parse(jsonMatch[0]);
       } else {
-        suggestion = JSON.parse(aiResponse);
+        suggestion = JSON.parse(aiContent);
       }
     } catch (e) {
-      console.error('Failed to parse suggestion:', aiResponse);
-      suggestion = {
-        needs_improvement: false,
-        suggestion: aiResponse,
-      };
+      console.error('Failed to parse suggestion:', aiContent);
+      suggestion = { needs_improvement: false, suggestion: aiContent };
     }
 
-    // Update template metrics
     await supabaseClient.rpc('update_template_metrics', {
       p_template_name: 'forum_post_improvement',
       p_template_version: template.template_version,
@@ -114,10 +99,7 @@ serve(async (req) => {
         improved_title: suggestion.improved_title,
         improved_question: suggestion.improved_question,
         explanation: suggestion.explanation || suggestion.suggestion,
-        metadata: {
-          response_time_ms: responseTime,
-          tokens_used: tokensUsed,
-        }
+        metadata: { response_time_ms: responseTime, tokens_used: tokensUsed }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

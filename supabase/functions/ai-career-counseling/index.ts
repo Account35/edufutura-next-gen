@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { OPENROUTER_BASE_URL, getOpenRouterHeaders, mapModel } from "../_shared/openrouter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,18 +26,14 @@ serve(async (req) => {
 
     const { career_id, user_profile } = await req.json();
 
-    // Get career details
     const { data: career, error: careerError } = await supabaseClient
       .from('career_paths')
       .select('*')
       .eq('id', career_id)
       .single();
 
-    if (careerError || !career) {
-      throw new Error('Career not found');
-    }
+    if (careerError || !career) throw new Error('Career not found');
 
-    // Get user profile data if not provided
     let profile = user_profile;
     if (!profile) {
       const { data: userData } = await supabaseClient
@@ -44,11 +41,9 @@ serve(async (req) => {
         .select('grade_level, subjects_studying, province')
         .eq('id', user.id)
         .single();
-      
       profile = userData || {};
     }
 
-    // Get user's quiz performance for performance summary
     const { data: quizPerformance } = await supabaseClient
       .from('quiz_performance')
       .select('subject_name, average_score')
@@ -58,16 +53,12 @@ serve(async (req) => {
       `${p.subject_name}: ${p.average_score}%`
     ).join(', ') || 'No quiz data available';
 
-    // Fetch the career counseling template
     const { data: templateData } = await supabaseClient
       .rpc('get_active_template', { p_template_name: 'career_counseling_guidance' });
 
     const template = templateData?.[0];
-    if (!template) {
-      throw new Error('Career counseling template not found');
-    }
+    if (!template) throw new Error('Career counseling template not found');
 
-    // Prepare template variables
     const variables = {
       grade_level: profile.grade_level || 10,
       subjects_list: Array.isArray(profile.subjects_studying) 
@@ -87,26 +78,19 @@ serve(async (req) => {
         `${career.growth_rate > 0 ? 'Growing' : 'Stable'} market` : 'Varies by region',
     };
 
-    // Interpolate template
     let prompt = template.prompt_text;
     for (const [key, value] of Object.entries(variables)) {
       prompt = prompt.replace(new RegExp(`\\{${key}\\}`, 'g'), String(value));
     }
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key not configured');
-    }
+    const openRouterHeaders = getOpenRouterHeaders();
 
     const startTime = Date.now();
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    const aiResponse = await fetch(OPENROUTER_BASE_URL, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
+      headers: openRouterHeaders,
       body: JSON.stringify({
-        model: template.model_name || 'gpt-4o-mini',
+        model: mapModel(template.model_name || 'gpt-4o-mini'),
         messages: [
           { role: 'system', content: template.system_context || '' },
           { role: 'user', content: prompt }
@@ -116,27 +100,25 @@ serve(async (req) => {
       }),
     });
 
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text();
-      console.error('OpenAI API error:', errorText);
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('OpenRouter API error:', errorText);
       throw new Error('AI counseling service unavailable');
     }
 
-    const openaiData = await openaiResponse.json();
+    const aiData = await aiResponse.json();
     const responseTime = Date.now() - startTime;
-    const counselingAdvice = openaiData.choices[0].message.content;
-    const tokensUsed = openaiData.usage?.total_tokens || 0;
+    const counselingAdvice = aiData.choices[0].message.content;
+    const tokensUsed = aiData.usage?.total_tokens || 0;
 
-    // Update template metrics
     await supabaseClient.rpc('update_template_metrics', {
       p_template_name: 'career_counseling_guidance',
       p_template_version: template.template_version,
       p_success: true,
       p_rating: null,
-      p_cost: tokensUsed * 0.00001, // Approximate cost
+      p_cost: tokensUsed * 0.00001,
     });
 
-    // Log to AI conversations
     const { data: conversation } = await supabaseClient
       .from('ai_conversations')
       .insert({
@@ -162,10 +144,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         advice: counselingAdvice,
-        career: {
-          name: career.career_name,
-          category: career.career_category,
-        },
+        career: { name: career.career_name, category: career.career_category },
         metadata: {
           response_time_ms: responseTime,
           tokens_used: tokensUsed,

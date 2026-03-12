@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { OPENROUTER_BASE_URL, getOpenRouterHeaders, mapModel } from "../_shared/openrouter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,29 +26,20 @@ serve(async (req) => {
 
     const { question_id, student_answer, attempt_id } = await req.json();
 
-    // Get question details
     const { data: question, error: questionError } = await supabaseClient
       .from('quiz_questions')
       .select('*, quizzes(subject_name)')
       .eq('id', question_id)
       .single();
 
-    if (questionError || !question) {
-      throw new Error('Question not found');
-    }
+    if (questionError || !question) throw new Error('Question not found');
 
-    // Fetch the grading template
     const { data: templateData } = await supabaseClient
       .rpc('get_active_template', { p_template_name: 'grading_short_answer' });
 
     const template = templateData?.[0];
+    const openRouterHeaders = getOpenRouterHeaders();
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key not configured');
-    }
-
-    // Build prompt from template or use default
     let systemPrompt: string;
     let gradingPrompt: string;
     let temperature = 0.2;
@@ -59,9 +51,8 @@ serve(async (req) => {
       temperature = Number(template.temperature) || 0.2;
       maxTokens = template.max_tokens || 800;
 
-      // Interpolate variables
       const variables: Record<string, string> = {
-        grade_level: '10', // Default, could be fetched from user profile
+        grade_level: '10',
         subject_name: question.quizzes?.subject_name || 'General',
         question_text: question.question_text,
         correct_answer_rubric: question.correct_answer,
@@ -74,7 +65,6 @@ serve(async (req) => {
         systemPrompt = systemPrompt.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
       }
     } else {
-      // Fallback to inline prompt
       systemPrompt = 'You are an expert educator providing fair and consistent grading. Always respond with valid JSON.';
       gradingPrompt = `You are grading a South African CAPS curriculum assessment for ${question.quizzes?.subject_name || 'a subject'}.
 
@@ -101,14 +91,11 @@ Return ONLY valid JSON in this format:
     }
 
     const startTime = Date.now();
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    const aiResponse = await fetch(OPENROUTER_BASE_URL, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
+      headers: openRouterHeaders,
       body: JSON.stringify({
-        model: template?.model_name || 'gpt-4o-mini',
+        model: mapModel(template?.model_name || 'gpt-4o-mini'),
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: gradingPrompt }
@@ -118,49 +105,44 @@ Return ONLY valid JSON in this format:
       }),
     });
 
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text();
-      console.error('OpenAI API error:', errorText);
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('OpenRouter API error:', errorText);
       throw new Error('AI grading service unavailable');
     }
 
-    const openaiData = await openaiResponse.json();
+    const aiData = await aiResponse.json();
     const responseTime = Date.now() - startTime;
-    const aiResponse = openaiData.choices[0].message.content;
-    const tokensUsed = openaiData.usage?.total_tokens || 0;
+    const aiContent = aiData.choices[0].message.content;
+    const tokensUsed = aiData.usage?.total_tokens || 0;
     
     let gradingResult;
     try {
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         gradingResult = JSON.parse(jsonMatch[0]);
       } else {
-        gradingResult = JSON.parse(aiResponse);
+        gradingResult = JSON.parse(aiContent);
       }
     } catch (e) {
-      console.error('Failed to parse grading response:', aiResponse);
-      
-      // Log failure for optimization
+      console.error('Failed to parse grading response:', aiContent);
       if (template) {
         await supabaseClient.from('failed_ai_responses').insert({
           template_name: 'grading_short_answer',
           template_version: template.template_version,
           model_name: template.model_name,
           input_data: { question_id, student_answer },
-          ai_response: aiResponse,
+          ai_response: aiContent,
           failure_reason: 'Invalid JSON format in grading response',
         });
       }
-      
       throw new Error('Invalid grading format');
     }
 
-    // Validate score within range
     const score = Math.max(0, Math.min(question.points || 1, gradingResult.score || gradingResult.exact_score || 0));
     const confidence = gradingResult.confidence || gradingResult.grading_confidence || 0.5;
     const needsReview = confidence < 0.6;
 
-    // Update template metrics
     if (template) {
       await supabaseClient.rpc('update_template_metrics', {
         p_template_name: 'grading_short_answer',
@@ -171,7 +153,6 @@ Return ONLY valid JSON in this format:
       });
     }
 
-    // Update attempt with grading results
     if (attempt_id) {
       const { data: attempt } = await supabaseClient
         .from('quiz_attempts')
@@ -197,7 +178,6 @@ Return ONLY valid JSON in this format:
       }
     }
 
-    // Log grading for audit
     await supabaseClient
       .from('ai_feedback')
       .insert({
@@ -235,14 +215,8 @@ Return ONLY valid JSON in this format:
                    errorMessage.includes('unavailable') ? 503 : 500;
     
     return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: errorMessage 
-      }),
-      { 
-        status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ success: false, error: errorMessage }),
+      { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

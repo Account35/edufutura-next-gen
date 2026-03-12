@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
+import { OPENROUTER_BASE_URL, getOpenRouterHeaders, mapModel } from "../_shared/openrouter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,35 +17,23 @@ serve(async (req) => {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
 
     const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
-      throw new Error('Unauthorized');
-    }
+    if (!user) throw new Error('Unauthorized');
 
     const { imageBase64, academicYear, gradeLevel } = await req.json();
     
     console.log('Analyzing report for user:', user.id, 'Year:', academicYear, 'Grade:', gradeLevel);
 
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
+    const openRouterHeaders = getOpenRouterHeaders();
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(OPENROUTER_BASE_URL, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: openRouterHeaders,
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: mapModel('gpt-4o-mini'),
         messages: [
           {
             role: 'system',
@@ -72,9 +61,7 @@ Return the data in this JSON format:
               },
               {
                 type: 'image_url',
-                image_url: {
-                  url: imageBase64
-                }
+                image_url: { url: imageBase64 }
               }
             ]
           }
@@ -85,19 +72,17 @@ Return the data in this JSON format:
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('OpenAI API error:', response.status, errorData);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      console.error('OpenRouter API error:', response.status, errorData);
+      throw new Error(`OpenRouter API error: ${response.status}`);
     }
 
     const data = await response.json();
     const content = data.choices[0].message.content;
     
-    console.log('OpenAI response:', content);
+    console.log('AI response:', content);
 
-    // Parse the JSON response
     let analysisResult;
     try {
-      // Try to extract JSON from the response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         analysisResult = JSON.parse(jsonMatch[0]);
@@ -111,7 +96,7 @@ Return the data in this JSON format:
         };
       }
     } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', parseError);
+      console.error('Failed to parse AI response:', parseError);
       analysisResult = {
         passStatus: null,
         overallPercentage: null,
@@ -122,10 +107,7 @@ Return the data in this JSON format:
     }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        analysis: analysisResult
-      }),
+      JSON.stringify({ success: true, analysis: analysisResult }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -136,10 +118,7 @@ Return the data in this JSON format:
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error' 
       }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
