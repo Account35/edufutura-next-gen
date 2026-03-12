@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { OPENROUTER_BASE_URL, getOpenRouterHeaders, mapModel } from "../_shared/openrouter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,7 +26,6 @@ serve(async (req) => {
 
     const { subject_name, study_time_available } = await req.json();
 
-    // Get user profile and study preferences
     const { data: userData } = await supabaseClient
       .from('users')
       .select('grade_level')
@@ -38,7 +38,6 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .single();
 
-    // Get user's quiz performance for the subject
     const { data: quizPerformance } = await supabaseClient
       .from('quiz_performance')
       .select('average_score, weak_topics, strong_topics')
@@ -46,16 +45,12 @@ serve(async (req) => {
       .eq('subject_name', subject_name)
       .single();
 
-    // Fetch the study tips template
     const { data: templateData } = await supabaseClient
       .rpc('get_active_template', { p_template_name: 'study_tips_personalized' });
 
     const template = templateData?.[0];
-    if (!template) {
-      throw new Error('Study tips template not found');
-    }
+    if (!template) throw new Error('Study tips template not found');
 
-    // Prepare template variables
     const variables = {
       grade_level: userData?.grade_level || 10,
       subject_name: subject_name,
@@ -66,26 +61,19 @@ serve(async (req) => {
       study_time_available: study_time_available || studyPrefs?.daily_goal_minutes || 60,
     };
 
-    // Interpolate template
     let prompt = template.prompt_text;
     for (const [key, value] of Object.entries(variables)) {
       prompt = prompt.replace(new RegExp(`\\{${key}\\}`, 'g'), String(value));
     }
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key not configured');
-    }
+    const openRouterHeaders = getOpenRouterHeaders();
 
     const startTime = Date.now();
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    const aiResponse = await fetch(OPENROUTER_BASE_URL, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
+      headers: openRouterHeaders,
       body: JSON.stringify({
-        model: template.model_name || 'gpt-4o-mini',
+        model: mapModel(template.model_name || 'gpt-4o-mini'),
         messages: [
           { role: 'system', content: template.system_context || '' },
           { role: 'user', content: prompt }
@@ -95,18 +83,17 @@ serve(async (req) => {
       }),
     });
 
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text();
-      console.error('OpenAI API error:', errorText);
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('OpenRouter API error:', errorText);
       throw new Error('AI study tips service unavailable');
     }
 
-    const openaiData = await openaiResponse.json();
+    const aiData = await aiResponse.json();
     const responseTime = Date.now() - startTime;
-    const studyTips = openaiData.choices[0].message.content;
-    const tokensUsed = openaiData.usage?.total_tokens || 0;
+    const studyTips = aiData.choices[0].message.content;
+    const tokensUsed = aiData.usage?.total_tokens || 0;
 
-    // Update template metrics
     await supabaseClient.rpc('update_template_metrics', {
       p_template_name: 'study_tips_personalized',
       p_template_version: template.template_version,
@@ -115,7 +102,6 @@ serve(async (req) => {
       p_cost: tokensUsed * 0.00001,
     });
 
-    // Log to AI conversations
     const { data: conversation } = await supabaseClient
       .from('ai_conversations')
       .insert({
