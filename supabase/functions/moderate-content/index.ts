@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { OPENROUTER_BASE_URL, getOpenRouterHeaders, mapModel } from "../_shared/openrouter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,15 +21,16 @@ serve(async (req) => {
 
     const { content, contentType, contentId, userId, contextMetadata } = await req.json();
 
-    // Fetch the moderation template
     const { data: templateData } = await supabaseClient
       .rpc('get_active_template', { p_template_name: 'content_moderation_community' });
 
     const template = templateData?.[0];
     
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      console.error('OPENAI_API_KEY not configured');
+    let openRouterHeaders;
+    try {
+      openRouterHeaders = getOpenRouterHeaders();
+    } catch {
+      console.error('OPENROUTER_API_KEY not configured');
       return new Response(
         JSON.stringify({ 
           approved: true, 
@@ -39,7 +41,6 @@ serve(async (req) => {
       );
     }
 
-    // Build prompt from template or use default
     let systemPrompt: string;
     let moderationPrompt: string;
     let temperature = 0.1;
@@ -51,7 +52,6 @@ serve(async (req) => {
       temperature = Number(template.temperature) || 0.1;
       maxTokens = template.max_tokens || 600;
 
-      // Interpolate variables
       const variables: Record<string, string> = {
         content_type: contentType || 'unknown',
         content_text: content,
@@ -62,7 +62,6 @@ serve(async (req) => {
         moderationPrompt = moderationPrompt.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
       }
     } else {
-      // Fallback to inline prompt
       systemPrompt = 'You are a content moderation AI. Always respond with valid JSON.';
       moderationPrompt = `You are a content moderator for an educational platform serving South African high school students aged 11-18. Analyze the following content for:
 1) Profanity and inappropriate language
@@ -80,14 +79,11 @@ Respond ONLY with valid JSON in this exact format:
     }
 
     const startTime = Date.now();
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    const aiResponse = await fetch(OPENROUTER_BASE_URL, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
+      headers: openRouterHeaders,
       body: JSON.stringify({
-        model: template?.model_name || 'gpt-4o-mini',
+        model: mapModel(template?.model_name || 'gpt-4o-mini'),
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: moderationPrompt }
@@ -97,26 +93,26 @@ Respond ONLY with valid JSON in this exact format:
       }),
     });
 
-    if (!openaiResponse.ok) {
-      console.error('OpenAI API error:', await openaiResponse.text());
-      throw new Error('OpenAI moderation failed');
+    if (!aiResponse.ok) {
+      console.error('OpenRouter API error:', await aiResponse.text());
+      throw new Error('OpenRouter moderation failed');
     }
 
-    const openaiData = await openaiResponse.json();
+    const aiData = await aiResponse.json();
     const responseTime = Date.now() - startTime;
-    const aiResponse = openaiData.choices[0].message.content;
-    const tokensUsed = openaiData.usage?.total_tokens || 0;
+    const aiContent = aiData.choices[0].message.content;
+    const tokensUsed = aiData.usage?.total_tokens || 0;
     
     let moderationResult;
     try {
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         moderationResult = JSON.parse(jsonMatch[0]);
       } else {
-        moderationResult = JSON.parse(aiResponse);
+        moderationResult = JSON.parse(aiContent);
       }
     } catch (e) {
-      console.error('Failed to parse AI response:', aiResponse);
+      console.error('Failed to parse AI response:', aiContent);
       moderationResult = {
         approved: false,
         issues: ['Unable to parse moderation result'],
@@ -125,13 +121,11 @@ Respond ONLY with valid JSON in this exact format:
       };
     }
 
-    // Extract issues from different possible formats
     const issues = moderationResult.issues || 
                    moderationResult.issues_found?.map((i: any) => i.specific_issue || i) || 
                    [];
     const confidence = moderationResult.confidence || moderationResult.confidence_score || 0.5;
 
-    // Determine moderation decision based on confidence and issues
     let moderationDecision = 'approved';
     if (confidence > 0.9 && issues.length > 0) {
       moderationDecision = 'removed';
@@ -139,7 +133,6 @@ Respond ONLY with valid JSON in this exact format:
       moderationDecision = 'flagged';
     }
 
-    // Update template metrics
     if (template) {
       await supabaseClient.rpc('update_template_metrics', {
         p_template_name: 'content_moderation_community',
@@ -150,7 +143,6 @@ Respond ONLY with valid JSON in this exact format:
       });
     }
 
-    // Log moderation result
     const { error: logError } = await supabaseClient
       .from('content_moderation_log')
       .insert({
@@ -163,9 +155,7 @@ Respond ONLY with valid JSON in this exact format:
         reviewed: false,
       });
 
-    if (logError) {
-      console.error('Error logging moderation:', logError);
-    }
+    if (logError) console.error('Error logging moderation:', logError);
 
     return new Response(
       JSON.stringify({
@@ -192,10 +182,7 @@ Respond ONLY with valid JSON in this exact format:
         moderation_decision: 'flagged',
         error: errorMessage 
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
