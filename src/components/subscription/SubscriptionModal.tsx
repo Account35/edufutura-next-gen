@@ -76,6 +76,12 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
     onClose();
   };
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      handleClose();
+    }
+  };
+
   const handleCheckout = async () => {
     if (!acceptedTerms) {
       toast({
@@ -110,7 +116,11 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
 
       await loadPaystackPopup();
 
-      const paystackHandler = window.PaystackPop?.setup({
+      if (typeof window.PaystackPop?.setup !== 'function') {
+        throw new Error('Paystack checkout did not initialize correctly.');
+      }
+
+      const paystackHandler = window.PaystackPop.setup({
         key: initializeData.publicKey,
         email: initializeData.email,
         amount: Math.round(initializeData.amount * 100),
@@ -120,6 +130,7 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
         label: initializeData.label,
         callback: function (response: { reference?: string }) {
           const reference = response.reference || initializeData.reference;
+          setIsLoading(true);
 
           supabase.functions.invoke<PaystackVerifyResponse>(
             'paystack-subscription',
@@ -157,7 +168,12 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
         },
       });
 
-      paystackHandler?.openIframe();
+      if (!paystackHandler || typeof paystackHandler.openIframe !== 'function') {
+        throw new Error('Paystack checkout popup could not be opened.');
+      }
+
+      paystackHandler.openIframe();
+      setIsLoading(false);
     } catch (error) {
       console.error('Error starting checkout:', error);
       toast({
@@ -170,7 +186,7 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
