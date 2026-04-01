@@ -118,23 +118,14 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
         ref: initializeData.reference,
         metadata: initializeData.metadata,
         label: initializeData.label,
-        callback: async (response: { reference?: string }) => {
-          try {
-            const reference = response.reference || initializeData.reference;
+        callback: function (response: { reference?: string }) {
+          const reference = response.reference || initializeData.reference;
 
-            const { data: verifyData, error: verifyError } = await supabase.functions.invoke<PaystackVerifyResponse>(
-              'paystack-subscription',
-              {
-                body: {
-                  action: 'verify',
-                  reference,
-                },
-              }
-            );
-
-            if (verifyError) {
-              throw verifyError;
-            }
+          supabase.functions.invoke<PaystackVerifyResponse>(
+            'paystack-subscription',
+            { body: { action: 'verify', reference } }
+          ).then(({ data: verifyData, error: verifyError }) => {
+            if (verifyError) throw verifyError;
 
             if (!verifyData || verifyData.paymentStatus !== 'success') {
               throw new Error('Payment verification failed.');
@@ -151,7 +142,7 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
             });
 
             handleClose();
-          } catch (error) {
+          }).catch((error) => {
             console.error('Error verifying payment:', error);
             toast({
               title: 'Payment verification failed',
@@ -159,7 +150,7 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
               variant: 'destructive',
             });
             setIsLoading(false);
-          }
+          });
         },
         onClose: () => {
           setIsLoading(false);
