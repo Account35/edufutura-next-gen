@@ -27,7 +27,10 @@ verify_jwt = true
 [functions.send-notifications]
 verify_jwt = false
 
-[functions.payfast-webhook]
+[functions.paystack-webhook]
+verify_jwt = false
+
+[functions.paystack-subscription]
 verify_jwt = false
 
 [functions.moderate-content]

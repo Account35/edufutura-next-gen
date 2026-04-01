@@ -48,6 +48,7 @@ export const useAdminRole = () => {
     setLoading(true);
 
     const checkRoles = async () => {
+      const startedAt = performance.now();
       try {
         // Prevent scheduling duplicate timeouts
         if (roleCheckTimeoutRef.current) {
@@ -63,12 +64,11 @@ export const useAdminRole = () => {
           }, ROLE_CHECK_TIMEOUT_MS);
         }
 
-        console.time('[AdminRole] checkRoles');
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id);
-        console.timeEnd('[AdminRole] checkRoles');
+        console.log(`[AdminRole] checkRoles: ${performance.now() - startedAt} ms`);
 
         // Clear timeout since we got a response
         if (roleCheckTimeoutRef.current) {
@@ -93,6 +93,7 @@ export const useAdminRole = () => {
         lastCheckedUserId.current = user.id;
         setHasChecked(true);
       } catch (error) {
+        console.log(`[AdminRole] checkRoles failed after ${performance.now() - startedAt} ms`);
         console.error('Error checking roles:', error);
         // On error, check email as fallback
         const isAdminEmail = user.email === 'admin_edufutura@gmail.com' || user.email === 'ntlemezal35@gmail.com';

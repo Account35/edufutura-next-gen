@@ -5,13 +5,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Crown,
   Mail,
@@ -20,21 +29,33 @@ import {
   Calendar,
   Clock,
   GraduationCap,
-  Award,
   MessageSquare,
   Users,
   FileText,
   Star,
   Shield,
-  Ban,
   KeyRound,
   UserCog,
-  LogIn,
+  Trash2,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAdminPermissions } from '@/hooks/useAdminPermissions';
 import { toast } from 'sonner';
+
+const formatDateValue = (value: string | null | undefined, fallback = 'N/A') => {
+  if (!value) return fallback;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? fallback : format(date, 'dd MMM yyyy');
+};
+
+const formatRelativeDateValue = (value: string | null | undefined, fallback = 'Never') => {
+  if (!value) return fallback;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? fallback
+    : formatDistanceToNow(date, { addSuffix: true });
+};
 
 interface User {
   id: string;
@@ -66,10 +87,10 @@ interface UserDetailModalProps {
 
 export function UserDetailModal({ user, open, onOpenChange, onUserUpdated }: UserDetailModalProps) {
   const { hasPermission } = useAdminPermissions();
-  const [loading, setLoading] = useState(false);
   const [quizStats, setQuizStats] = useState<{ total: number; average: number }>({ total: 0, average: 0 });
   const [communityStats, setCommunityStats] = useState<{ posts: number; groups: number; resources: number; reputation: number }>({ posts: 0, groups: 0, resources: 0, reputation: 0 });
   const [subscriptionHistory, setSubscriptionHistory] = useState<any[]>([]);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (user && open) {
@@ -79,7 +100,6 @@ export function UserDetailModal({ user, open, onOpenChange, onUserUpdated }: Use
 
   const loadUserDetails = async () => {
     if (!user) return;
-    setLoading(true);
     try {
       // Load quiz performance stats
       const { data: quizData } = await supabase
@@ -132,61 +152,39 @@ export function UserDetailModal({ user, open, onOpenChange, onUserUpdated }: Use
     } catch (error) {
       console.error('Error loading user details:', error);
     } finally {
-      setLoading(false);
     }
   };
 
-  const handleSuspendUser = async () => {
-    if (!user || !hasPermission('users.edit')) return;
+  const handleDeleteUser = async () => {
+    if (!user || !hasPermission('users.delete')) return;
     
     try {
       const { error } = await supabase
         .from('users')
-        .update({ subscription_status: 'inactive' })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      // Log the action
-      await supabase.from('admin_audit_log').insert({
-        action_type: 'user_suspended',
-        action_description: `Suspended user: ${user.email}`,
-        target_type: 'user',
-        target_id: user.id,
-        severity: 'warning',
-      });
-
-      toast.success('User suspended successfully');
-      onUserUpdated();
-    } catch (error) {
-      toast.error('Failed to suspend user');
-      console.error(error);
-    }
-  };
-
-  const handleReactivateUser = async () => {
-    if (!user || !hasPermission('users.edit')) return;
-    
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ subscription_status: 'active' })
+        .update({
+          subscription_status: 'deleted',
+          subscription_plan: null,
+          subscription_start_date: null,
+          subscription_end_date: null,
+        })
         .eq('id', user.id);
 
       if (error) throw error;
 
       await supabase.from('admin_audit_log').insert({
-        action_type: 'user_reactivated',
-        action_description: `Reactivated user: ${user.email}`,
+        action_type: 'user_deleted',
+        action_description: `Deleted user: ${user.email}`,
         target_type: 'user',
         target_id: user.id,
-        severity: 'info',
+        severity: 'critical',
       });
 
-      toast.success('User reactivated successfully');
+      toast.success('User deleted successfully');
+      setConfirmDeleteOpen(false);
+      onOpenChange(false);
       onUserUpdated();
     } catch (error) {
-      toast.error('Failed to reactivate user');
+      toast.error('Failed to delete user');
       console.error(error);
     }
   };
@@ -279,7 +277,7 @@ export function UserDetailModal({ user, open, onOpenChange, onUserUpdated }: Use
                   Premium
                 </Badge>
               )}
-              <Badge variant={user.subscription_status === 'suspended' ? 'destructive' : 'outline'}>
+              <Badge variant={user.subscription_status === 'deleted' ? 'destructive' : 'outline'}>
                 {user.subscription_status || 'Active'}
               </Badge>
             </div>
@@ -308,11 +306,11 @@ export function UserDetailModal({ user, open, onOpenChange, onUserUpdated }: Use
               </span>
               <span className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
-                Joined {format(new Date(user.created_at), 'dd MMM yyyy')}
+                Joined {formatDateValue(user.created_at)}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="w-4 h-4" />
-                Last seen {user.last_login_at ? formatDistanceToNow(new Date(user.last_login_at), { addSuffix: true }) : 'Never'}
+                Last seen {formatRelativeDateValue(user.last_login_at)}
               </span>
             </div>
           </div>
@@ -371,13 +369,13 @@ export function UserDetailModal({ user, open, onOpenChange, onUserUpdated }: Use
                   {user.subscription_start_date && (
                     <div>
                       <p className="text-sm text-muted-foreground">Start Date</p>
-                      <p className="font-medium">{format(new Date(user.subscription_start_date), 'dd MMM yyyy')}</p>
+                      <p className="font-medium">{formatDateValue(user.subscription_start_date)}</p>
                     </div>
                   )}
                   {user.subscription_end_date && (
                     <div>
                       <p className="text-sm text-muted-foreground">End Date</p>
-                      <p className="font-medium">{format(new Date(user.subscription_end_date), 'dd MMM yyyy')}</p>
+                      <p className="font-medium">{formatDateValue(user.subscription_end_date)}</p>
                     </div>
                   )}
                 </div>
@@ -396,7 +394,7 @@ export function UserDetailModal({ user, open, onOpenChange, onUserUpdated }: Use
                         <div>
                           <p className="font-medium capitalize">{tx.transaction_type}</p>
                           <p className="text-sm text-muted-foreground">
-                            {format(new Date(tx.transaction_date), 'dd MMM yyyy')}
+                            {formatDateValue(tx.transaction_date)}
                           </p>
                         </div>
                         <div className="text-right">
@@ -478,27 +476,15 @@ export function UserDetailModal({ user, open, onOpenChange, onUserUpdated }: Use
                     Send Password Reset
                   </Button>
                   
-                  {user.subscription_status === 'suspended' ? (
-                    <Button
-                      variant="outline"
-                      className="justify-start text-green-600"
-                      onClick={handleReactivateUser}
-                      disabled={!hasPermission('users.edit')}
-                    >
-                      <Shield className="w-4 h-4 mr-2" />
-                      Reactivate User
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      className="justify-start text-destructive"
-                      onClick={handleSuspendUser}
-                      disabled={!hasPermission('users.edit')}
-                    >
-                      <Ban className="w-4 h-4 mr-2" />
-                      Suspend User
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    className="justify-start text-destructive"
+                    onClick={() => setConfirmDeleteOpen(true)}
+                    disabled={!hasPermission('users.delete') || user.subscription_status === 'deleted'}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    {user.subscription_status === 'deleted' ? 'User Deleted' : 'Delete User'}
+                  </Button>
 
                   {user.account_type === 'free' && (
                     <Button
@@ -529,9 +515,10 @@ export function UserDetailModal({ user, open, onOpenChange, onUserUpdated }: Use
                   <Button
                     variant="destructive"
                     size="sm"
-                    disabled={!hasPermission('users.delete')}
+                    disabled={!hasPermission('users.delete') || user.subscription_status === 'deleted'}
+                    onClick={() => setConfirmDeleteOpen(true)}
                   >
-                    Delete User Account
+                    {user.subscription_status === 'deleted' ? 'User Deleted' : 'Delete User Account'}
                   </Button>
                 </div>
               </CardContent>
@@ -539,6 +526,25 @@ export function UserDetailModal({ user, open, onOpenChange, onUserUpdated }: Use
           </TabsContent>
         </Tabs>
       </DialogContent>
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This marks the user account as deleted in the app and removes active subscription access.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Progress } from '@/components/ui/progress';
-import { Mail, Download, Ban, Trash2, ChevronDown, X } from 'lucide-react';
+import { Mail, Download, Trash2, ChevronDown, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAdminPermissions } from '@/hooks/useAdminPermissions';
@@ -74,43 +74,6 @@ export function BulkUserActions({ selectedUsers, onClearSelection, onActionCompl
     }
   };
 
-  const handleBulkSuspend = async () => {
-    if (!hasPermission('users.edit')) return;
-    
-    setProcessing(true);
-    setProgress(0);
-    
-    try {
-      let completed = 0;
-      for (const userId of selectedUsers) {
-        await supabase
-          .from('users')
-          .update({ subscription_status: 'inactive' })
-          .eq('id', userId);
-        
-        completed++;
-        setProgress((completed / selectedUsers.length) * 100);
-      }
-
-      await supabase.from('admin_audit_log').insert({
-        action_type: 'bulk_suspend',
-        action_description: `Bulk suspended ${selectedUsers.length} users`,
-        severity: 'warning',
-        metadata: { user_ids: selectedUsers },
-      });
-
-      toast.success(`Successfully suspended ${selectedUsers.length} users`);
-      onActionComplete();
-      onClearSelection();
-    } catch (error) {
-      toast.error('Failed to suspend users');
-      console.error(error);
-    } finally {
-      setProcessing(false);
-      setConfirmAction(null);
-    }
-  };
-
   const handleBulkDelete = async () => {
     if (!hasPermission('users.delete')) return;
     
@@ -120,10 +83,14 @@ export function BulkUserActions({ selectedUsers, onClearSelection, onActionCompl
     try {
       let completed = 0;
       for (const userId of selectedUsers) {
-        // Soft delete by updating status to cancelled
         await supabase
           .from('users')
-          .update({ subscription_status: 'cancelled' })
+          .update({
+            subscription_status: 'deleted',
+            subscription_plan: null,
+            subscription_start_date: null,
+            subscription_end_date: null,
+          })
           .eq('id', userId);
         
         completed++;
@@ -176,14 +143,6 @@ export function BulkUserActions({ selectedUsers, onClearSelection, onActionCompl
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => setConfirmAction('suspend')}
-              disabled={!hasPermission('users.edit')}
-              className="text-amber-600"
-            >
-              <Ban className="w-4 h-4 mr-2" />
-              Suspend Selected
-            </DropdownMenuItem>
-            <DropdownMenuItem
               onClick={() => setConfirmAction('delete')}
               disabled={!hasPermission('users.delete')}
               className="text-destructive"
@@ -206,29 +165,12 @@ export function BulkUserActions({ selectedUsers, onClearSelection, onActionCompl
         </div>
       )}
 
-      <AlertDialog open={confirmAction === 'suspend'} onOpenChange={() => setConfirmAction(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Suspend {selectedUsers.length} Users?</AlertDialogTitle>
-            <AlertDialogDescription>
-              These users will not be able to log in until reactivated. This action can be reversed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleBulkSuspend} className="bg-amber-600 hover:bg-amber-700">
-              Suspend Users
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <AlertDialog open={confirmAction === 'delete'} onOpenChange={() => setConfirmAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {selectedUsers.length} Users?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. All user data will be permanently deleted.
+              This marks the selected accounts as deleted in the app and removes active subscription access.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

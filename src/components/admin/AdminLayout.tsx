@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { FullPageLoader } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   GraduationCap, 
   LogOut, 
   Users, 
@@ -18,8 +18,7 @@ import {
   Headphones,
   ScrollText,
   Menu,
-  X,
-  ArrowLeft
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -257,14 +256,10 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
               </Sheet>
 
               {/* Back Button for Mobile */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-primary-foreground h-10 w-10"
-                onClick={() => navigate(-1)}
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
+              <BackButton
+                className="text-primary-foreground hover:bg-primary-foreground/10 h-10 w-10"
+                fallbackPath="/admin"
+              />
 
               <div className="flex items-center gap-2">
                 <span className="font-bold truncate max-w-[150px]">{title || 'Admin'}</span>

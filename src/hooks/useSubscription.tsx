@@ -9,6 +9,8 @@ interface SubscriptionData {
   subscriptionStatus: SubscriptionStatus;
   subscriptionPlan: 'monthly' | 'annual' | null;
   daysRemaining: number | null;
+  paymentMethod: string | null;
+  subscriptionAutoRenew: boolean;
   isLoading: boolean;
 }
 
@@ -18,6 +20,8 @@ export const useSubscription = () => {
     subscriptionStatus: 'inactive',
     subscriptionPlan: null,
     daysRemaining: null,
+    paymentMethod: null,
+    subscriptionAutoRenew: false,
     isLoading: true,
   });
 
@@ -35,7 +39,7 @@ export const useSubscription = () => {
       // Fetch user subscription data
       const { data: userData, error } = await supabase
         .from('users')
-        .select('account_type, subscription_status, subscription_plan, subscription_end_date')
+        .select('account_type, subscription_status, subscription_plan, subscription_end_date, payment_method, subscription_auto_renew')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -55,6 +59,8 @@ export const useSubscription = () => {
           subscriptionStatus: userData.subscription_status as SubscriptionStatus,
           subscriptionPlan: userData.subscription_plan as 'monthly' | 'annual' | null,
           daysRemaining,
+          paymentMethod: userData.payment_method,
+          subscriptionAutoRenew: !!userData.subscription_auto_renew,
           isLoading: false,
         });
       }
@@ -66,6 +72,17 @@ export const useSubscription = () => {
 
   useEffect(() => {
     checkSubscription();
+  }, []);
+
+  useEffect(() => {
+    const handleSubscriptionUpdated = () => {
+      void checkSubscription();
+    };
+
+    window.addEventListener('subscription-updated', handleSubscriptionUpdated);
+    return () => {
+      window.removeEventListener('subscription-updated', handleSubscriptionUpdated);
+    };
   }, []);
 
   return {

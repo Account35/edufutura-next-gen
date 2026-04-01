@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,20 @@ import { UserFiltersComponent, UserFilters } from '@/components/admin/UserFilter
 import { UserDetailModal } from '@/components/admin/UserDetailModal';
 import { BulkUserActions } from '@/components/admin/BulkUserActions';
 import { toast } from 'sonner';
+
+const formatDateValue = (value: string | null | undefined, fallback = '-') => {
+  if (!value) return fallback;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? fallback : format(date, 'dd MMM yyyy');
+};
+
+const formatRelativeDateValue = (value: string | null | undefined, fallback = 'Never') => {
+  if (!value) return fallback;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? fallback
+    : formatDistanceToNow(date, { addSuffix: true });
+};
 
 interface User {
   id: string;
@@ -287,13 +301,10 @@ export default function AdminUsers() {
                         <TableCell>{getAccountTypeBadge(user.account_type)}</TableCell>
                         <TableCell>{getStatusBadge(user.subscription_status)}</TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {format(new Date(user.created_at), 'dd MMM yyyy')}
+                          {formatDateValue(user.created_at)}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {user.last_login_at 
-                            ? formatDistanceToNow(new Date(user.last_login_at), { addSuffix: true })
-                            : 'Never'
-                          }
+                          {formatRelativeDateValue(user.last_login_at)}
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
@@ -321,7 +332,7 @@ export default function AdminUsers() {
                               </DropdownMenuItem>
                               <DropdownMenuItem className="text-destructive">
                                 <Ban className="h-4 w-4 mr-2" />
-                                Suspend User
+                                Delete User
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

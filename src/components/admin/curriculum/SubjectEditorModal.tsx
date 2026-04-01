@@ -80,7 +80,7 @@ export const SubjectEditorModal = ({
         grade_level: subject.grade_level || 10,
         estimated_hours: subject.estimated_hours || 0,
         is_published: subject.is_published || false,
-        caps_aligned: subject.caps_aligned || true,
+        caps_aligned: subject.caps_aligned ?? true,
         learning_objectives: subject.learning_objectives || [],
       });
     } else {

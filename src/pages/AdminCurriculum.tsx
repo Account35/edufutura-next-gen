@@ -82,8 +82,10 @@ export default function AdminCurriculum() {
 
   // Filter subjects
   const filteredSubjects = subjects.filter(subject => {
-    const matchesSearch = subject.subject_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (subject.description?.toLowerCase().includes(searchQuery.toLowerCase()));
+    const normalizedQuery = searchQuery.toLowerCase();
+    const subjectName = (subject.subject_name || '').toLowerCase();
+    const subjectDescription = (subject.description || '').toLowerCase();
+    const matchesSearch = subjectName.includes(normalizedQuery) || subjectDescription.includes(normalizedQuery);
     const matchesGrade = gradeFilter === 'all' || subject.grade_level === Number(gradeFilter);
     return matchesSearch && matchesGrade;
   });

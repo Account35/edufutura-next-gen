@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Check, Crown } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Check, Crown, CreditCard, Loader2, RefreshCcw } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,28 +11,77 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { PRICING, FEATURES } from '@/config/pricing';
 import { supabase } from '@/integrations/supabase/client';
+import { loadPaystackPopup } from '@/lib/paystack';
 import { toast } from '@/hooks/use-toast';
+import type { BillingPlan, PaymentType, PaystackInitializeResponse, PaystackVerifyResponse } from '@/types/paystack';
 
 interface SubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type PlanType = 'monthly' | 'annual';
-
 export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) => {
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>('annual');
+  const [selectedPlan, setSelectedPlan] = useState<BillingPlan>('annual');
+  const [paymentType, setPaymentType] = useState<PaymentType>('recurring');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSelectPlan = async () => {
+  const plans = useMemo(
+    () => [
+      {
+        type: 'monthly' as BillingPlan,
+        name: 'Monthly',
+        price: PRICING.MONTHLY_PRICE,
+        period: 'per month',
+        savings: null,
+      },
+      {
+        type: 'annual' as BillingPlan,
+        name: 'Annual',
+        price: PRICING.ANNUAL_PRICE,
+        period: 'per year',
+        savings: `Save ${PRICING.CURRENCY_SYMBOL}${PRICING.ANNUAL_SAVINGS} per year!`,
+      },
+    ],
+    []
+  );
+
+  const paymentOptions = [
+    {
+      type: 'recurring' as PaymentType,
+      title: 'Recurring payment',
+      description: 'Pay automatically every billing cycle until you cancel.',
+      icon: RefreshCcw,
+    },
+    {
+      type: 'one_time' as PaymentType,
+      title: 'One-time payment',
+      description: 'Pay once for this billing period and renew manually later.',
+      icon: CreditCard,
+    },
+  ];
+
+  const resetModalState = () => {
+    setAcceptedTerms(false);
+    setPaymentType('recurring');
+    setSelectedPlan('annual');
+    setIsLoading(false);
+  };
+
+  const handleClose = () => {
+    resetModalState();
+    onClose();
+  };
+
+  const handleCheckout = async () => {
     if (!acceptedTerms) {
       toast({
-        title: "Terms Required",
-        description: "Please accept the terms and conditions to continue.",
-        variant: "destructive",
+        title: 'Terms Required',
+        description: 'Please accept the terms and conditions to continue.',
+        variant: 'destructive',
       });
       return;
     }
@@ -40,65 +89,97 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
     setIsLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      const { data: initializeData, error: initializeError } = await supabase.functions.invoke<PaystackInitializeResponse>(
+        'paystack-subscription',
+        {
+          body: {
+            action: 'initialize',
+            planType: selectedPlan,
+            paymentType,
+          },
+        }
+      );
 
-      // Store selected plan preference
-      const { error } = await supabase
-        .from('users')
-        .update({ subscription_plan: selectedPlan })
-        .eq('id', user.id);
+      if (initializeError) {
+        throw initializeError;
+      }
 
-      if (error) throw error;
+      if (!initializeData?.publicKey || !initializeData.reference) {
+        throw new Error('Invalid payment session received.');
+      }
 
-      // Reset the subscription plan since payment isn't available yet
-      await supabase
-        .from('users')
-        .update({ subscription_plan: null })
-        .eq('id', user.id);
+      await loadPaystackPopup();
 
-      toast({
-        title: "Payment Integration Coming Soon",
-        description: "Payment processing will be available in Phase 10. We've saved your plan preference for when it launches!",
-        variant: "default",
+      const paystackHandler = window.PaystackPop?.setup({
+        key: initializeData.publicKey,
+        email: initializeData.email,
+        amount: Math.round(initializeData.amount * 100),
+        currency: initializeData.currency,
+        ref: initializeData.reference,
+        metadata: initializeData.metadata,
+        label: initializeData.label,
+        callback: async (response: { reference?: string }) => {
+          try {
+            const reference = response.reference || initializeData.reference;
+
+            const { data: verifyData, error: verifyError } = await supabase.functions.invoke<PaystackVerifyResponse>(
+              'paystack-subscription',
+              {
+                body: {
+                  action: 'verify',
+                  reference,
+                },
+              }
+            );
+
+            if (verifyError) {
+              throw verifyError;
+            }
+
+            if (!verifyData || verifyData.paymentStatus !== 'success') {
+              throw new Error('Payment verification failed.');
+            }
+
+            window.dispatchEvent(new CustomEvent('subscription-updated'));
+
+            toast({
+              title: 'Payment successful',
+              description:
+                verifyData.paymentType === 'recurring'
+                  ? 'Your recurring premium subscription is now active.'
+                  : 'Your premium access is now active for the selected billing period.',
+            });
+
+            handleClose();
+          } catch (error) {
+            console.error('Error verifying payment:', error);
+            toast({
+              title: 'Payment verification failed',
+              description: error instanceof Error ? error.message : 'We could not confirm your payment.',
+              variant: 'destructive',
+            });
+            setIsLoading(false);
+          }
+        },
+        onClose: () => {
+          setIsLoading(false);
+        },
       });
 
-      // Close modal after showing message
-      setTimeout(() => {
-        onClose();
-      }, 2000);
-      
+      paystackHandler?.openIframe();
     } catch (error) {
-      console.error('Error selecting plan:', error);
+      console.error('Error starting checkout:', error);
       toast({
-        title: "Error",
-        description: "Failed to process subscription. Please try again.",
-        variant: "destructive",
+        title: 'Unable to start payment',
+        description: error instanceof Error ? error.message : 'Failed to initialize payment. Please try again.',
+        variant: 'destructive',
       });
-    } finally {
       setIsLoading(false);
     }
   };
 
-  const plans = [
-    {
-      type: 'monthly' as PlanType,
-      name: 'Monthly',
-      price: PRICING.MONTHLY_PRICE,
-      period: 'per month',
-      savings: null,
-    },
-    {
-      type: 'annual' as PlanType,
-      name: 'Annual',
-      price: PRICING.ANNUAL_PRICE,
-      period: 'per year',
-      savings: `Save ${PRICING.CURRENCY_SYMBOL}${PRICING.ANNUAL_SAVINGS} per year!`,
-    },
-  ];
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
@@ -106,12 +187,11 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
             Upgrade to Premium
           </DialogTitle>
           <DialogDescription>
-            Choose your plan and unlock all premium features
+            Choose your plan, then pay with Paystack without leaving the app.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Plan Selection */}
           <div className="grid md:grid-cols-2 gap-4">
             {plans.map((plan) => (
               <Card
@@ -126,15 +206,20 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xl font-semibold">{plan.name}</h3>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      selectedPlan === plan.type ? 'border-accent bg-accent' : 'border-border'
-                    }`}>
+                    <div
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        selectedPlan === plan.type ? 'border-accent bg-accent' : 'border-border'
+                      }`}
+                    >
                       {selectedPlan === plan.type && <Check className="w-3 h-3 text-white" />}
                     </div>
                   </div>
                   <div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold">{PRICING.CURRENCY_SYMBOL}{plan.price}</span>
+                      <span className="text-3xl font-bold">
+                        {PRICING.CURRENCY_SYMBOL}
+                        {plan.price}
+                      </span>
                       <span className="text-muted-foreground text-sm">{plan.period}</span>
                     </div>
                     {plan.savings && (
@@ -146,7 +231,39 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
             ))}
           </div>
 
-          {/* Features List */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold">How would you like to pay?</h4>
+              <Badge variant="outline">Test mode</Badge>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              {paymentOptions.map((option) => {
+                const Icon = option.icon;
+                return (
+                  <Card
+                    key={option.type}
+                    className={`p-5 cursor-pointer transition-all ${
+                      paymentType === option.type
+                        ? 'border-accent border-2 shadow-elegant'
+                        : 'border-border hover:border-accent/50'
+                    }`}
+                    onClick={() => setPaymentType(option.type)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+                        <Icon className="w-5 h-5 text-accent" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-semibold">{option.title}</p>
+                        <p className="text-sm text-muted-foreground">{option.description}</p>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+
           <div>
             <h4 className="font-semibold mb-3">Premium features include:</h4>
             <div className="grid md:grid-cols-2 gap-2">
@@ -159,7 +276,6 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
             </div>
           </div>
 
-          {/* Terms Acceptance */}
           <div className="flex items-start gap-2 pt-4 border-t">
             <Checkbox
               id="terms"
@@ -167,35 +283,32 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
               onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
             />
             <Label htmlFor="terms" className="text-sm text-muted-foreground cursor-pointer">
-              I accept the{' '}
-              <a href="#" className="text-accent hover:underline">
-                subscription terms and conditions
-              </a>
+              I accept the subscription terms and understand that recurring billing continues until I cancel.
             </Label>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-3 pt-2">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="flex-1"
-              disabled={isLoading}
-            >
+            <Button variant="outline" onClick={handleClose} className="flex-1" disabled={isLoading}>
               Cancel
             </Button>
             <Button
-              onClick={handleSelectPlan}
+              onClick={handleCheckout}
               className="flex-1 bg-accent hover:bg-accent/90 text-white"
               disabled={isLoading || !acceptedTerms}
             >
-              {isLoading ? 'Processing...' : 'Continue to Payment'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Continue to Payment'
+              )}
             </Button>
           </div>
 
-          {/* Payment Note */}
           <p className="text-xs text-muted-foreground text-center">
-            Secure payment powered by PayFast. Cancel anytime.
+            Secure payment powered by Paystack. The checkout opens as an in-app popup.
           </p>
         </div>
       </DialogContent>

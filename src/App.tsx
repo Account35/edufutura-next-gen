@@ -6,6 +6,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
  import { createBrowserRouter, RouterProvider, createRoutesFromElements, Route, Outlet } from "react-router-dom";
 import createQueryClient from '@/lib/query-client';
 import { AuthProvider } from "@/hooks/useAuth";
+import { AdminPermissionsProvider } from "@/hooks/useAdminPermissions";
 import { AuthEventsProvider } from "@/components/AuthEventsProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteErrorBoundary } from "@/components/error-boundaries/RouteErrorBoundary";
@@ -158,9 +159,11 @@ const queryClient = createQueryClient();
  
  const AdminWrapper = ({ Component }: { Component: React.LazyExoticComponent<any> }) => (
    <AdminRoute>
-     <Suspense fallback={<GenericPageSkeleton />}>
-       <Component />
-     </Suspense>
+     <AdminPermissionsProvider>
+       <Suspense fallback={<GenericPageSkeleton />}>
+         <Component />
+       </Suspense>
+     </AdminPermissionsProvider>
    </AdminRoute>
  );
 

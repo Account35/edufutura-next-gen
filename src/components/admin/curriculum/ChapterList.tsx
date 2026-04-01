@@ -34,6 +34,14 @@ import {
 import { Chapter, Subject } from '@/hooks/useAdminCurriculum';
 import { formatDistanceToNow } from 'date-fns';
 
+const formatRelativeDateValue = (value: string | null | undefined, fallback = '-') => {
+  if (!value) return fallback;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? fallback
+    : formatDistanceToNow(date, { addSuffix: true });
+};
+
 interface ChapterListProps {
   subject: Subject;
   chapters: Chapter[];
@@ -194,9 +202,7 @@ export const ChapterList = ({
                       ) : '-'}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {chapter.updated_at 
-                        ? formatDistanceToNow(new Date(chapter.updated_at), { addSuffix: true })
-                        : '-'}
+                      {formatRelativeDateValue(chapter.updated_at)}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">

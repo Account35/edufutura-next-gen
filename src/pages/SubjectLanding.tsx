@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Calculator, Atom, Dna, Globe, Book, ChevronRight, Clock, Target } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { CAPSBadge } from '@/components/curriculum/CAPSBadge';
 import { ProgressRing } from '@/components/ui/progress-ring';
 
@@ -16,6 +17,7 @@ const iconMap: Record<string, any> = {
   Dna: Dna,
   Globe: Globe,
   Book: Book,
+  BookOpen: Book,
 };
 
 export default function SubjectLanding() {
@@ -81,7 +83,10 @@ export default function SubjectLanding() {
     );
   }
 
-  const Icon = iconMap[subject.icon_name || 'Book'];
+  const Icon =
+    iconMap[subject.icon_name || 'Book'] ||
+    (subject.icon_name ? (LucideIcons as Record<string, any>)[subject.icon_name] : null) ||
+    Book;
   const firstChapter = chapters[0];
 
   return (

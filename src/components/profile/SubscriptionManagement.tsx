@@ -32,7 +32,15 @@ const premiumFeatures = [
 ];
 
 export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) => {
-  const { isPremium, subscriptionStatus, subscriptionPlan, daysRemaining, checkSubscription } = useSubscription();
+  const {
+    isPremium,
+    subscriptionStatus,
+    subscriptionPlan,
+    daysRemaining,
+    paymentMethod,
+    subscriptionAutoRenew,
+    checkSubscription,
+  } = useSubscription();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showDowngradeDialog, setShowDowngradeDialog] = useState(false);
   const [understood, setUnderstood] = useState(false);
@@ -65,9 +73,23 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
     try {
       setIsLoading(true);
 
+      if (paymentMethod === 'paystack' && subscriptionAutoRenew) {
+        const { error: cancelError } = await supabase.functions.invoke('paystack-subscription', {
+          body: {
+            action: 'cancel-recurring',
+          },
+        });
+
+        if (cancelError) throw cancelError;
+      }
+
       const { error } = await supabase
         .from('users')
-        .update({ subscription_status: 'cancelled' })
+        .update({
+          subscription_status: 'cancelled',
+          subscription_auto_renew: false,
+          subscription_cancelled_at: new Date().toISOString(),
+        })
         .eq('id', userId);
 
       if (error) throw error;
@@ -152,7 +174,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
                   className="w-full border-red-200 text-red-600 hover:bg-red-50"
                   onClick={() => setShowDowngradeDialog(true)}
                 >
-                  Downgrade to Free
+                  {subscriptionAutoRenew ? 'Cancel Auto-Renew' : 'Downgrade to Free'}
                 </Button>
               )}
             </div>

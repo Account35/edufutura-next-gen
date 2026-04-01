@@ -196,8 +196,9 @@ export default defineConfig(({ mode }) => ({
       'framer-motion',
       'date-fns',
       'lucide-react',
+      'recharts',
     ],
-    exclude: ['recharts', '@tiptap/react', 'jspdf'],
+    exclude: ['@tiptap/react', 'jspdf'],
   },
   css: {
     devSourcemap: mode === 'development',

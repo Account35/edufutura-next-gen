@@ -38,12 +38,14 @@ export function IntegrationSettings() {
     elevenlabs: { connected: false, lastCheck: new Date() },
   });
 
-  const [payfast, setPayfast] = useState({
-    merchantId: '10000100',
-    merchantKey: '••••••••••••••••',
-    passphrase: '••••••••••••••••',
+  const [paystack, setPaystack] = useState({
+    publicKey: 'pk_test_••••••••••••••',
+    secretKey: 'sk_test_••••••••••••••',
+    monthlyPlanCode: 'PLN_monthly_••••',
+    annualPlanCode: 'PLN_annual_••••',
     testMode: true,
-    webhookUrl: 'https://api.edufutura.co.za/webhooks/payfast',
+    initializeFunction: 'paystack-subscription',
+    webhookUrl: 'https://umnpomycamfmsrssjuqn.supabase.co/functions/v1/paystack-webhook',
   });
 
   const [email, setEmail] = useState({
@@ -238,68 +240,95 @@ export function IntegrationSettings() {
         </CardContent>
       </Card>
 
-      {/* PayFast */}
+      {/* Paystack */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="w-5 h-5" />
-            PayFast Payment Gateway
+            Paystack Payment Gateway
           </CardTitle>
-          <CardDescription>Configure South African payment processing</CardDescription>
+          <CardDescription>
+            Configure in-app Paystack checkout for one-time and recurring subscriptions
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-3 bg-secondary/10 rounded-lg">
             <div className="flex items-center gap-2">
               <span className="font-medium">Test Mode</span>
-              <Badge variant={payfast.testMode ? 'secondary' : 'default'}>
-                {payfast.testMode ? 'Sandbox' : 'Production'}
+              <Badge variant={paystack.testMode ? 'secondary' : 'default'}>
+                {paystack.testMode ? 'Test' : 'Live'}
               </Badge>
             </div>
             <Switch
-              checked={payfast.testMode}
-              onCheckedChange={(checked) => setPayfast({ ...payfast, testMode: checked })}
+              checked={paystack.testMode}
+              onCheckedChange={(checked) => setPaystack({ ...paystack, testMode: checked })}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Merchant ID</Label>
+              <Label>Public Key</Label>
               <Input
-                value={payfast.merchantId}
-                onChange={(e) => setPayfast({ ...payfast, merchantId: e.target.value })}
+                value={paystack.publicKey}
+                onChange={(e) => setPaystack({ ...paystack, publicKey: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label>Merchant Key</Label>
+              <Label>Secret Key</Label>
               <Input
                 type="password"
-                value={payfast.merchantKey}
-                onChange={(e) => setPayfast({ ...payfast, merchantKey: e.target.value })}
+                value={paystack.secretKey}
+                onChange={(e) => setPaystack({ ...paystack, secretKey: e.target.value })}
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Passphrase</Label>
-            <Input
-              type="password"
-              value={payfast.passphrase}
-              onChange={(e) => setPayfast({ ...payfast, passphrase: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Webhook URL</Label>
-            <div className="flex gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Monthly Plan Code</Label>
               <Input
-                value={payfast.webhookUrl}
-                readOnly
-                className="flex-1 bg-muted"
+                value={paystack.monthlyPlanCode}
+                onChange={(e) => setPaystack({ ...paystack, monthlyPlanCode: e.target.value })}
               />
-              <Button variant="outline" size="icon">
-                <ExternalLink className="w-4 h-4" />
-              </Button>
             </div>
+            <div className="space-y-2">
+              <Label>Annual Plan Code</Label>
+              <Input
+                value={paystack.annualPlanCode}
+                onChange={(e) => setPaystack({ ...paystack, annualPlanCode: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Initialize Function</Label>
+              <Input
+                value={paystack.initializeFunction}
+                readOnly
+                className="bg-muted"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Webhook URL</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={paystack.webhookUrl}
+                  readOnly
+                  className="flex-1 bg-muted"
+                />
+                <Button variant="outline" size="icon">
+                  <ExternalLink className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground space-y-1">
+            <p className="font-medium text-foreground">Current payment experience</p>
+            <p>Users can choose a monthly or annual premium plan and pay once or enable recurring auto-renew.</p>
+            <p>The checkout appears inside the application as a Paystack popup instead of redirecting to a different app or page.</p>
+            <p>Recurring subscriptions start on the payment date and renew until the user cancels.</p>
           </div>
 
           <div className="space-y-3">
