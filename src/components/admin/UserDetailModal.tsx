@@ -162,7 +162,7 @@ export function UserDetailModal({ user, open, onOpenChange, onUserUpdated }: Use
       const { error } = await supabase
         .from('users')
         .update({
-          subscription_status: 'deleted',
+          subscription_status: 'inactive',
           subscription_plan: null,
           subscription_start_date: null,
           subscription_end_date: null,
