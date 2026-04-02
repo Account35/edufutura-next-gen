@@ -23,3 +23,9 @@ export interface PaystackVerifyResponse {
   subscriptionEndDate: string | null;
   autoRenew: boolean;
 }
+
+export interface SubscriptionUpdatedEventDetail extends PaystackVerifyResponse {
+  paymentMethod: string;
+  transactionDate: string;
+  reference: string;
+}

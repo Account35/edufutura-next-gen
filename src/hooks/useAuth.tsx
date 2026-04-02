@@ -388,6 +388,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user]);
 
+  useEffect(() => {
+    const handleSubscriptionUpdated = () => {
+      void refreshProfile();
+    };
+
+    window.addEventListener('subscription-updated', handleSubscriptionUpdated);
+    return () => {
+      window.removeEventListener('subscription-updated', handleSubscriptionUpdated);
+    };
+  }, [refreshProfile]);
+
   const value = useMemo(
     () => ({
       user,

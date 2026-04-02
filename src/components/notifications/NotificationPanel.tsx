@@ -271,7 +271,7 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
             {/* Footer */}
             <div className="p-3 border-t">
               <Button variant="outline" className="w-full" asChild>
-                <a href="/settings?tab=preferences">
+                <a href="/profile?tab=account">
                   Manage notification settings
                 </a>
               </Button>

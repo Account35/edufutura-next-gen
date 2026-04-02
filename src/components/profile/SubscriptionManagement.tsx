@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Crown, Calendar, CreditCard, Check, Lock, Loader2 } from 'lucide-react';
 import { PRICING } from '@/config/pricing';
 import { format } from 'date-fns';
+import type { SubscriptionUpdatedEventDetail } from '@/types/paystack';
 
 interface SubscriptionManagementProps {
   userId: string;
@@ -37,6 +38,9 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
     subscriptionStatus,
     subscriptionPlan,
     daysRemaining,
+    subscriptionEndDate,
+    nextPaymentDate,
+    lastPaymentDate,
     paymentMethod,
     subscriptionAutoRenew,
     checkSubscription,
@@ -49,8 +53,46 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
   const [showAllHistory, setShowAllHistory] = useState(false);
 
   useEffect(() => {
-    loadSubscriptionHistory();
+    void loadSubscriptionHistory();
   }, [userId]);
+
+  useEffect(() => {
+    const handleSubscriptionUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<SubscriptionUpdatedEventDetail>;
+      const detail = customEvent.detail;
+
+      if (detail?.paymentStatus === 'success') {
+        setSubscriptionHistory((current) => {
+          const alreadyExists = current.some((item) => item.transaction_id === detail.reference);
+          if (alreadyExists) return current;
+
+          return [
+            {
+              id: `local-${detail.reference}`,
+              transaction_id: detail.reference,
+              transaction_type: detail.paymentType === 'recurring' ? 'renewal' : 'upgrade',
+              plan_type: detail.planType,
+              amount_zar: detail.amount,
+              currency: 'ZAR',
+              payment_method: detail.paymentMethod,
+              payment_status: 'completed',
+              subscription_end_date: detail.subscriptionEndDate,
+              transaction_date: detail.transactionDate,
+            },
+            ...current,
+          ];
+        });
+      }
+
+      void checkSubscription();
+      void loadSubscriptionHistory();
+    };
+
+    window.addEventListener('subscription-updated', handleSubscriptionUpdated);
+    return () => {
+      window.removeEventListener('subscription-updated', handleSubscriptionUpdated);
+    };
+  }, [checkSubscription, userId]);
 
   const loadSubscriptionHistory = async () => {
     try {
@@ -153,6 +195,26 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
             <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 bg-muted rounded-lg">
               <Calendar className="h-4 w-4" />
               <span>{daysRemaining} days remaining until next billing</span>
+            </div>
+          )}
+
+          {isPremium && (
+            <div className="space-y-2 rounded-lg border bg-muted/40 p-4 text-sm">
+              {subscriptionEndDate && (
+                <p className="text-muted-foreground">
+                  Premium access expires on <span className="font-medium text-foreground">{format(new Date(subscriptionEndDate), 'd MMM yyyy')}</span>
+                </p>
+              )}
+              {nextPaymentDate && (
+                <p className="text-muted-foreground">
+                  Next payment date: <span className="font-medium text-foreground">{format(new Date(nextPaymentDate), 'd MMM yyyy')}</span>
+                </p>
+              )}
+              {lastPaymentDate && (
+                <p className="text-muted-foreground">
+                  Last successful payment: <span className="font-medium text-foreground">{format(new Date(lastPaymentDate), 'd MMM yyyy')}</span>
+                </p>
+              )}
             </div>
           )}
 

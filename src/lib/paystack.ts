@@ -9,6 +9,35 @@ declare global {
 }
 
 let paystackScriptPromise: Promise<void> | null = null;
+let paystackCheckoutActive = false;
+
+const PAYSTACK_CHECKOUT_EVENT = 'paystack-checkout-state';
+
+const notifyPaystackCheckoutState = () => {
+  window.dispatchEvent(
+    new CustomEvent(PAYSTACK_CHECKOUT_EVENT, {
+      detail: { isActive: paystackCheckoutActive },
+    })
+  );
+};
+
+export const setPaystackCheckoutActive = (isActive: boolean) => {
+  paystackCheckoutActive = isActive;
+  document.body.dataset.paystackCheckout = isActive ? 'open' : 'closed';
+  notifyPaystackCheckoutState();
+};
+
+export const isPaystackCheckoutActive = () => paystackCheckoutActive;
+
+export const onPaystackCheckoutStateChange = (listener: (isActive: boolean) => void) => {
+  const handler = (event: Event) => {
+    const customEvent = event as CustomEvent<{ isActive?: boolean }>;
+    listener(Boolean(customEvent.detail?.isActive));
+  };
+
+  window.addEventListener(PAYSTACK_CHECKOUT_EVENT, handler);
+  return () => window.removeEventListener(PAYSTACK_CHECKOUT_EVENT, handler);
+};
 
 export const loadPaystackPopup = async () => {
   if (window.PaystackPop) {
@@ -42,6 +71,7 @@ export const loadPaystackPopup = async () => {
         formHost = document.createElement('form');
         formHost.dataset.paystackHost = 'true';
         formHost.style.position = 'absolute';
+        formHost.style.inset = '0';
         formHost.style.width = '0';
         formHost.style.height = '0';
         formHost.style.opacity = '0';
