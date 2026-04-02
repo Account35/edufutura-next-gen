@@ -157,50 +157,61 @@ export const SubscriptionModal = ({ isOpen, onClose }: SubscriptionModalProps) =
         label: initializeData.label,
         callback: function (response: { reference?: string }) {
           const reference = response.reference || initializeData.reference;
+          console.log('[Paystack] Payment callback fired, reference:', reference);
           setIsLoading(true);
 
-          supabase.functions.invoke<PaystackVerifyResponse>(
-            'paystack-subscription',
-            { body: { action: 'verify', reference } }
-          ).then(({ data: verifyData, error: verifyError }) => {
-            if (verifyError) throw verifyError;
+          const verifyPayment = async () => {
+            try {
+              const { data: verifyData, error: verifyError } = await supabase.functions.invoke<PaystackVerifyResponse>(
+                'paystack-subscription',
+                { body: { action: 'verify', reference } }
+              );
 
-            if (!verifyData || verifyData.paymentStatus !== 'success') {
-              throw new Error('Payment verification failed.');
+              console.log('[Paystack] Verify response:', { verifyData, verifyError });
+
+              if (verifyError) {
+                throw new Error(typeof verifyError === 'object' && 'message' in verifyError ? (verifyError as any).message : 'Verification request failed.');
+              }
+
+              if (!verifyData || verifyData.paymentStatus !== 'success') {
+                throw new Error('Payment verification failed.');
+              }
+
+              const eventDetail: SubscriptionUpdatedEventDetail = {
+                ...verifyData,
+                paymentMethod: 'paystack',
+                transactionDate: new Date().toISOString(),
+                reference,
+              };
+
+              window.dispatchEvent(new CustomEvent('subscription-updated', {
+                detail: eventDetail,
+              }));
+              void refreshProfile();
+
+              toast({
+                title: 'Payment successful',
+                description:
+                  verifyData.paymentType === 'recurring'
+                    ? 'Your recurring premium subscription is now active.'
+                    : 'Your premium access is now active for the selected billing period.',
+              });
+
+              setPaystackCheckoutActive(false);
+              handleClose();
+            } catch (error) {
+              console.error('[Paystack] Error verifying payment:', error);
+              toast({
+                title: 'Payment verification failed',
+                description: error instanceof Error ? error.message : 'We could not confirm your payment.',
+                variant: 'destructive',
+              });
+              setPaystackCheckoutActive(false);
+              setIsLoading(false);
             }
+          };
 
-            const eventDetail: SubscriptionUpdatedEventDetail = {
-              ...verifyData,
-              paymentMethod: 'paystack',
-              transactionDate: new Date().toISOString(),
-              reference,
-            };
-
-            window.dispatchEvent(new CustomEvent('subscription-updated', {
-              detail: eventDetail,
-            }));
-            void refreshProfile();
-
-            toast({
-              title: 'Payment successful',
-              description:
-                verifyData.paymentType === 'recurring'
-                  ? 'Your recurring premium subscription is now active.'
-                  : 'Your premium access is now active for the selected billing period.',
-            });
-
-            setPaystackCheckoutActive(false);
-            handleClose();
-          }).catch((error) => {
-            console.error('Error verifying payment:', error);
-            toast({
-              title: 'Payment verification failed',
-              description: error instanceof Error ? error.message : 'We could not confirm your payment.',
-              variant: 'destructive',
-            });
-            setPaystackCheckoutActive(false);
-            setIsLoading(false);
-          });
+          verifyPayment();
         },
         onClose: () => {
           setPaystackCheckoutActive(false);

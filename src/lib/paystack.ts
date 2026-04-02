@@ -56,7 +56,7 @@ export const loadPaystackPopup = async () => {
           return;
         }
 
-        if (existingScript.dataset.loaded === 'true' || existingScript.readyState === 'complete') {
+        if (existingScript.dataset.loaded === 'true') {
           resolve();
           return;
         }
