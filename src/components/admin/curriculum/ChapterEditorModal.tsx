@@ -381,6 +381,48 @@ export const ChapterEditorModal = ({
                   </div>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Attachments</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>PDF File (uploads to curriculum library)</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleUploadPdf}
+                        disabled={!pdfFile || uploadingPdf}
+                      >
+                        {uploadingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                        Upload
+                      </Button>
+                    </div>
+                    {formData.content_url && (
+                      <p className="text-xs text-muted-foreground break-all">
+                        Current: <a href={formData.content_url} target="_blank" rel="noreferrer" className="underline">{formData.content_url}</a>
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="video_url">Video URL (YouTube / Vimeo)</Label>
+                    <Input
+                      id="video_url"
+                      type="url"
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      value={formData.content_url}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, content_url: e.target.value }))}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Content Tab */}
