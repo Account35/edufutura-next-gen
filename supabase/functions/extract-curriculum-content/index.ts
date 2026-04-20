@@ -2,11 +2,7 @@
 // AI provider routing: OpenRouter primary -> Lovable AI Gateway fallback
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import * as XLSX from 'https://esm.sh/xlsx@0.18.5';
-import { getDocument, GlobalWorkerOptions } from 'https://esm.sh/pdfjs-dist@4.0.379/legacy/build/pdf.mjs';
-
-// pdfjs in Deno: disable worker
-// @ts-ignore
-GlobalWorkerOptions.workerSrc = '';
+import { extractText, getDocumentProxy } from 'https://esm.sh/unpdf@0.12.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -76,18 +72,9 @@ async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Pro
 
   if (lower.endsWith('.pdf')) {
     try {
-      const loadingTask = getDocument({ data: fileBytes, useWorker: false, isEvalSupported: false });
-      const pdf = await loadingTask.promise;
-      const pageTexts: string[] = [];
-      const maxPages = Math.min(pdf.numPages, 50);
-      for (let i = 1; i <= maxPages; i++) {
-        const page = await pdf.getPage(i);
-        const tc = await page.getTextContent();
-        // @ts-ignore
-        const text = tc.items.map((it: any) => it.str).join(' ');
-        pageTexts.push(`--- Page ${i} ---\n${text}`);
-      }
-      return pageTexts.join('\n\n');
+      const pdf = await getDocumentProxy(fileBytes);
+      const { text } = await extractText(pdf, { mergePages: true });
+      return typeof text === 'string' ? text : (text as string[]).join('\n\n');
     } catch (err) {
       console.error('PDF extraction failed:', err);
       throw new Error(`Could not parse PDF: ${err instanceof Error ? err.message : 'unknown error'}`);
