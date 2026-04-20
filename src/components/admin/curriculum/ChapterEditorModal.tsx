@@ -30,13 +30,16 @@ import {
   FileText,
   Target,
   BookOpen,
-  Settings
+  Settings,
+  Upload
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ChapterEditorModalProps {
   open: boolean;
@@ -76,7 +79,10 @@ export const ChapterEditorModal = ({
     key_concepts: [] as string[],
     learning_outcomes: [] as string[],
     glossary_terms: {} as Record<string, string>,
+    content_url: '' as string,
   });
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
 
   const [newConcept, setNewConcept] = useState('');
   const [newOutcome, setNewOutcome] = useState('');
@@ -110,6 +116,7 @@ export const ChapterEditorModal = ({
         key_concepts: chapter.key_concepts || [],
         learning_outcomes: chapter.learning_outcomes || [],
         glossary_terms: (chapter.glossary_terms as Record<string, string>) || {},
+        content_url: chapter.content_url || '',
       });
       editor?.commands.setContent(chapter.content_markdown || '');
     } else {
@@ -126,10 +133,33 @@ export const ChapterEditorModal = ({
         key_concepts: [],
         learning_outcomes: [],
         glossary_terms: {},
+        content_url: '',
       });
       editor?.commands.setContent('');
     }
+    setPdfFile(null);
   }, [chapter, open, nextChapterNumber, editor, defaultDifficulty]);
+
+  const handleUploadPdf = async () => {
+    if (!pdfFile) return;
+    setUploadingPdf(true);
+    try {
+      const ext = pdfFile.name.split('.').pop() || 'pdf';
+      const path = `${subjectId}/${formData.chapter_number}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('curriculum-pdfs')
+        .upload(path, pdfFile, { cacheControl: '3600', upsert: false });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('curriculum-pdfs').getPublicUrl(path);
+      setFormData((prev) => ({ ...prev, content_url: urlData.publicUrl }));
+      setPdfFile(null);
+      toast.success('PDF uploaded');
+    } catch (err: any) {
+      toast.error(`PDF upload failed: ${err.message || 'unknown error'}`);
+    } finally {
+      setUploadingPdf(false);
+    }
+  };
 
   const handleSave = async () => {
     const data = chapter 
@@ -347,6 +377,48 @@ export const ChapterEditorModal = ({
                       onChange={(e) => setFormData(prev => ({ ...prev, caps_description: e.target.value }))}
                       placeholder="Official CAPS curriculum description..."
                       rows={2}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Attachments</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>PDF File (uploads to curriculum library)</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleUploadPdf}
+                        disabled={!pdfFile || uploadingPdf}
+                      >
+                        {uploadingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                        Upload
+                      </Button>
+                    </div>
+                    {formData.content_url && (
+                      <p className="text-xs text-muted-foreground break-all">
+                        Current: <a href={formData.content_url} target="_blank" rel="noreferrer" className="underline">{formData.content_url}</a>
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="video_url">Video URL (YouTube / Vimeo)</Label>
+                    <Input
+                      id="video_url"
+                      type="url"
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      value={formData.content_url}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, content_url: e.target.value }))}
                     />
                   </div>
                 </CardContent>

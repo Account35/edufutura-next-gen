@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
- import { createBrowserRouter, RouterProvider, createRoutesFromElements, Route, Outlet } from "react-router-dom";
+ import { createBrowserRouter, RouterProvider, createRoutesFromElements, Route, Outlet, Navigate } from "react-router-dom";
 import createQueryClient from '@/lib/query-client';
 import { AuthProvider } from "@/hooks/useAuth";
 import { AdminPermissionsProvider } from "@/hooks/useAdminPermissions";
@@ -94,7 +94,6 @@ import NotFound from "./pages/NotFound";
 
 // Admin features - separate chunk
  const AdminDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminDashboard"));
- const AdminContent = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminContent"));
  const AdminCurriculum = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminCurriculum"));
  const AdminQuizzes = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminQuizzes"));
  const AdminQuizCreate = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminQuizCreate"));
@@ -233,7 +232,7 @@ const router = createBrowserRouter(
       {/* Admin */}
        <Route path="/admin" element={<AdminWrapper Component={AdminDashboard} />} />
        <Route path="/admin/moderation" element={<AdminWrapper Component={AdminModeration} />} />
-       <Route path="/admin/content" element={<AdminWrapper Component={AdminContent} />} />
+       <Route path="/admin/content" element={<Navigate to="/admin/curriculum" replace />} />
        <Route path="/admin/curriculum" element={<AdminWrapper Component={AdminCurriculum} />} />
        <Route path="/admin/jobs" element={<AdminWrapper Component={JobMonitoring} />} />
        <Route path="/admin/quizzes" element={<AdminWrapper Component={AdminQuizzes} />} />
