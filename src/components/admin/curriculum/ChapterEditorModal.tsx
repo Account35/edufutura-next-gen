@@ -30,13 +30,16 @@ import {
   FileText,
   Target,
   BookOpen,
-  Settings
+  Settings,
+  Upload
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ChapterEditorModalProps {
   open: boolean;
@@ -76,7 +79,10 @@ export const ChapterEditorModal = ({
     key_concepts: [] as string[],
     learning_outcomes: [] as string[],
     glossary_terms: {} as Record<string, string>,
+    content_url: '' as string,
   });
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
 
   const [newConcept, setNewConcept] = useState('');
   const [newOutcome, setNewOutcome] = useState('');
@@ -110,6 +116,7 @@ export const ChapterEditorModal = ({
         key_concepts: chapter.key_concepts || [],
         learning_outcomes: chapter.learning_outcomes || [],
         glossary_terms: (chapter.glossary_terms as Record<string, string>) || {},
+        content_url: chapter.content_url || '',
       });
       editor?.commands.setContent(chapter.content_markdown || '');
     } else {
@@ -126,10 +133,33 @@ export const ChapterEditorModal = ({
         key_concepts: [],
         learning_outcomes: [],
         glossary_terms: {},
+        content_url: '',
       });
       editor?.commands.setContent('');
     }
+    setPdfFile(null);
   }, [chapter, open, nextChapterNumber, editor, defaultDifficulty]);
+
+  const handleUploadPdf = async () => {
+    if (!pdfFile) return;
+    setUploadingPdf(true);
+    try {
+      const ext = pdfFile.name.split('.').pop() || 'pdf';
+      const path = `${subjectId}/${formData.chapter_number}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('curriculum-pdfs')
+        .upload(path, pdfFile, { cacheControl: '3600', upsert: false });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('curriculum-pdfs').getPublicUrl(path);
+      setFormData((prev) => ({ ...prev, content_url: urlData.publicUrl }));
+      setPdfFile(null);
+      toast.success('PDF uploaded');
+    } catch (err: any) {
+      toast.error(`PDF upload failed: ${err.message || 'unknown error'}`);
+    } finally {
+      setUploadingPdf(false);
+    }
+  };
 
   const handleSave = async () => {
     const data = chapter 
