@@ -33,7 +33,6 @@ interface AdminLayoutProps {
 
 const sidebarItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/content', label: 'Content', icon: BookOpen },
   { href: '/admin/curriculum', label: 'Curriculum', icon: GraduationCap },
   { href: '/admin/quizzes', label: 'Quizzes', icon: FileQuestion },
   { href: '/admin/moderation', label: 'Moderation', icon: Shield },
