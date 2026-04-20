@@ -387,6 +387,16 @@ export default function AdminCurriculum() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* AI Content Import Wizard */}
+      <ContentImportWizard
+        open={importWizardOpen}
+        onOpenChange={setImportWizardOpen}
+        subjects={subjects}
+        onComplete={() => {
+          void refetchSubjects();
+        }}
+      />
     </AdminLayout>
   );
 }
