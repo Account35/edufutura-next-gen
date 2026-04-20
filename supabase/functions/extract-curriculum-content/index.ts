@@ -10,6 +10,77 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+const MAX_TEXT_CHARS_FOR_MODEL = 18000;
+const MAX_PDF_BYTES = 8 * 1024 * 1024;
+const MAX_SPREADSHEET_BYTES = 6 * 1024 * 1024;
+const MAX_TEXT_FILE_BYTES = 2 * 1024 * 1024;
+const MAX_PDF_PAGES = 80;
+
+function createJsonResponse(payload: unknown, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+function normalizeExtractedText(rawText: string): string {
+  return rawText
+    .split('\0').join(' ')
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
+function getErrorMessage(error: unknown, fallback = 'Unknown error'): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) {
+      return message;
+    }
+  }
+  return fallback;
+}
+
+function getErrorStatus(error: unknown): number | null {
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    const status = (error as { status?: unknown }).status;
+    if (typeof status === 'number') {
+      return status;
+    }
+  }
+  return null;
+}
+
+function isAllowedRole(role: unknown): boolean {
+  return role === 'admin' || role === 'educator';
+}
+
+function buildModelExcerpt(rawText: string, maxChars = MAX_TEXT_CHARS_FOR_MODEL): string {
+  const normalized = normalizeExtractedText(rawText);
+  if (normalized.length <= maxChars) {
+    return normalized;
+  }
+
+  const sectionSize = Math.floor(maxChars / 3);
+  const head = normalized.slice(0, sectionSize);
+  const middleStart = Math.max(0, Math.floor(normalized.length / 2) - Math.floor(sectionSize / 2));
+  const middle = normalized.slice(middleStart, middleStart + sectionSize);
+  const tail = normalized.slice(-sectionSize);
+
+  return [
+    head,
+    '[... middle of document omitted for size ...]',
+    middle,
+    '[... end of document excerpt ...]',
+    tail,
+  ].join('\n\n');
+}
+
 const EXTRACTION_TOOL = {
   type: 'function',
   function: {
@@ -56,10 +127,16 @@ async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Pro
   const lower = fileName.toLowerCase();
 
   if (lower.endsWith('.txt') || lower.endsWith('.md')) {
+    if (fileBytes.byteLength > MAX_TEXT_FILE_BYTES) {
+      throw new Error('Text or Markdown files must be 2MB or smaller for AI extraction. Split the document and try again.');
+    }
     return new TextDecoder().decode(fileBytes);
   }
 
   if (lower.endsWith('.csv') || lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
+    if (fileBytes.byteLength > MAX_SPREADSHEET_BYTES) {
+      throw new Error('Spreadsheet files must be 6MB or smaller for AI extraction. Split the workbook and try again.');
+    }
     const wb = XLSX.read(fileBytes, { type: 'array' });
     const out: string[] = [];
     for (const sheetName of wb.SheetNames) {
@@ -72,7 +149,14 @@ async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Pro
 
   if (lower.endsWith('.pdf')) {
     try {
+      if (fileBytes.byteLength > MAX_PDF_BYTES) {
+        throw new Error('PDF files must be 8MB or smaller for AI extraction. Split the PDF into smaller sections and try again.');
+      }
+
       const pdf = await getDocumentProxy(fileBytes);
+      if (typeof pdf.numPages === 'number' && pdf.numPages > MAX_PDF_PAGES) {
+        throw new Error(`PDF has ${pdf.numPages} pages. The extractor supports up to ${MAX_PDF_PAGES} pages per import. Split the PDF and try again.`);
+      }
       const { text } = await extractText(pdf, { mergePages: true });
       return typeof text === 'string' ? text : (text as string[]).join('\n\n');
     } catch (err) {
@@ -84,11 +168,11 @@ async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Pro
   throw new Error(`Unsupported file type: ${fileName}`);
 }
 
-async function callOpenRouter(rawText: string, signal: AbortSignal): Promise<any> {
+async function callOpenRouter(rawText: string, signal: AbortSignal): Promise<unknown> {
   const apiKey = Deno.env.get('OPENROUTER_API_KEY');
   if (!apiKey) throw new Error('OPENROUTER_API_KEY missing');
 
-  const truncated = rawText.slice(0, 60000);
+  const truncated = buildModelExcerpt(rawText);
   const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -119,11 +203,11 @@ async function callOpenRouter(rawText: string, signal: AbortSignal): Promise<any
   return JSON.parse(toolCall.function.arguments);
 }
 
-async function callLovableAI(rawText: string): Promise<any> {
+async function callLovableAI(rawText: string): Promise<unknown> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!apiKey) throw new Error('LOVABLE_API_KEY missing');
 
-  const truncated = rawText.slice(0, 60000);
+  const truncated = buildModelExcerpt(rawText);
   const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -142,12 +226,12 @@ async function callLovableAI(rawText: string): Promise<any> {
   });
 
   if (resp.status === 429) {
-    const e: any = new Error('Rate limit exceeded on Lovable AI');
+    const e = new Error('Rate limit exceeded on Lovable AI') as Error & { status?: number };
     e.status = 429;
     throw e;
   }
   if (resp.status === 402) {
-    const e: any = new Error('Payment required on Lovable AI');
+    const e = new Error('Payment required on Lovable AI') as Error & { status?: number };
     e.status = 402;
     throw e;
   }
@@ -169,10 +253,7 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return createJsonResponse({ error: 'Missing authorization header' }, 401);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -186,10 +267,7 @@ Deno.serve(async (req) => {
       authHeader.replace('Bearer ', '')
     );
     if (userErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return createJsonResponse({ error: 'Unauthorized' }, 401);
     }
 
     // Role check: admin or educator
@@ -197,21 +275,15 @@ Deno.serve(async (req) => {
       .from('user_roles')
       .select('role')
       .eq('user_id', userData.user.id);
-    const allowed = (roles || []).some((r: any) => r.role === 'admin' || r.role === 'educator');
+    const allowed = (roles || []).some((r) => isAllowedRole(r.role));
     if (!allowed) {
-      return new Response(JSON.stringify({ error: 'Forbidden: admin or educator role required' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return createJsonResponse({ error: 'Forbidden: admin or educator role required' }, 403);
     }
 
     const body = await req.json();
     const { storage_path, file_name } = body;
     if (!storage_path || !file_name) {
-      return new Response(JSON.stringify({ error: 'storage_path and file_name required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return createJsonResponse({ error: 'storage_path and file_name required' }, 400);
     }
 
     // Download from private bucket
@@ -219,24 +291,30 @@ Deno.serve(async (req) => {
       .from('curriculum-imports')
       .download(storage_path);
     if (dlErr || !fileBlob) {
-      return new Response(JSON.stringify({ error: `Failed to download file: ${dlErr?.message}` }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return createJsonResponse({ error: `Failed to download file: ${dlErr?.message}` }, 500);
+    }
+
+    const fileSize = fileBlob.size ?? 0;
+    if (file_name.toLowerCase().endsWith('.pdf') && fileSize > MAX_PDF_BYTES) {
+      return createJsonResponse({
+        error: `PDF is too large for edge extraction (${Math.ceil(fileSize / 1024 / 1024)}MB). Maximum supported size is ${Math.floor(MAX_PDF_BYTES / 1024 / 1024)}MB per import. Split the file and try again.`,
+      }, 413);
+    }
+    if ((file_name.toLowerCase().endsWith('.xlsx') || file_name.toLowerCase().endsWith('.xls') || file_name.toLowerCase().endsWith('.csv')) && fileSize > MAX_SPREADSHEET_BYTES) {
+      return createJsonResponse({
+        error: `Spreadsheet is too large for edge extraction (${Math.ceil(fileSize / 1024 / 1024)}MB). Maximum supported size is ${Math.floor(MAX_SPREADSHEET_BYTES / 1024 / 1024)}MB per import.`,
+      }, 413);
     }
 
     const bytes = new Uint8Array(await fileBlob.arrayBuffer());
     const rawText = await extractTextFromFile(bytes, file_name);
 
     if (!rawText.trim()) {
-      return new Response(JSON.stringify({ error: 'No text could be extracted from the file' }), {
-        status: 422,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return createJsonResponse({ error: 'No text could be extracted from the file' }, 422);
     }
 
     // Try OpenRouter first with timeout, fall back to Lovable AI
-    let result: any;
+    let result: unknown;
     let providerUsed: 'openrouter' | 'lovable' = 'openrouter';
     let openrouterError: string | null = null;
 
@@ -259,30 +337,24 @@ Deno.serve(async (req) => {
       try {
         result = await callLovableAI(rawText);
         providerUsed = 'lovable';
-      } catch (err: any) {
-        const status = err?.status || 500;
-        return new Response(
-          JSON.stringify({
-            error: `Both AI providers failed. OpenRouter: ${openrouterError}. Lovable AI: ${err.message}`,
-          }),
-          { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      } catch (err) {
+        const status = getErrorStatus(err) ?? 500;
+        const lovableMessage = getErrorMessage(err);
+        return createJsonResponse({
+          error: `Both AI providers failed. OpenRouter: ${openrouterError}. Lovable AI: ${lovableMessage}`,
+        }, status);
       }
     }
 
-    return new Response(
-      JSON.stringify({
-        ...result,
-        provider_used: providerUsed,
-        openrouter_error: openrouterError,
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return createJsonResponse({
+      ...result,
+      provider_used: providerUsed,
+      openrouter_error: openrouterError,
+    });
   } catch (err) {
     console.error('extract-curriculum-content error:', err);
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    const message = getErrorMessage(err);
+    const status = message.includes('must be') || message.includes('supports up to') ? 413 : 500;
+    return createJsonResponse({ error: message }, status);
   }
 });

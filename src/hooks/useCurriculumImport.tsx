@@ -22,7 +22,34 @@ export interface ExtractionResult {
 }
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25MB
+const MAX_PDF_IMPORT_BYTES = 8 * 1024 * 1024; // Keep PDF extraction within edge worker limits
 const ACCEPTED_EXTS = ['pdf', 'csv', 'xlsx', 'xls', 'md', 'txt'];
+
+const getErrorMessage = (error: unknown, fallback = 'unknown error') => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) {
+      return message;
+    }
+  }
+  return fallback;
+};
+
+const getErrorStatus = (error: unknown): number | null => {
+  if (typeof error === 'object' && error !== null && 'context' in error) {
+    const context = (error as { context?: unknown }).context;
+    if (typeof context === 'object' && context !== null && 'status' in context) {
+      const status = (context as { status?: unknown }).status;
+      if (typeof status === 'number') {
+        return status;
+      }
+    }
+  }
+  return null;
+};
 
 export function useCurriculumImport() {
   const [isUploading, setIsUploading] = useState(false);
@@ -39,6 +66,10 @@ export function useCurriculumImport() {
       toast.error(`Unsupported file type: .${ext}. Use PDF, CSV, XLSX, MD or TXT.`);
       return null;
     }
+    if (ext === 'pdf' && file.size > MAX_PDF_IMPORT_BYTES) {
+      toast.error('PDF is too large for AI extraction. Use a PDF smaller than 8MB or split it into smaller sections.');
+      return null;
+    }
 
     setIsUploading(true);
     let storagePath = '';
@@ -51,8 +82,8 @@ export function useCurriculumImport() {
         .from('curriculum-imports')
         .upload(storagePath, file, { cacheControl: '0', upsert: false });
       if (upErr) throw upErr;
-    } catch (err: any) {
-      toast.error(`Upload failed: ${err.message || 'unknown error'}`);
+    } catch (err: unknown) {
+      toast.error(`Upload failed: ${getErrorMessage(err)}`);
       setIsUploading(false);
       return null;
     }
@@ -65,13 +96,15 @@ export function useCurriculumImport() {
       });
 
       if (error) {
-        const status = (error as any).context?.status;
+        const status = getErrorStatus(error);
         if (status === 429) {
           toast.error('AI rate limit reached. Please try again in a moment.');
         } else if (status === 402) {
           toast.error('AI credits exhausted. Add funds to your workspace.');
+        } else if (status === 413) {
+          toast.error('This file is too large or complex for edge extraction. Split it into smaller sections and try again.');
         } else {
-          toast.error(`Extraction failed: ${error.message}`);
+          toast.error(`Extraction failed: ${getErrorMessage(error)}`);
         }
         return null;
       }
@@ -86,8 +119,8 @@ export function useCurriculumImport() {
 
       toast.success(`Extracted ${data.chapters?.length || 0} chapter(s) via ${data.provider_used}`);
       return data as ExtractionResult;
-    } catch (err: any) {
-      toast.error(`Extraction failed: ${err.message || 'unknown error'}`);
+    } catch (err: unknown) {
+      toast.error(`Extraction failed: ${getErrorMessage(err)}`);
       return null;
     } finally {
       setIsExtracting(false);
@@ -124,8 +157,8 @@ export function useCurriculumImport() {
 
       toast.success(`${rows.length} chapter(s) saved as drafts.`);
       return true;
-    } catch (err: any) {
-      toast.error(`Save failed: ${err.message || 'unknown error'}`);
+    } catch (err: unknown) {
+      toast.error(`Save failed: ${getErrorMessage(err)}`);
       return false;
     } finally {
       setIsSaving(false);
