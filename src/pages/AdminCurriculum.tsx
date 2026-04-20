@@ -7,6 +7,7 @@ import { ChapterList } from '@/components/admin/curriculum/ChapterList';
 import { ChapterEditorModal } from '@/components/admin/curriculum/ChapterEditorModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -37,7 +38,8 @@ import {
   Upload, 
   BookOpen,
   Filter,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
@@ -49,6 +51,10 @@ export default function AdminCurriculum() {
     selectedChapter,
     subjectsLoading,
     chaptersLoading,
+    subjectsError,
+    chaptersError,
+    refetchSubjects,
+    refetchChapters,
     setSelectedSubject,
     setSelectedChapter,
     createSubject,
@@ -161,6 +167,21 @@ export default function AdminCurriculum() {
   if (selectedSubject) {
     return (
       <AdminLayout title="Curriculum Management" subtitle="Edit subject chapters">
+        {chaptersError && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Unable to load chapters</AlertTitle>
+            <AlertDescription className="flex items-center justify-between gap-4">
+              <span>
+                {chaptersError.message || 'There was a problem loading this subject.'}
+              </span>
+              <Button variant="outline" size="sm" onClick={() => void refetchChapters()}>
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <ChapterList
           subject={selectedSubject}
           chapters={chapters}
@@ -188,6 +209,21 @@ export default function AdminCurriculum() {
 
   return (
     <AdminLayout title="Curriculum Management" subtitle="Manage subjects and chapters">
+      {subjectsError && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Unable to load curriculum subjects</AlertTitle>
+          <AlertDescription className="flex items-center justify-between gap-4">
+            <span>
+              {subjectsError.message || 'The curriculum data could not be loaded.'}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => void refetchSubjects()}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">

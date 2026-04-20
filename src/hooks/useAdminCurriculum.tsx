@@ -3,6 +3,61 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+const SUBJECT_SELECT = `
+  id,
+  subject_name,
+  description,
+  icon_name,
+  color_scheme,
+  grade_level,
+  total_chapters,
+  estimated_hours,
+  is_published,
+  caps_aligned,
+  learning_objectives,
+  created_at,
+  updated_at
+`;
+
+const CHAPTER_SELECT = `
+  id,
+  subject_id,
+  chapter_number,
+  chapter_title,
+  chapter_description,
+  content_markdown,
+  content_type,
+  content_url,
+  difficulty_level,
+  estimated_duration_minutes,
+  is_published,
+  caps_code,
+  caps_description,
+  key_concepts,
+  learning_outcomes,
+  glossary_terms,
+  thumbnail_url,
+  created_at,
+  updated_at,
+  created_by,
+  updated_by
+`;
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) {
+      return message;
+    }
+  }
+
+  return fallback;
+};
+
 export interface Subject {
   id: string;
   subject_name: string;
@@ -59,28 +114,39 @@ export const useAdminCurriculum = () => {
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
 
   // Fetch all subjects
-  const { data: subjects = [], isLoading: subjectsLoading, refetch: refetchSubjects } = useQuery({
+  const {
+    data: subjects = [],
+    isLoading: subjectsLoading,
+    error: subjectsError,
+    refetch: refetchSubjects,
+  } = useQuery({
     queryKey: ['admin-subjects'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('curriculum_subjects')
-        .select('*')
+        .select(SUBJECT_SELECT)
         .order('subject_name');
       
       if (error) throw error;
       return data as Subject[];
     },
+    retry: false,
   });
 
   // Fetch chapters for selected subject
-  const { data: chapters = [], isLoading: chaptersLoading, refetch: refetchChapters } = useQuery({
+  const {
+    data: chapters = [],
+    isLoading: chaptersLoading,
+    error: chaptersError,
+    refetch: refetchChapters,
+  } = useQuery({
     queryKey: ['admin-chapters', selectedSubject?.id],
     queryFn: async () => {
       if (!selectedSubject?.id) return [];
       
       const { data, error } = await supabase
         .from('curriculum_chapters')
-        .select('*')
+        .select(CHAPTER_SELECT)
         .eq('subject_id', selectedSubject.id)
         .order('chapter_number');
       
@@ -88,6 +154,7 @@ export const useAdminCurriculum = () => {
       return data as Chapter[];
     },
     enabled: !!selectedSubject?.id,
+    retry: false,
   });
 
   // Create subject mutation
@@ -118,8 +185,8 @@ export const useAdminCurriculum = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-subjects'] });
       toast.success('Subject created successfully');
     },
-    onError: (error: any) => {
-      toast.error('Failed to create subject: ' + error.message);
+    onError: (error: unknown) => {
+      toast.error('Failed to create subject: ' + getErrorMessage(error, 'Unknown error'));
     },
   });
 
@@ -140,8 +207,8 @@ export const useAdminCurriculum = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-subjects'] });
       toast.success('Subject updated successfully');
     },
-    onError: (error) => {
-      toast.error('Failed to update subject: ' + error.message);
+    onError: (error: unknown) => {
+      toast.error('Failed to update subject: ' + getErrorMessage(error, 'Unknown error'));
     },
   });
 
@@ -160,8 +227,8 @@ export const useAdminCurriculum = () => {
       setSelectedSubject(null);
       toast.success('Subject deleted successfully');
     },
-    onError: (error) => {
-      toast.error('Failed to delete subject: ' + error.message);
+    onError: (error: unknown) => {
+      toast.error('Failed to delete subject: ' + getErrorMessage(error, 'Unknown error'));
     },
   });
 
@@ -201,8 +268,8 @@ export const useAdminCurriculum = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-chapters'] });
       toast.success('Chapter created successfully');
     },
-    onError: (error: any) => {
-      toast.error('Failed to create chapter: ' + error.message);
+    onError: (error: unknown) => {
+      toast.error('Failed to create chapter: ' + getErrorMessage(error, 'Unknown error'));
     },
   });
 
@@ -228,8 +295,8 @@ export const useAdminCurriculum = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-chapters'] });
       toast.success('Chapter updated successfully');
     },
-    onError: (error) => {
-      toast.error('Failed to update chapter: ' + error.message);
+    onError: (error: unknown) => {
+      toast.error('Failed to update chapter: ' + getErrorMessage(error, 'Unknown error'));
     },
   });
 
@@ -248,8 +315,8 @@ export const useAdminCurriculum = () => {
       setSelectedChapter(null);
       toast.success('Chapter deleted successfully');
     },
-    onError: (error) => {
-      toast.error('Failed to delete chapter: ' + error.message);
+    onError: (error: unknown) => {
+      toast.error('Failed to delete chapter: ' + getErrorMessage(error, 'Unknown error'));
     },
   });
 
@@ -272,8 +339,8 @@ export const useAdminCurriculum = () => {
 
       queryClient.invalidateQueries({ queryKey: ['admin-chapters'] });
       toast.success('Chapters reordered successfully');
-    } catch (error: any) {
-      toast.error('Failed to reorder chapters: ' + error.message);
+    } catch (error: unknown) {
+      toast.error('Failed to reorder chapters: ' + getErrorMessage(error, 'Unknown error'));
     }
   }, [queryClient]);
 
@@ -312,8 +379,8 @@ export const useAdminCurriculum = () => {
       URL.revokeObjectURL(url);
 
       toast.success('Subject exported successfully');
-    } catch (error: any) {
-      toast.error('Failed to export subject: ' + error.message);
+    } catch (error: unknown) {
+      toast.error('Failed to export subject: ' + getErrorMessage(error, 'Unknown error'));
     }
   }, []);
 
@@ -353,8 +420,8 @@ export const useAdminCurriculum = () => {
 
       queryClient.invalidateQueries({ queryKey: ['admin-subjects'] });
       toast.success('Subject imported successfully');
-    } catch (error: any) {
-      toast.error('Failed to import subject: ' + error.message);
+    } catch (error: unknown) {
+      toast.error('Failed to import subject: ' + getErrorMessage(error, 'Unknown error'));
     }
   }, [queryClient]);
 
@@ -406,8 +473,8 @@ export const useAdminCurriculum = () => {
 
       queryClient.invalidateQueries({ queryKey: ['admin-subjects'] });
       toast.success('Subject duplicated successfully');
-    } catch (error: any) {
-      toast.error('Failed to duplicate subject: ' + error.message);
+    } catch (error: unknown) {
+      toast.error('Failed to duplicate subject: ' + getErrorMessage(error, 'Unknown error'));
     }
   }, [queryClient]);
 
@@ -434,6 +501,8 @@ export const useAdminCurriculum = () => {
     selectedChapter,
     subjectsLoading,
     chaptersLoading,
+    subjectsError,
+    chaptersError,
     
     // Actions
     setSelectedSubject,

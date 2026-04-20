@@ -37,7 +37,6 @@ import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import ReactMarkdown from 'react-markdown';
 
 interface ChapterEditorModalProps {
   open: boolean;
@@ -46,7 +45,7 @@ interface ChapterEditorModalProps {
   subjectId: string;
   existingChapters: Chapter[];
   nextChapterNumber: number;
-  onSave: (data: Partial<Chapter>) => Promise<any>;
+  onSave: (data: Partial<Chapter>) => Promise<unknown>;
   isSaving: boolean;
 }
 
@@ -60,6 +59,7 @@ export const ChapterEditorModal = ({
   onSave,
   isSaving,
 }: ChapterEditorModalProps) => {
+  const defaultDifficulty = 'Intermediate';
   const [activeTab, setActiveTab] = useState('metadata');
   const [showPreview, setShowPreview] = useState(false);
   
@@ -68,7 +68,7 @@ export const ChapterEditorModal = ({
     chapter_number: nextChapterNumber,
     chapter_description: '',
     content_markdown: '',
-    difficulty_level: 'medium',
+    difficulty_level: defaultDifficulty,
     estimated_duration_minutes: 30,
     is_published: false,
     caps_code: '',
@@ -102,7 +102,7 @@ export const ChapterEditorModal = ({
         chapter_number: chapter.chapter_number || nextChapterNumber,
         chapter_description: chapter.chapter_description || '',
         content_markdown: chapter.content_markdown || '',
-        difficulty_level: chapter.difficulty_level || 'medium',
+        difficulty_level: chapter.difficulty_level || defaultDifficulty,
         estimated_duration_minutes: chapter.estimated_duration_minutes || 30,
         is_published: chapter.is_published || false,
         caps_code: chapter.caps_code || '',
@@ -118,7 +118,7 @@ export const ChapterEditorModal = ({
         chapter_number: nextChapterNumber,
         chapter_description: '',
         content_markdown: '',
-        difficulty_level: 'medium',
+        difficulty_level: defaultDifficulty,
         estimated_duration_minutes: 30,
         is_published: false,
         caps_code: '',
@@ -129,7 +129,7 @@ export const ChapterEditorModal = ({
       });
       editor?.commands.setContent('');
     }
-  }, [chapter, open, nextChapterNumber, editor]);
+  }, [chapter, open, nextChapterNumber, editor, defaultDifficulty]);
 
   const handleSave = async () => {
     const data = chapter 
@@ -293,9 +293,9 @@ export const ChapterEditorModal = ({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="easy">Easy</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="hard">Hard</SelectItem>
+                      <SelectItem value="Beginner">Beginner</SelectItem>
+                      <SelectItem value="Intermediate">Intermediate</SelectItem>
+                      <SelectItem value="Advanced">Advanced</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

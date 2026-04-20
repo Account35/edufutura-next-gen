@@ -34,6 +34,15 @@ import {
 import { Chapter, Subject } from '@/hooks/useAdminCurriculum';
 import { formatDistanceToNow } from 'date-fns';
 
+const DIFFICULTY_BADGE_STYLES: Record<string, string> = {
+  beginner: 'bg-green-500/10 text-green-600 border-green-200',
+  easy: 'bg-green-500/10 text-green-600 border-green-200',
+  intermediate: 'bg-yellow-500/10 text-yellow-600 border-yellow-200',
+  medium: 'bg-yellow-500/10 text-yellow-600 border-yellow-200',
+  advanced: 'bg-red-500/10 text-red-600 border-red-200',
+  hard: 'bg-red-500/10 text-red-600 border-red-200',
+};
+
 const formatRelativeDateValue = (value: string | null | undefined, fallback = '-') => {
   if (!value) return fallback;
   const date = new Date(value);
@@ -96,13 +105,9 @@ export const ChapterList = ({
 
   const getDifficultyBadge = (difficulty: string | null) => {
     if (!difficulty) return null;
-    const colors: Record<string, string> = {
-      easy: 'bg-green-500/10 text-green-600 border-green-200',
-      medium: 'bg-yellow-500/10 text-yellow-600 border-yellow-200',
-      hard: 'bg-red-500/10 text-red-600 border-red-200',
-    };
+    const normalizedDifficulty = difficulty.toLowerCase();
     return (
-      <Badge className={colors[difficulty.toLowerCase()] || ''}>
+      <Badge className={DIFFICULTY_BADGE_STYLES[normalizedDifficulty] || ''}>
         {difficulty}
       </Badge>
     );
