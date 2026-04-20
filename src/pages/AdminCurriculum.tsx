@@ -5,6 +5,7 @@ import { SubjectCard } from '@/components/admin/curriculum/SubjectCard';
 import { SubjectEditorModal } from '@/components/admin/curriculum/SubjectEditorModal';
 import { ChapterList } from '@/components/admin/curriculum/ChapterList';
 import { ChapterEditorModal } from '@/components/admin/curriculum/ChapterEditorModal';
+import { ContentImportWizard } from '@/components/admin/curriculum/ContentImportWizard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -39,7 +40,8 @@ import {
   BookOpen,
   Filter,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Sparkles
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
@@ -83,6 +85,7 @@ export default function AdminCurriculum() {
   const [deleteSubjectDialog, setDeleteSubjectDialog] = useState<Subject | null>(null);
   const [duplicateDialog, setDuplicateDialog] = useState<Subject | null>(null);
   const [duplicateGrade, setDuplicateGrade] = useState<number>(10);
+  const [importWizardOpen, setImportWizardOpen] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -262,7 +265,12 @@ export default function AdminCurriculum() {
           
           <Button variant="outline" onClick={handleImport}>
             <Upload className="w-4 h-4 mr-2" />
-            Import
+            Import JSON
+          </Button>
+
+          <Button variant="secondary" onClick={() => setImportWizardOpen(true)}>
+            <Sparkles className="w-4 h-4 mr-2" />
+            AI Import
           </Button>
           
           <Button onClick={handleCreateSubject}>
