@@ -393,6 +393,8 @@ export default function AdminCurriculum() {
         open={importWizardOpen}
         onOpenChange={setImportWizardOpen}
         subjects={subjects}
+        defaultSubjectId={selectedSubject?.id}
+        onCreateSubject={createSubject}
         onComplete={() => {
           void refetchSubjects();
         }}
