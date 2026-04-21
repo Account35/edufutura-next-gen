@@ -76,7 +76,10 @@ async function splitPdfIntoChunks(file: File): Promise<File[]> {
     copied.forEach((p) => newDoc.addPage(p));
     const bytes = await newDoc.save();
     const partName = `${baseName}__part-${chunks.length + 1}-pages-${start + 1}-${end}.pdf`;
-    chunks.push(new File([bytes], partName, { type: 'application/pdf' }));
+    const blob = new Blob([bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)], {
+      type: 'application/pdf',
+    });
+    chunks.push(new File([blob], partName, { type: 'application/pdf' }));
   }
   return chunks;
 }
