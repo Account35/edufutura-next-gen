@@ -126,7 +126,7 @@ export const ContentImportWizard = ({ open, onOpenChange, subjects, defaultSubje
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  PDF, CSV, XLSX, MD, or TXT — max 25MB
+                  PDF, CSV, XLSX, MD, or TXT — up to 50MB. Large PDFs are auto-split for AI extraction.
                 </p>
                 {file && (
                   <Badge variant="secondary" className="mt-2">
