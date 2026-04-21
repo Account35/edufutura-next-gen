@@ -146,10 +146,15 @@ export const ContentImportWizard = ({ open, onOpenChange, subjects, defaultSubje
               <Loader2 className="w-12 h-12 animate-spin text-primary" />
               <div className="text-center">
                 <p className="font-medium">
-                  {isUploading ? 'Uploading file…' : 'AI is reading your content…'}
+                  {progress?.label ?? (isUploading ? 'Uploading file…' : 'AI is reading your content…')}
                 </p>
+                {progress && progress.total > 1 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Part {progress.current} of {progress.total}
+                  </p>
+                )}
                 <p className="text-sm text-muted-foreground mt-1">
-                  This usually takes 10–30 seconds.
+                  Large PDFs are split and processed in parts — please keep this window open.
                 </p>
               </div>
             </div>
