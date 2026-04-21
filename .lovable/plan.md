@@ -1,84 +1,46 @@
 
 
-## Merge Admin Content into Curriculum + AI-Assisted Bulk Upload (OpenRouter primary, Lovable AI fallback)
+## Support large PDF uploads via client-side chunking
 
-Consolidate the two admin pages into a single `/admin/curriculum` workflow, and add an AI-powered uploader that ingests PDFs, CSVs, or spreadsheets, extracts chapter data, detects the grade/subject, and lets the editor review before saving. AI extraction routes through OpenRouter first and falls back to Lovable AI Gateway on failure.
+The current 8MB PDF limit is enforced both client-side (`useCurriculumImport.tsx`) and edge-side (`extract-curriculum-content`). It exists because the edge worker has memory + time limits when parsing PDFs with `unpdf`, and the AI context is already truncated to ~18K characters. We will lift the limit by **splitting large PDFs in the browser into smaller per-chunk PDFs**, sending each chunk through the existing edge function, and merging the extracted chapters before the editor reviews them. No information is lost, and the edge function and AI providers remain untouched.
 
-### Part 1 — Merge `/admin/content` into `/admin/curriculum`
+### What changes for the user
 
-- Move the rich upload capabilities from `ContentUploadForm` (PDF upload to `curriculum-pdfs` bucket, video URL, markdown content, key concepts, CAPS code, difficulty, estimated duration) into the existing `ChapterEditorModal`.
-- Remove the `/admin/content` route from `App.tsx` and any sidebar/nav entry.
-- Add a redirect: `/admin/content` → `/admin/curriculum` so old links still work.
-- Delete `src/pages/AdminContent.tsx` and `src/components/admin/ContentUploadForm.tsx` after their fields are merged.
+1. The wizard accepts PDFs up to 50MB (configurable). CSV/XLSX/MD/TXT limits stay the same.
+2. For PDFs larger than 7MB or longer than ~60 pages, the wizard automatically:
+   - Splits the file in the browser using `pdf-lib` into ~6MB / 40-page chunks.
+   - Uploads each chunk to `curriculum-imports` and calls `extract-curriculum-content` per chunk (sequentially, to respect AI rate limits).
+   - Shows progress: "Processing chunk 2 of 4…".
+3. Results are merged into a single `ExtractionResult`:
+   - `detected_grade` / `detected_subject` / `confidence` taken from the highest-confidence chunk.
+   - `provider_used` shown as the provider used by the majority of chunks.
+   - Chapters concatenated, `chapter_number` re-sequenced to be unique, and near-duplicate titles (case-insensitive match) deduplicated.
+4. The review screen behaves exactly as today — editor confirms grade/subject and saves drafts.
+5. If a single chunk fails, the wizard surfaces a non-blocking warning and continues with the rest, so partial results are never lost.
 
-### Part 2 — AI-Assisted Bulk Content Import
+### Files to modify
 
-A new "Import Content" button on `/admin/curriculum` opens a 3-step wizard.
+- **`src/hooks/useCurriculumImport.tsx`**
+  - Raise `MAX_PDF_IMPORT_BYTES` to 50MB.
+  - Add `splitPdfIntoChunks(file)` using `pdf-lib` (already a tiny, browser-safe dep we will add).
+  - Refactor `uploadAndExtract` to: detect large PDFs → split → loop chunks (`uploadAndExtractSingle` helper) → merge results → return one `ExtractionResult`.
+  - Add `progress` state (`{current, total, label}`) returned from the hook.
+  - Best-effort cleanup of all chunk files in `curriculum-imports` after extraction.
 
-**Step 1 — Upload**
-- Accept `.pdf`, `.csv`, `.xlsx`, `.md`, `.txt` (max 25MB).
-- File uploads to a new private storage bucket `curriculum-imports` (admin/educator only).
+- **`src/components/admin/curriculum/ContentImportWizard.tsx`**
+  - Show progress text in the "extracting" step using the new `progress` value.
+  - Update the upload helper text to reflect the new 50MB PDF limit.
 
-**Step 2 — AI Extraction**
-- New edge function `extract-curriculum-content` (admin/educator role check):
-  - PDFs: extract text server-side, then send to AI with a structured tool-call schema.
-  - CSV/XLSX: parse rows server-side, send to AI to map columns to chapter fields.
-  - **AI provider routing**:
-    1. **Primary**: OpenRouter via the existing shared utility `supabase/functions/_shared/openrouter.ts` (model: `google/gemini-2.5-pro` or `openai/gpt-4o`).
-    2. **Fallback**: Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`, model `google/gemini-2.5-pro`) — triggered when OpenRouter returns non-2xx, times out (>30s), or `OPENROUTER_API_KEY` is missing.
-  - Response shape (enforced via tool-calling on both providers):
-    ```json
-    {
-      "detected_grade": 10,
-      "detected_subject": "Mathematics",
-      "confidence": 0.92,
-      "provider_used": "openrouter" | "lovable",
-      "chapters": [{
-        "chapter_number": 1,
-        "chapter_title": "...",
-        "chapter_description": "...",
-        "content_markdown": "...",
-        "difficulty_level": "intermediate",
-        "estimated_duration_minutes": 45,
-        "caps_code": "...",
-        "key_concepts": ["..."]
-      }]
-    }
-    ```
-  - Surface 429/402/5xx errors as toasts with provider context.
+### Files NOT changed
 
-**Step 3 — Review & Confirm**
-- Editor sees:
-  - Detected grade + subject (dropdowns to override; pre-matched against existing `curriculum_subjects`).
-  - A badge showing which AI provider was used (OpenRouter / Lovable AI fallback).
-  - Per-chapter inline editing for every field with confidence indicators.
-  - Checkboxes to include/exclude individual chapters.
-- "Confirm & Save" batch-inserts selected chapters into `curriculum_chapters` linked to the chosen subject.
+- `supabase/functions/extract-curriculum-content/index.ts` — keeps its 8MB PDF / 80-page guardrails. Each chunk we send is well under those limits, so the function continues to behave safely and reliably.
+- `ChapterEditorModal.tsx`, RLS policies, storage buckets, `saveChapters` — untouched.
 
-### Files to Add
-- `src/components/admin/curriculum/ContentImportWizard.tsx`
-- `src/components/admin/curriculum/ExtractedChapterReview.tsx`
-- `src/hooks/useCurriculumImport.tsx`
-- `supabase/functions/extract-curriculum-content/index.ts`
+### Tech notes
 
-### Files to Modify
-- `src/components/admin/curriculum/ChapterEditorModal.tsx` — absorb PDF upload, video URL, key concepts, CAPS code.
-- `src/pages/AdminCurriculum.tsx` — add "Import Content" button.
-- `src/App.tsx` — remove `/admin/content` route, add redirect to `/admin/curriculum`.
-- `src/components/admin/AdminLayout.tsx` (and mobile nav) — remove "Content" sidebar entry.
-- `supabase/functions/_shared/openrouter.ts` — add a small `callOpenRouterWithTools()` helper if needed for the structured tool-call payload.
-
-### Files to Delete
-- `src/pages/AdminContent.tsx`
-- `src/components/admin/ContentUploadForm.tsx`
-
-### Database / Backend Changes
-- New private storage bucket `curriculum-imports` with RLS allowing only admins/educators (`has_role(auth.uid(),'admin') OR has_role(auth.uid(),'educator')`) to insert/select/delete.
-- No schema changes to `curriculum_chapters`.
-
-### Tech Notes
-- AI provider order is OpenRouter → Lovable AI; both use tool-calling for reliable structured JSON.
-- Detected grade is matched against existing `curriculum_subjects.grade_level` so the editor confirms the subject with a single click.
-- Wizard is mobile-responsive and uses semantic design tokens.
-- Fallback is silent to the user (toast only on total failure); the review screen shows which provider was used for transparency.
+- `pdf-lib` runs entirely in the browser, no native deps, ~80KB gzipped.
+- Chunk size targets: ≤6MB and ≤40 pages each, whichever triggers first. This keeps every chunk comfortably inside the edge function's existing limits.
+- Chunk requests are sequential (not parallel) to avoid hitting AI 429s; a small delay between chunks is added.
+- Merge logic re-numbers chapters globally (1..N) so saved drafts have unique `chapter_number` values per subject.
+- All existing error handling (`429`, `402`, `413`, generic) is preserved per chunk; a chunk-level failure becomes a toast warning, not a hard stop.
 
