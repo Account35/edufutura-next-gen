@@ -405,9 +405,9 @@ export const ChapterEditorModal = ({
                         Upload
                       </Button>
                     </div>
-                    {formData.content_url && (
+                    {formData.content_url && /\.pdf($|\?)/i.test(formData.content_url) && (
                       <p className="text-xs text-muted-foreground break-all">
-                        Current: <a href={formData.content_url} target="_blank" rel="noreferrer" className="underline">{formData.content_url}</a>
+                        Current PDF: <a href={formData.content_url} target="_blank" rel="noreferrer" className="underline">{formData.content_url}</a>
                       </p>
                     )}
                   </div>
@@ -417,9 +417,12 @@ export const ChapterEditorModal = ({
                       id="video_url"
                       type="url"
                       placeholder="https://www.youtube.com/watch?v=..."
-                      value={formData.content_url}
+                      value={/\.pdf($|\?)/i.test(formData.content_url) ? '' : formData.content_url}
                       onChange={(e) => setFormData((prev) => ({ ...prev, content_url: e.target.value }))}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      A chapter can have either an attached PDF or a video URL — not both.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
