@@ -28,11 +28,11 @@ export interface ImportProgress {
   label: string;
 }
 
-const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB overall cap
-const MAX_PDF_IMPORT_BYTES = 50 * 1024 * 1024; // PDFs up to 50MB are now supported via auto-chunking
-const PDF_CHUNK_BYTE_TARGET = 6 * 1024 * 1024; // ~6MB per chunk (under edge 8MB guard)
-const PDF_CHUNK_PAGE_TARGET = 40; // ~40 pages per chunk (under edge 80-page guard)
-const SINGLE_PDF_THRESHOLD_BYTES = 7 * 1024 * 1024; // Below this, no need to chunk
+const MAX_FILE_BYTES = 50 * 1024 * 1024;
+const MAX_PDF_IMPORT_BYTES = 50 * 1024 * 1024;
+const PDF_CHUNK_BYTE_TARGET = 6 * 1024 * 1024;
+const PDF_CHUNK_PAGE_TARGET = 40;
+const SINGLE_PDF_THRESHOLD_BYTES = 7 * 1024 * 1024;
 const ACCEPTED_EXTS = ['pdf', 'csv', 'xlsx', 'xls', 'md', 'txt'];
 
 const getErrorMessage = (error: unknown, fallback = 'unknown error') => {
@@ -56,64 +56,75 @@ const getErrorStatus = (error: unknown): number | null => {
 };
 
 async function splitPdfIntoChunks(file: File): Promise<File[]> {
-  const buf = await file.arrayBuffer();
-  const src = await PDFDocument.load(buf, { ignoreEncryption: true });
-  const totalPages = src.getPageCount();
+  const buffer = await file.arrayBuffer();
+  const sourcePdf = await PDFDocument.load(buffer, { ignoreEncryption: true });
+  const totalPages = sourcePdf.getPageCount();
   const totalBytes = file.size;
 
-  // Estimate pages per chunk so each chunk is under both byte + page targets.
   const bytesPerPage = totalBytes / Math.max(1, totalPages);
   const pagesByByte = Math.max(1, Math.floor(PDF_CHUNK_BYTE_TARGET / Math.max(1, bytesPerPage)));
   const pagesPerChunk = Math.max(1, Math.min(PDF_CHUNK_PAGE_TARGET, pagesByByte));
 
   const chunks: File[] = [];
   const baseName = file.name.replace(/\.pdf$/i, '');
+
   for (let start = 0; start < totalPages; start += pagesPerChunk) {
     const end = Math.min(totalPages, start + pagesPerChunk);
-    const newDoc = await PDFDocument.create();
-    const pageIndexes = Array.from({ length: end - start }, (_, i) => start + i);
-    const copied = await newDoc.copyPages(src, pageIndexes);
-    copied.forEach((p) => newDoc.addPage(p));
-    const bytes = await newDoc.save();
-    const partName = `${baseName}__part-${chunks.length + 1}-pages-${start + 1}-${end}.pdf`;
-    // Copy into a fresh ArrayBuffer to satisfy strict BlobPart typing
-    const ab = new ArrayBuffer(bytes.byteLength);
-    new Uint8Array(ab).set(bytes);
-    chunks.push(new File([ab], partName, { type: 'application/pdf' }));
+    const chunkPdf = await PDFDocument.create();
+    const pageIndexes = Array.from({ length: end - start }, (_, index) => start + index);
+    const pages = await chunkPdf.copyPages(sourcePdf, pageIndexes);
+    pages.forEach((page) => chunkPdf.addPage(page));
+
+    const bytes = await chunkPdf.save();
+    const arrayBuffer = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(arrayBuffer).set(bytes);
+
+    chunks.push(
+      new File(
+        [arrayBuffer],
+        `${baseName}__part-${chunks.length + 1}-pages-${start + 1}-${end}.pdf`,
+        { type: 'application/pdf' }
+      )
+    );
   }
+
   return chunks;
 }
 
 function mergeResults(parts: ExtractionResult[]): ExtractionResult {
-  // Pick highest-confidence detection
-  const best = parts.reduce((a, b) => (b.confidence > a.confidence ? b : a), parts[0]);
+  const bestResult = parts.reduce((best, current) => (
+    current.confidence > best.confidence ? current : best
+  ), parts[0]);
 
-  // Provider used by majority
-  const providerCount = parts.reduce<Record<string, number>>((acc, p) => {
-    acc[p.provider_used] = (acc[p.provider_used] || 0) + 1;
-    return acc;
+  const providerCounts = parts.reduce<Record<string, number>>((counts, part) => {
+    counts[part.provider_used] = (counts[part.provider_used] || 0) + 1;
+    return counts;
   }, {});
-  const provider_used =
-    (Object.entries(providerCount).sort((a, b) => b[1] - a[1])[0]?.[0] as 'openrouter' | 'lovable') ||
-    best.provider_used;
 
-  // Concatenate + dedupe chapters by lowercased title, then re-sequence
-  const seen = new Set<string>();
+  const provider_used =
+    (Object.entries(providerCounts).sort((a, b) => b[1] - a[1])[0]?.[0] as 'openrouter' | 'lovable') ||
+    bestResult.provider_used;
+
+  const seenTitles = new Set<string>();
   const chapters: ExtractedChapter[] = [];
+
   for (const part of parts) {
-    for (const ch of part.chapters || []) {
-      const key = (ch.chapter_title || '').trim().toLowerCase();
-      if (key && seen.has(key)) continue;
-      if (key) seen.add(key);
-      chapters.push(ch);
+    for (const chapter of part.chapters || []) {
+      const key = (chapter.chapter_title || '').trim().toLowerCase();
+      if (key && seenTitles.has(key)) continue;
+      if (key) seenTitles.add(key);
+      chapters.push({ ...chapter });
     }
   }
-  chapters.forEach((ch, i) => { ch.chapter_number = i + 1; });
+
+  chapters.forEach((chapter, index) => {
+    chapter.chapter_number = index + 1;
+  });
 
   return {
-    detected_grade: best.detected_grade,
-    detected_subject: best.detected_subject,
-    confidence: best.confidence,
+    detected_grade: bestResult.detected_grade,
+    detected_subject: bestResult.detected_subject,
+    confidence: bestResult.confidence,
     provider_used,
     chapters,
   };
@@ -144,10 +155,11 @@ export function useCurriculumImport() {
       const msg =
         status === 429 ? 'AI rate limit reached.' :
         status === 402 ? 'AI credits exhausted.' :
-        status === 413 ? 'Chunk too large for edge extraction.' :
+        status === 413 ? 'This file is too large or complex for edge extraction.' :
         `Extraction failed: ${getErrorMessage(error)}`;
       return { result: null, error: msg, storagePath };
     }
+
     if (data?.error) return { result: null, error: data.error, storagePath };
     return { result: data as ExtractionResult, storagePath };
   }
@@ -157,11 +169,13 @@ export function useCurriculumImport() {
       toast.error('File is too large. Maximum is 50MB.');
       return null;
     }
+
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
     if (!ACCEPTED_EXTS.includes(ext)) {
       toast.error(`Unsupported file type: .${ext}. Use PDF, CSV, XLSX, MD or TXT.`);
       return null;
     }
+
     if (ext === 'pdf' && file.size > MAX_PDF_IMPORT_BYTES) {
       toast.error('PDF is too large. Maximum is 50MB.');
       return null;
@@ -173,15 +187,15 @@ export function useCurriculumImport() {
       return null;
     }
 
-    // Decide whether to chunk
     let chunks: File[] = [file];
+
     if (ext === 'pdf' && file.size > SINGLE_PDF_THRESHOLD_BYTES) {
       setIsUploading(true);
-      setProgress({ current: 0, total: 1, label: 'Splitting large PDF…' });
+      setProgress({ current: 0, total: 1, label: 'Splitting large PDF...' });
       try {
         chunks = await splitPdfIntoChunks(file);
-        toast.message(`Large PDF detected — split into ${chunks.length} parts for AI extraction.`);
-      } catch (err) {
+        toast.message(`Large PDF detected. Split into ${chunks.length} parts for AI extraction.`);
+      } catch (err: unknown) {
         toast.error(`Could not split PDF: ${getErrorMessage(err)}`);
         setIsUploading(false);
         setProgress(null);
@@ -196,25 +210,31 @@ export function useCurriculumImport() {
     const failedChunks: string[] = [];
 
     try {
-      for (let i = 0; i < chunks.length; i++) {
+      for (let index = 0; index < chunks.length; index += 1) {
         setProgress({
-          current: i + 1,
+          current: index + 1,
           total: chunks.length,
-          label: chunks.length > 1 ? `Processing part ${i + 1} of ${chunks.length}…` : 'AI is reading your content…',
+          label: chunks.length > 1
+            ? `Processing part ${index + 1} of ${chunks.length}...`
+            : 'AI is reading your content...',
         });
-        const { result, error, storagePath } = await uploadAndExtractSingle(chunks[i], user.id);
+
+        const { result, error, storagePath } = await uploadAndExtractSingle(chunks[index], user.id);
         pathsToCleanup.push(storagePath);
+
         if (result) {
           partResults.push(result);
         } else {
-          failedChunks.push(`Part ${i + 1}: ${error || 'unknown error'}`);
+          failedChunks.push(`Part ${index + 1}: ${error || 'unknown error'}`);
           if (chunks.length === 1) {
             toast.error(error || 'Extraction failed');
             return null;
           }
         }
-        // small pacing delay to avoid AI 429 between chunks
-        if (i < chunks.length - 1) await new Promise((r) => setTimeout(r, 750));
+
+        if (index < chunks.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 750));
+        }
       }
 
       if (partResults.length === 0) {
@@ -226,16 +246,17 @@ export function useCurriculumImport() {
         toast.warning(`${failedChunks.length} part(s) could not be extracted. Continuing with the rest.`);
       }
 
-      const merged = mergeResults(partResults);
-      toast.success(`Extracted ${merged.chapters.length} chapter(s) via ${merged.provider_used}`);
-      return merged;
+      const mergedResult = mergeResults(partResults);
+      toast.success(`Extracted ${mergedResult.chapters.length} chapter(s) via ${mergedResult.provider_used}`);
+      return mergedResult;
     } catch (err: unknown) {
       toast.error(`Extraction failed: ${getErrorMessage(err)}`);
       return null;
     } finally {
+      setIsUploading(false);
       setIsExtracting(false);
       setProgress(null);
-      // best-effort cleanup
+
       if (pathsToCleanup.length > 0) {
         void supabase.storage.from('curriculum-imports').remove(pathsToCleanup);
       }
