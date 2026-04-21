@@ -22,7 +22,7 @@ interface Props {
 type Step = 'upload' | 'extracting' | 'review';
 
 export const ContentImportWizard = ({ open, onOpenChange, subjects, defaultSubjectId, onComplete }: Props) => {
-  const { isUploading, isExtracting, isSaving, uploadAndExtract, saveChapters } = useCurriculumImport();
+  const { isUploading, isExtracting, isSaving, progress, uploadAndExtract, saveChapters } = useCurriculumImport();
   const [step, setStep] = useState<Step>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ExtractionResult | null>(null);
@@ -126,7 +126,7 @@ export const ContentImportWizard = ({ open, onOpenChange, subjects, defaultSubje
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  PDF, CSV, XLSX, MD, or TXT — max 25MB
+                  PDF, CSV, XLSX, MD, or TXT — up to 50MB. Large PDFs are auto-split for AI extraction.
                 </p>
                 {file && (
                   <Badge variant="secondary" className="mt-2">
@@ -146,10 +146,15 @@ export const ContentImportWizard = ({ open, onOpenChange, subjects, defaultSubje
               <Loader2 className="w-12 h-12 animate-spin text-primary" />
               <div className="text-center">
                 <p className="font-medium">
-                  {isUploading ? 'Uploading file…' : 'AI is reading your content…'}
+                  {progress?.label ?? (isUploading ? 'Uploading file…' : 'AI is reading your content…')}
                 </p>
+                {progress && progress.total > 1 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Part {progress.current} of {progress.total}
+                  </p>
+                )}
                 <p className="text-sm text-muted-foreground mt-1">
-                  This usually takes 10–30 seconds.
+                  Large PDFs are split and processed in parts — please keep this window open.
                 </p>
               </div>
             </div>
