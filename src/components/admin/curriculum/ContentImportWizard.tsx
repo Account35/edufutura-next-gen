@@ -22,7 +22,7 @@ interface Props {
 type Step = 'upload' | 'extracting' | 'review';
 
 export const ContentImportWizard = ({ open, onOpenChange, subjects, defaultSubjectId, onComplete }: Props) => {
-  const { isUploading, isExtracting, isSaving, uploadAndExtract, saveChapters } = useCurriculumImport();
+  const { isUploading, isExtracting, isSaving, progress, uploadAndExtract, saveChapters } = useCurriculumImport();
   const [step, setStep] = useState<Step>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ExtractionResult | null>(null);
