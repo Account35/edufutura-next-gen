@@ -113,6 +113,41 @@ export const useAdminCurriculum = () => {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
 
+  // Recompute total_chapters and estimated_hours on a subject
+  const recomputeSubjectCounters = useCallback(async (subjectId: string | null | undefined) => {
+    if (!subjectId) return;
+    try {
+      const { count } = await supabase
+        .from('curriculum_chapters')
+        .select('id', { count: 'exact', head: true })
+        .eq('subject_id', subjectId);
+
+      const { data: durRows } = await supabase
+        .from('curriculum_chapters')
+        .select('estimated_duration_minutes')
+        .eq('subject_id', subjectId);
+
+      const totalMinutes = (durRows || []).reduce(
+        (sum, r: { estimated_duration_minutes: number | null }) =>
+          sum + (r.estimated_duration_minutes || 0),
+        0
+      );
+
+      await supabase
+        .from('curriculum_subjects')
+        .update({
+          total_chapters: count ?? 0,
+          estimated_hours: Math.max(0, Math.round(totalMinutes / 60)),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', subjectId);
+
+      queryClient.invalidateQueries({ queryKey: ['admin-subjects'] });
+    } catch {
+      // non-fatal
+    }
+  }, [queryClient]);
+
   // Fetch all subjects
   const {
     data: subjects = [],
