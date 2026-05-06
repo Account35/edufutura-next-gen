@@ -299,8 +299,9 @@ export const useAdminCurriculum = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-chapters'] });
+      void recomputeSubjectCounters(data?.subject_id);
       toast.success('Chapter created successfully');
     },
     onError: (error: unknown) => {
@@ -338,15 +339,22 @@ export const useAdminCurriculum = () => {
   // Delete chapter mutation
   const deleteChapterMutation = useMutation({
     mutationFn: async (id: string) => {
+      const { data: existing } = await supabase
+        .from('curriculum_chapters')
+        .select('subject_id')
+        .eq('id', id)
+        .maybeSingle();
       const { error } = await supabase
         .from('curriculum_chapters')
         .delete()
         .eq('id', id);
       
       if (error) throw error;
+      return existing?.subject_id as string | null | undefined;
     },
-    onSuccess: () => {
+    onSuccess: (subjectId) => {
       queryClient.invalidateQueries({ queryKey: ['admin-chapters'] });
+      void recomputeSubjectCounters(subjectId ?? selectedSubject?.id);
       setSelectedChapter(null);
       toast.success('Chapter deleted successfully');
     },
