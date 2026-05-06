@@ -73,6 +73,8 @@ export default function AdminCurriculum() {
     isUpdatingSubject,
     isCreatingChapter,
     isUpdatingChapter,
+    togglePublish,
+    toggleCapsAligned,
   } = useAdminCurriculum();
 
   // UI State
@@ -312,6 +314,8 @@ export default function AdminCurriculum() {
               onDelete={setDeleteSubjectDialog}
               onExport={exportSubject}
               onDuplicate={setDuplicateDialog}
+              onTogglePublish={(s, v) => void togglePublish(s.id, v)}
+              onToggleCapsAligned={(s, v) => void toggleCapsAligned(s.id, v)}
             />
           ))}
         </div>
