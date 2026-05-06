@@ -291,6 +291,36 @@ export function useCurriculumImport() {
       const { error } = await supabase.from('curriculum_chapters').insert(rows);
       if (error) throw error;
 
+      // Recompute parent subject counters
+      try {
+        const { count } = await supabase
+          .from('curriculum_chapters')
+          .select('id', { count: 'exact', head: true })
+          .eq('subject_id', subjectId);
+
+        const { data: durRows } = await supabase
+          .from('curriculum_chapters')
+          .select('estimated_duration_minutes')
+          .eq('subject_id', subjectId);
+
+        const totalMinutes = (durRows || []).reduce(
+          (sum, r: { estimated_duration_minutes: number | null }) =>
+            sum + (r.estimated_duration_minutes || 0),
+          0
+        );
+
+        await supabase
+          .from('curriculum_subjects')
+          .update({
+            total_chapters: count ?? rows.length,
+            estimated_hours: Math.max(1, Math.round(totalMinutes / 60)),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', subjectId);
+      } catch {
+        // Non-fatal: counters will resync on next manual edit
+      }
+
       toast.success(`${rows.length} chapter(s) saved as drafts.`);
       return true;
     } catch (err: unknown) {

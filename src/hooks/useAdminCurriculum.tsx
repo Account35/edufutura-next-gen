@@ -113,6 +113,41 @@ export const useAdminCurriculum = () => {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
 
+  // Recompute total_chapters and estimated_hours on a subject
+  const recomputeSubjectCounters = useCallback(async (subjectId: string | null | undefined) => {
+    if (!subjectId) return;
+    try {
+      const { count } = await supabase
+        .from('curriculum_chapters')
+        .select('id', { count: 'exact', head: true })
+        .eq('subject_id', subjectId);
+
+      const { data: durRows } = await supabase
+        .from('curriculum_chapters')
+        .select('estimated_duration_minutes')
+        .eq('subject_id', subjectId);
+
+      const totalMinutes = (durRows || []).reduce(
+        (sum, r: { estimated_duration_minutes: number | null }) =>
+          sum + (r.estimated_duration_minutes || 0),
+        0
+      );
+
+      await supabase
+        .from('curriculum_subjects')
+        .update({
+          total_chapters: count ?? 0,
+          estimated_hours: Math.max(0, Math.round(totalMinutes / 60)),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', subjectId);
+
+      queryClient.invalidateQueries({ queryKey: ['admin-subjects'] });
+    } catch {
+      // non-fatal
+    }
+  }, [queryClient]);
+
   // Fetch all subjects
   const {
     data: subjects = [],
@@ -264,8 +299,9 @@ export const useAdminCurriculum = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-chapters'] });
+      void recomputeSubjectCounters(data?.subject_id);
       toast.success('Chapter created successfully');
     },
     onError: (error: unknown) => {
@@ -303,15 +339,22 @@ export const useAdminCurriculum = () => {
   // Delete chapter mutation
   const deleteChapterMutation = useMutation({
     mutationFn: async (id: string) => {
+      const { data: existing } = await supabase
+        .from('curriculum_chapters')
+        .select('subject_id')
+        .eq('id', id)
+        .maybeSingle();
       const { error } = await supabase
         .from('curriculum_chapters')
         .delete()
         .eq('id', id);
       
       if (error) throw error;
+      return existing?.subject_id as string | null | undefined;
     },
-    onSuccess: () => {
+    onSuccess: (subjectId) => {
       queryClient.invalidateQueries({ queryKey: ['admin-chapters'] });
+      void recomputeSubjectCounters(subjectId ?? selectedSubject?.id);
       setSelectedChapter(null);
       toast.success('Chapter deleted successfully');
     },
@@ -493,6 +536,15 @@ export const useAdminCurriculum = () => {
     return publicUrl;
   }, []);
 
+  // Quick toggles for subject card
+  const togglePublish = useCallback(async (subjectId: string, value: boolean) => {
+    await updateSubjectMutation.mutateAsync({ id: subjectId, is_published: value });
+  }, [updateSubjectMutation]);
+
+  const toggleCapsAligned = useCallback(async (subjectId: string, value: boolean) => {
+    await updateSubjectMutation.mutateAsync({ id: subjectId, caps_aligned: value });
+  }, [updateSubjectMutation]);
+
   return {
     // State
     subjects,
@@ -524,6 +576,8 @@ export const useAdminCurriculum = () => {
     importSubject,
     duplicateSubject,
     uploadImage,
+    togglePublish,
+    toggleCapsAligned,
     
     // Loading states
     isCreatingSubject: createSubjectMutation.isPending,
