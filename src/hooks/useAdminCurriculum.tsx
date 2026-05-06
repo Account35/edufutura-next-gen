@@ -536,6 +536,15 @@ export const useAdminCurriculum = () => {
     return publicUrl;
   }, []);
 
+  // Quick toggles for subject card
+  const togglePublish = useCallback(async (subjectId: string, value: boolean) => {
+    await updateSubjectMutation.mutateAsync({ id: subjectId, is_published: value });
+  }, [updateSubjectMutation]);
+
+  const toggleCapsAligned = useCallback(async (subjectId: string, value: boolean) => {
+    await updateSubjectMutation.mutateAsync({ id: subjectId, caps_aligned: value });
+  }, [updateSubjectMutation]);
+
   return {
     // State
     subjects,
@@ -567,6 +576,8 @@ export const useAdminCurriculum = () => {
     importSubject,
     duplicateSubject,
     uploadImage,
+    togglePublish,
+    toggleCapsAligned,
     
     // Loading states
     isCreatingSubject: createSubjectMutation.isPending,
