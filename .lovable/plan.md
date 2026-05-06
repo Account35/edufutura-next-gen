@@ -1,46 +1,39 @@
+## Fix subject card chapter count + add Publish & CAPS quick toggles
 
+Two small, scoped changes on the Admin → Curriculum Management screen. No structural or routing changes.
 
-## Support large PDF uploads via client-side chunking
+### Problem 1 — Card shows "0 chapters" after AI import
 
-The current 8MB PDF limit is enforced both client-side (`useCurriculumImport.tsx`) and edge-side (`extract-curriculum-content`). It exists because the edge worker has memory + time limits when parsing PDFs with `unpdf`, and the AI context is already truncated to ~18K characters. We will lift the limit by **splitting large PDFs in the browser into smaller per-chunk PDFs**, sending each chunk through the existing edge function, and merging the extracted chapters before the editor reviews them. No information is lost, and the edge function and AI providers remain untouched.
+`curriculum_subjects.total_chapters` is a **static counter column**, not auto-derived. The AI import inserts rows into `curriculum_chapters` but never updates the parent subject's counter, so the card keeps showing `0 chapters` even though opening the subject lists them correctly. The same drift can happen on manual add/delete.
 
-### What changes for the user
+### Problem 2 — No quick way to publish or mark CAPS-aligned from the card
 
-1. The wizard accepts PDFs up to 50MB (configurable). CSV/XLSX/MD/TXT limits stay the same.
-2. For PDFs larger than 7MB or longer than ~60 pages, the wizard automatically:
-   - Splits the file in the browser using `pdf-lib` into ~6MB / 40-page chunks.
-   - Uploads each chunk to `curriculum-imports` and calls `extract-curriculum-content` per chunk (sequentially, to respect AI rate limits).
-   - Shows progress: "Processing chunk 2 of 4…".
-3. Results are merged into a single `ExtractionResult`:
-   - `detected_grade` / `detected_subject` / `confidence` taken from the highest-confidence chunk.
-   - `provider_used` shown as the provider used by the majority of chunks.
-   - Chapters concatenated, `chapter_number` re-sequenced to be unique, and near-duplicate titles (case-insensitive match) deduplicated.
-4. The review screen behaves exactly as today — editor confirms grade/subject and saves drafts.
-5. If a single chunk fails, the wizard surfaces a non-blocking warning and continues with the rest, so partial results are never lost.
+Today you can only toggle `is_published` and `caps_aligned` from the full Subject Editor modal. The user wants the same two switches surfaced directly on the subject card after reviewing AI-imported content, mirroring what manual creation already offers.
 
-### Files to modify
+### Changes
 
-- **`src/hooks/useCurriculumImport.tsx`**
-  - Raise `MAX_PDF_IMPORT_BYTES` to 50MB.
-  - Add `splitPdfIntoChunks(file)` using `pdf-lib` (already a tiny, browser-safe dep we will add).
-  - Refactor `uploadAndExtract` to: detect large PDFs → split → loop chunks (`uploadAndExtractSingle` helper) → merge results → return one `ExtractionResult`.
-  - Add `progress` state (`{current, total, label}`) returned from the hook.
-  - Best-effort cleanup of all chunk files in `curriculum-imports` after extraction.
+**1. `src/hooks/useCurriculumImport.tsx` → `saveChapters`**
+- After inserting the new chapter rows, recount `curriculum_chapters` for that `subject_id` and `update` the parent `curriculum_subjects` row with the fresh `total_chapters` value (and recompute `estimated_hours` from the sum of `estimated_duration_minutes`, rounded to the nearest hour).
+- Toast and return value stay the same.
 
-- **`src/components/admin/curriculum/ContentImportWizard.tsx`**
-  - Show progress text in the "extracting" step using the new `progress` value.
-  - Update the upload helper text to reflect the new 50MB PDF limit.
+**2. `src/hooks/useAdminCurriculum.tsx` → keep counters honest for manual edits**
+- In `createChapterMutation.onSuccess` and `deleteChapterMutation.onSuccess`, recount chapters for the affected `subject_id` and update `total_chapters` + `estimated_hours` on the subject. Invalidate `['admin-subjects']` so the cards refresh.
+- Add a small `togglePublish(subjectId, value)` and `toggleCapsAligned(subjectId, value)` helper that calls the existing `updateSubject` mutation (no new endpoints, no schema changes).
+- Export both helpers from the hook.
+
+**3. `src/components/admin/curriculum/SubjectCard.tsx`**
+- Add two new optional props: `onTogglePublish(subject, next: boolean)` and `onToggleCapsAligned(subject, next: boolean)`.
+- In the card footer, replace the static "Published / Draft" badge and "CAPS Aligned" badge with two compact toggle controls (shadcn `Switch` + label). Each is wrapped in a `div` with `onClick={(e) => e.stopPropagation()}` so toggling does not navigate into the subject.
+- Layout stays inside the existing footer; uses semantic tokens only (no hardcoded colors).
+- Mobile: switches stack on the right of the grade badge — already fits within the current 1/2/3 column grid at 1040px.
+
+**4. `src/pages/AdminCurriculum.tsx`**
+- Wire `onTogglePublish` and `onToggleCapsAligned` to the new hook helpers and pass them into each `<SubjectCard />`.
 
 ### Files NOT changed
+- `SubjectEditorModal.tsx`, `ChapterEditorModal.tsx`, `ContentImportWizard.tsx`, RLS policies, edge functions, storage buckets, routing.
 
-- `supabase/functions/extract-curriculum-content/index.ts` — keeps its 8MB PDF / 80-page guardrails. Each chunk we send is well under those limits, so the function continues to behave safely and reliably.
-- `ChapterEditorModal.tsx`, RLS policies, storage buckets, `saveChapters` — untouched.
-
-### Tech notes
-
-- `pdf-lib` runs entirely in the browser, no native deps, ~80KB gzipped.
-- Chunk size targets: ≤6MB and ≤40 pages each, whichever triggers first. This keeps every chunk comfortably inside the edge function's existing limits.
-- Chunk requests are sequential (not parallel) to avoid hitting AI 429s; a small delay between chunks is added.
-- Merge logic re-numbers chapters globally (1..N) so saved drafts have unique `chapter_number` values per subject.
-- All existing error handling (`429`, `402`, `413`, generic) is preserved per chunk; a chunk-level failure becomes a toast warning, not a hard stop.
-
+### Acceptance
+- After an AI import completes, the subject card immediately shows the correct chapter count (matches the count visible inside the subject).
+- Each subject card displays a working **Publish** switch and **CAPS Aligned** switch; flipping either updates the database, refreshes the card, and never opens the subject view.
+- Manual add/delete of chapters also keeps the card's count accurate.
