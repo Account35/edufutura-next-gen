@@ -26,7 +26,7 @@ export const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
             </div>
             
             <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-primary leading-tight">
-              Master Your CAPS Curriculum with{" "}
+              Learn Your CAPS Curriculum with{" "}
               <span className="text-secondary">AI-Powered Learning</span>
             </h1>
             
