@@ -272,9 +272,33 @@ export function useCurriculumImport() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const rows = chapters.map((c) => ({
+      // Find current max chapter_number for this subject to avoid
+      // duplicate-key violations on UNIQUE (subject_id, chapter_number).
+      const { data: existing } = await supabase
+        .from('curriculum_chapters')
+        .select('chapter_number')
+        .eq('subject_id', subjectId)
+        .order('chapter_number', { ascending: false })
+        .limit(1);
+
+      const startFrom = (existing && existing.length > 0
+        ? (existing[0].chapter_number || 0)
+        : 0) + 1;
+
+      // Deduplicate by title within the incoming batch and renumber
+      // sequentially starting after the highest existing chapter.
+      const seen = new Set<string>();
+      const deduped = chapters.filter((c) => {
+        const key = (c.chapter_title || '').trim().toLowerCase();
+        if (!key) return true;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      const rows = deduped.map((c, i) => ({
         subject_id: subjectId,
-        chapter_number: c.chapter_number,
+        chapter_number: startFrom + i,
         chapter_title: c.chapter_title,
         chapter_description: c.chapter_description || '',
         content_markdown: c.content_markdown || '',
