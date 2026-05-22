@@ -182,13 +182,14 @@ async function callOpenRouter(rawText: string, signal: AbortSignal): Promise<unk
       'X-Title': 'EduFutura',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-pro',
+      model: 'google/gemini-2.5-flash',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: `Source document (filename context will follow):\n\n${truncated}` },
       ],
       tools: [EXTRACTION_TOOL],
       tool_choice: { type: 'function', function: { name: 'extract_curriculum' } },
+      max_tokens: 3500,
     }),
     signal,
   });
@@ -313,43 +314,30 @@ Deno.serve(async (req) => {
       return createJsonResponse({ error: 'No text could be extracted from the file' }, 422);
     }
 
-    // Try OpenRouter first with timeout, fall back to Lovable AI
+    // OpenRouter only (per user request — no Lovable AI fallback)
     let result: unknown;
-    let providerUsed: 'openrouter' | 'lovable' = 'openrouter';
-    let openrouterError: string | null = null;
+    const providerUsed: 'openrouter' = 'openrouter';
 
-    if (Deno.env.get('OPENROUTER_API_KEY')) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      try {
-        result = await callOpenRouter(rawText, controller.signal);
-        clearTimeout(timeoutId);
-      } catch (err) {
-        clearTimeout(timeoutId);
-        openrouterError = err instanceof Error ? err.message : String(err);
-        console.warn('OpenRouter failed, falling back to Lovable AI:', openrouterError);
-      }
-    } else {
-      openrouterError = 'OPENROUTER_API_KEY not configured';
+    if (!Deno.env.get('OPENROUTER_API_KEY')) {
+      return createJsonResponse({ error: 'OPENROUTER_API_KEY not configured' }, 500);
     }
 
-    if (!result) {
-      try {
-        result = await callLovableAI(rawText);
-        providerUsed = 'lovable';
-      } catch (err) {
-        const status = getErrorStatus(err) ?? 500;
-        const lovableMessage = getErrorMessage(err);
-        return createJsonResponse({
-          error: `Both AI providers failed. OpenRouter: ${openrouterError}. Lovable AI: ${lovableMessage}`,
-        }, status);
-      }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    try {
+      result = await callOpenRouter(rawText, controller.signal);
+      clearTimeout(timeoutId);
+    } catch (err) {
+      clearTimeout(timeoutId);
+      const message = getErrorMessage(err);
+      const status = getErrorStatus(err) ?? 500;
+      return createJsonResponse({ error: `OpenRouter extraction failed: ${message}` }, status);
     }
 
     return createJsonResponse({
       ...result,
       provider_used: providerUsed,
-      openrouter_error: openrouterError,
+      openrouter_error: null,
     });
   } catch (err) {
     console.error('extract-curriculum-content error:', err);
