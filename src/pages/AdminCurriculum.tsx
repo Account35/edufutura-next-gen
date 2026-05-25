@@ -47,6 +47,7 @@ import {
 import { Label } from '@/components/ui/label';
 
 export default function AdminCurriculum() {
+  const queryClient = useQueryClient();
   const {
     subjects,
     chapters,
