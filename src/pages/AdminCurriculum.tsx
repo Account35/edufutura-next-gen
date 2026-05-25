@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAdminCurriculum, Subject, Chapter } from '@/hooks/useAdminCurriculum';
 import { SubjectCard } from '@/components/admin/curriculum/SubjectCard';
