@@ -2,8 +2,8 @@ import { Home, BookOpen, User, Menu, Bookmark, FileText, Trophy, MessageSquare, 
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 interface NavItem {
   id: string;
@@ -19,12 +19,12 @@ interface MobileBottomNavProps {
 export const MobileBottomNav = ({ onMoreClick }: MobileBottomNavProps) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
 
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut();
+      await signOut();
       navigate('/');
-      toast.success('Signed out successfully');
     } catch (error) {
       toast.error('Error signing out');
     }

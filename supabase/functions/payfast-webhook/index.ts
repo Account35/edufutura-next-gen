@@ -1,11 +1,35 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
+import { crypto as stdCrypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Validate PayFast ITN signature using MD5 per PayFast spec
+async function validatePayFastSignature(
+  data: Record<string, string>,
+  passphrase: string,
+): Promise<boolean> {
+  const provided = data.signature;
+  if (!provided) return false;
+
+  // Build param string in the order received, excluding the signature field
+  const entries = Object.entries(data).filter(([k]) => k !== 'signature');
+  const paramString = entries
+    .map(([k, v]) => `${k}=${encodeURIComponent(String(v)).replace(/%20/g, '+')}`)
+    .join('&');
+  const toHash = passphrase
+    ? `${paramString}&passphrase=${encodeURIComponent(passphrase).replace(/%20/g, '+')}`
+    : paramString;
+
+  const buf = await stdCrypto.subtle.digest('MD5', new TextEncoder().encode(toHash));
+  const computed = Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  return computed.toLowerCase() === provided.toLowerCase();
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -19,18 +43,24 @@ serve(async (req) => {
     );
 
     const formData = await req.formData();
-    const paymentData: any = {};
+    const paymentData: Record<string, string> = {};
     for (const [key, value] of formData.entries()) {
-      paymentData[key] = value;
+      paymentData[key] = String(value);
     }
 
-    console.log('PayFast webhook received:', paymentData);
+    console.log('PayFast webhook received for payment id:', paymentData.pf_payment_id);
 
-    // Validate PayFast signature (simplified - implement full MD5 validation in production)
+    // Validate PayFast ITN signature before trusting any payload
     const PAYFAST_PASSPHRASE = Deno.env.get('PAYFAST_PASSPHRASE') || '';
-    // In production: compute MD5 hash and validate signature
-    // For now, just log for security audit
-    
+    const signatureValid = await validatePayFastSignature(paymentData, PAYFAST_PASSPHRASE);
+    if (!signatureValid) {
+      console.error('PayFast webhook rejected: invalid signature');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid signature' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     const {
       m_payment_id,
       pf_payment_id,

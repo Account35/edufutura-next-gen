@@ -3,7 +3,7 @@ import { X, LogOut, Compass, HelpCircle, DollarSign, Building2, Sparkles } from 
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MobileMoreSheetProps {
   isOpen: boolean;
@@ -22,6 +22,7 @@ interface MenuItem {
 
 export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [dragY, setDragY] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -29,9 +30,9 @@ export const MobileMoreSheet = ({ isOpen, onClose }: MobileMoreSheetProps) => {
 
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut();
+      onClose();
+      await signOut();
       navigate('/');
-      toast.success('Signed out successfully');
     } catch (error) {
       toast.error('Error signing out');
     }

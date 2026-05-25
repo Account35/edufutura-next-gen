@@ -22,11 +22,13 @@ export const BackButton = ({
   const location = useLocation();
 
   const handleGoBack = () => {
-    // Check if we have history to go back to
-    if (window.history.length > 2) {
+    const historyIndex = typeof window.history.state?.idx === 'number'
+      ? window.history.state.idx
+      : 0;
+
+    if (historyIndex > 0 || window.history.length > 2) {
       navigate(-1);
     } else {
-      // Fallback to a safe route based on current location
       if (location.pathname.startsWith('/admin')) {
         navigate('/admin');
       } else if (location.pathname.startsWith('/onboarding')) {

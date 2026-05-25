@@ -30,14 +30,16 @@ import {
   FileText,
   Target,
   BookOpen,
-  Settings
+  Settings,
+  Upload
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import ReactMarkdown from 'react-markdown';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ChapterEditorModalProps {
   open: boolean;
@@ -46,7 +48,7 @@ interface ChapterEditorModalProps {
   subjectId: string;
   existingChapters: Chapter[];
   nextChapterNumber: number;
-  onSave: (data: Partial<Chapter>) => Promise<any>;
+  onSave: (data: Partial<Chapter>) => Promise<unknown>;
   isSaving: boolean;
 }
 
@@ -60,6 +62,7 @@ export const ChapterEditorModal = ({
   onSave,
   isSaving,
 }: ChapterEditorModalProps) => {
+  const defaultDifficulty = 'Intermediate';
   const [activeTab, setActiveTab] = useState('metadata');
   const [showPreview, setShowPreview] = useState(false);
   
@@ -68,7 +71,7 @@ export const ChapterEditorModal = ({
     chapter_number: nextChapterNumber,
     chapter_description: '',
     content_markdown: '',
-    difficulty_level: 'medium',
+    difficulty_level: defaultDifficulty,
     estimated_duration_minutes: 30,
     is_published: false,
     caps_code: '',
@@ -76,7 +79,10 @@ export const ChapterEditorModal = ({
     key_concepts: [] as string[],
     learning_outcomes: [] as string[],
     glossary_terms: {} as Record<string, string>,
+    content_url: '' as string,
   });
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
 
   const [newConcept, setNewConcept] = useState('');
   const [newOutcome, setNewOutcome] = useState('');
@@ -102,7 +108,7 @@ export const ChapterEditorModal = ({
         chapter_number: chapter.chapter_number || nextChapterNumber,
         chapter_description: chapter.chapter_description || '',
         content_markdown: chapter.content_markdown || '',
-        difficulty_level: chapter.difficulty_level || 'medium',
+        difficulty_level: chapter.difficulty_level || defaultDifficulty,
         estimated_duration_minutes: chapter.estimated_duration_minutes || 30,
         is_published: chapter.is_published || false,
         caps_code: chapter.caps_code || '',
@@ -110,6 +116,7 @@ export const ChapterEditorModal = ({
         key_concepts: chapter.key_concepts || [],
         learning_outcomes: chapter.learning_outcomes || [],
         glossary_terms: (chapter.glossary_terms as Record<string, string>) || {},
+        content_url: chapter.content_url || '',
       });
       editor?.commands.setContent(chapter.content_markdown || '');
     } else {
@@ -118,7 +125,7 @@ export const ChapterEditorModal = ({
         chapter_number: nextChapterNumber,
         chapter_description: '',
         content_markdown: '',
-        difficulty_level: 'medium',
+        difficulty_level: defaultDifficulty,
         estimated_duration_minutes: 30,
         is_published: false,
         caps_code: '',
@@ -126,10 +133,33 @@ export const ChapterEditorModal = ({
         key_concepts: [],
         learning_outcomes: [],
         glossary_terms: {},
+        content_url: '',
       });
       editor?.commands.setContent('');
     }
-  }, [chapter, open, nextChapterNumber, editor]);
+    setPdfFile(null);
+  }, [chapter, open, nextChapterNumber, editor, defaultDifficulty]);
+
+  const handleUploadPdf = async () => {
+    if (!pdfFile) return;
+    setUploadingPdf(true);
+    try {
+      const ext = pdfFile.name.split('.').pop() || 'pdf';
+      const path = `${subjectId}/${formData.chapter_number}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('curriculum-pdfs')
+        .upload(path, pdfFile, { cacheControl: '3600', upsert: false });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('curriculum-pdfs').getPublicUrl(path);
+      setFormData((prev) => ({ ...prev, content_url: urlData.publicUrl }));
+      setPdfFile(null);
+      toast.success('PDF uploaded');
+    } catch (err: any) {
+      toast.error(`PDF upload failed: ${err.message || 'unknown error'}`);
+    } finally {
+      setUploadingPdf(false);
+    }
+  };
 
   const handleSave = async () => {
     const data = chapter 
@@ -293,9 +323,9 @@ export const ChapterEditorModal = ({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="easy">Easy</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="hard">Hard</SelectItem>
+                      <SelectItem value="Beginner">Beginner</SelectItem>
+                      <SelectItem value="Intermediate">Intermediate</SelectItem>
+                      <SelectItem value="Advanced">Advanced</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -348,6 +378,51 @@ export const ChapterEditorModal = ({
                       placeholder="Official CAPS curriculum description..."
                       rows={2}
                     />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Attachments</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>PDF File (uploads to curriculum library)</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleUploadPdf}
+                        disabled={!pdfFile || uploadingPdf}
+                      >
+                        {uploadingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                        Upload
+                      </Button>
+                    </div>
+                    {formData.content_url && /\.pdf($|\?)/i.test(formData.content_url) && (
+                      <p className="text-xs text-muted-foreground break-all">
+                        Current PDF: <a href={formData.content_url} target="_blank" rel="noreferrer" className="underline">{formData.content_url}</a>
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="video_url">Video URL (YouTube / Vimeo)</Label>
+                    <Input
+                      id="video_url"
+                      type="url"
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      value={/\.pdf($|\?)/i.test(formData.content_url) ? '' : formData.content_url}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, content_url: e.target.value }))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      A chapter can have either an attached PDF or a video URL — not both.
+                    </p>
                   </div>
                 </CardContent>
               </Card>

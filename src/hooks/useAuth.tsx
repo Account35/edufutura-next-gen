@@ -42,10 +42,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<Tables<'users'> | null>(null);
   const [loading, setLoading] = useState(true);
-  const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
-  const [warningTimer, setWarningTimer] = useState<NodeJS.Timeout | null>(null);
   const initCompleteRef = useRef(false);
   const [showWarning, setShowWarning] = useState(false);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Track the currently active user so deferred async work can’t set stale profile state.
   const activeUserIdRef = useRef<string | null>(null);
@@ -176,13 +176,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return inFlightPromise;
   };
 
-  const resetInactivityTimer = () => {
-    if (warningTimer) clearTimeout(warningTimer);
-    if (inactivityTimer) clearTimeout(inactivityTimer);
+  const clearInactivityTimers = useCallback(() => {
+    if (warningTimerRef.current) {
+      clearTimeout(warningTimerRef.current);
+      warningTimerRef.current = null;
+    }
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
+    }
+  }, []);
+
+  const signOut = useCallback(async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      setUser(null);
+      setSession(null);
+      setUserProfile(null);
+      activeUserIdRef.current = null;
+      profileLoadRef.current = null;
+      clearInactivityTimers();
+
+      toast({
+        title: 'Logged Out',
+        description: "You've been logged out successfully.",
+      });
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to log out. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  }, [clearInactivityTimers]);
+
+  const resetInactivityTimer = useCallback(() => {
+    clearInactivityTimers();
     setShowWarning(false);
 
-    if (session) {
-      const warning = setTimeout(() => {
+    if (session?.access_token) {
+      warningTimerRef.current = setTimeout(() => {
         setShowWarning(true);
         toast({
           title: 'Inactivity Warning',
@@ -191,18 +227,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }, WARNING_TIMEOUT);
 
-      const timeout = setTimeout(async () => {
+      inactivityTimerRef.current = setTimeout(async () => {
         await signOut();
         toast({
           title: 'Logged Out',
           description: "You've been logged out due to inactivity.",
         });
       }, INACTIVITY_TIMEOUT);
-
-      setWarningTimer(warning);
-      setInactivityTimer(timeout);
     }
-  };
+  }, [clearInactivityTimers, session?.access_token]);
 
   useEffect(() => {
     let mounted = true;
@@ -367,16 +400,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       mounted = false;
       if (authTimeoutId) clearTimeout(authTimeoutId);
       subscription.unsubscribe();
-      if (inactivityTimer) clearTimeout(inactivityTimer);
-      if (warningTimer) clearTimeout(warningTimer);
+      clearInactivityTimers();
     };
-  }, []);
+  }, [clearInactivityTimers]);
 
   // Set up inactivity detection
   useEffect(() => {
-    if (!session) return;
+    if (!session?.access_token) {
+      clearInactivityTimers();
+      return;
+    }
 
-    const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    const events: Array<keyof WindowEventMap> = [
+      'mousedown',
+      'mousemove',
+      'keydown',
+      'touchstart',
+      'scroll',
+      'focus',
+      'click',
+    ];
 
     events.forEach(event => {
       window.addEventListener(event, resetInactivityTimer);
@@ -388,36 +431,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       events.forEach(event => {
         window.removeEventListener(event, resetInactivityTimer);
       });
+      clearInactivityTimers();
     };
-  }, [session]);
-
-  const signOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-
-      setUser(null);
-      setSession(null);
-      setUserProfile(null);
-      activeUserIdRef.current = null;
-      profileLoadRef.current = null;
-
-      if (inactivityTimer) clearTimeout(inactivityTimer);
-      if (warningTimer) clearTimeout(warningTimer);
-
-      toast({
-        title: 'Logged Out',
-        description: "You've been logged out successfully.",
-      });
-    } catch (error) {
-      console.error('Error signing out:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to log out. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
+  }, [clearInactivityTimers, resetInactivityTimer, session?.access_token]);
 
   const refreshProfile = useCallback(async () => {
     if (user) {
@@ -427,6 +443,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUserProfile(profile);
     }
   }, [user]);
+
+  useEffect(() => {
+    const handleSubscriptionUpdated = () => {
+      void refreshProfile();
+    };
+
+    window.addEventListener('subscription-updated', handleSubscriptionUpdated);
+    return () => {
+      window.removeEventListener('subscription-updated', handleSubscriptionUpdated);
+    };
+  }, [refreshProfile]);
 
   const value = useMemo(
     () => ({

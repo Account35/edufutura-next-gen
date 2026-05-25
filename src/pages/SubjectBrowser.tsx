@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Book, Calculator, Atom, Dna, Globe, Clock, CheckCircle2, Plus } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { CAPSBadge } from '@/components/curriculum/CAPSBadge';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -21,6 +22,7 @@ const iconMap: Record<string, any> = {
   Dna: Dna,
   Globe: Globe,
   Book: Book,
+  BookOpen: Book,
 };
 
 const ALL_GRADES = [6, 7, 8, 9, 10, 11, 12];
@@ -239,7 +241,10 @@ export default function SubjectBrowser() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((subject) => {
-              const Icon = iconMap[subject.icon_name || 'Book'];
+              const Icon =
+                iconMap[subject.icon_name || 'Book'] ||
+                (subject.icon_name ? (LucideIcons as Record<string, any>)[subject.icon_name] : null) ||
+                Book;
               const isStudying = studying.includes(subject.subject_name);
 
               return (

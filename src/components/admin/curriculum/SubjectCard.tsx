@@ -1,13 +1,13 @@
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { 
   Edit, 
   Trash2, 
   BookOpen, 
   Clock, 
-  Eye, 
-  EyeOff,
   Download,
   Copy,
   MoreVertical
@@ -29,6 +29,8 @@ interface SubjectCardProps {
   onDelete: (subject: Subject) => void;
   onExport: (subjectId: string) => void;
   onDuplicate: (subject: Subject) => void;
+  onTogglePublish?: (subject: Subject, value: boolean) => void;
+  onToggleCapsAligned?: (subject: Subject, value: boolean) => void;
 }
 
 export const SubjectCard = ({
@@ -38,6 +40,8 @@ export const SubjectCard = ({
   onDelete,
   onExport,
   onDuplicate,
+  onTogglePublish,
+  onToggleCapsAligned,
 }: SubjectCardProps) => {
   const IconComponent = subject.icon_name 
     ? (LucideIcons as any)[subject.icon_name] || LucideIcons.BookOpen
@@ -61,11 +65,7 @@ export const SubjectCard = ({
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={subject.is_published ? 'default' : 'secondary'}>
-              {subject.is_published ? (
-                <><Eye className="w-3 h-3 mr-1" /> Published</>
-              ) : (
-                <><EyeOff className="w-3 h-3 mr-1" /> Draft</>
-              )}
+              {subject.is_published ? 'Published' : 'Draft'}
             </Badge>
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -120,13 +120,37 @@ export const SubjectCard = ({
       </CardContent>
       
       <CardFooter className="pt-3 border-t">
-        <div className="flex items-center justify-between w-full">
-          <Badge variant="outline">Grade {subject.grade_level}</Badge>
-          {subject.caps_aligned && (
-            <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
-              CAPS Aligned
-            </Badge>
-          )}
+        <div className="flex flex-col gap-3 w-full">
+          <div className="flex items-center justify-between gap-2">
+            <Badge variant="outline">Grade {subject.grade_level}</Badge>
+          </div>
+          <div
+            className="flex items-center justify-between gap-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2">
+              <Switch
+                id={`publish-${subject.id}`}
+                checked={!!subject.is_published}
+                onCheckedChange={(v) => onTogglePublish?.(subject, v)}
+                disabled={!onTogglePublish}
+              />
+              <Label htmlFor={`publish-${subject.id}`} className="text-xs cursor-pointer">
+                Publish
+              </Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id={`caps-${subject.id}`}
+                checked={!!subject.caps_aligned}
+                onCheckedChange={(v) => onToggleCapsAligned?.(subject, v)}
+                disabled={!onToggleCapsAligned}
+              />
+              <Label htmlFor={`caps-${subject.id}`} className="text-xs cursor-pointer">
+                CAPS Aligned
+              </Label>
+            </div>
+          </div>
         </div>
       </CardFooter>
     </Card>
