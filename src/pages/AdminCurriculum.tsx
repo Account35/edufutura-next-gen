@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAdminCurriculum, Subject, Chapter } from '@/hooks/useAdminCurriculum';
 import { SubjectCard } from '@/components/admin/curriculum/SubjectCard';
@@ -46,6 +47,7 @@ import {
 import { Label } from '@/components/ui/label';
 
 export default function AdminCurriculum() {
+  const queryClient = useQueryClient();
   const {
     subjects,
     chapters,
@@ -401,6 +403,8 @@ export default function AdminCurriculum() {
         onCreateSubject={createSubject}
         onComplete={() => {
           void refetchSubjects();
+          // Refresh the chapter list so newly-imported chapters appear immediately
+          void queryClient.invalidateQueries({ queryKey: ['admin-chapters'] });
         }}
       />
     </AdminLayout>
