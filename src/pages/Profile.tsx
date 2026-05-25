@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,14 +16,22 @@ import { BarChart3, ArrowRight, Award } from 'lucide-react';
 
 export default function Profile() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, userProfile, loading: isLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState('basic');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'basic');
 
   useEffect(() => {
     if (!isLoading && !user) {
       navigate('/');
     }
   }, [user, isLoading, navigate]);
+
+  useEffect(() => {
+    const nextTab = searchParams.get('tab');
+    if (nextTab) {
+      setActiveTab(nextTab);
+    }
+  }, [searchParams]);
 
   if (isLoading || !userProfile) {
     return <FullPageLoader message="Loading profile..." />;
@@ -42,7 +50,14 @@ export default function Profile() {
         {/* Community Stats */}
         <CommunityStatsSection userId={user!.id} />
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => {
+            setActiveTab(value);
+            setSearchParams({ tab: value });
+          }}
+          className="space-y-6"
+        >
           <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
             <TabsTrigger value="basic" className="min-h-[44px]">Basic Info</TabsTrigger>
             <TabsTrigger value="academic" className="min-h-[44px]">Academic Info</TabsTrigger>

@@ -48,6 +48,34 @@ export default function Dashboard() {
 
       if (progressError) throw progressError;
 
+     // Auto-include any published subjects matching the student's grade
+     // so newly published admin subjects appear immediately for existing users.
+     let mergedSubjects: any[] = progressData || [];
+     const studentGrade = (userProfile as any)?.grade_level;
+     if (studentGrade) {
+       const { data: publishedSubjects } = await supabase
+         .from('curriculum_subjects')
+         .select('id, subject_name, total_chapters, grade_level')
+         .eq('is_published', true)
+         .eq('grade_level', studentGrade);
+
+       const existingNames = new Set(
+         (progressData || []).map((p: any) => (p.subject_name || '').toLowerCase())
+       );
+       const extras = (publishedSubjects || [])
+         .filter((s: any) => !existingNames.has((s.subject_name || '').toLowerCase()))
+         .map((s: any) => ({
+           id: s.id,
+           subject_name: s.subject_name,
+           progress_percentage: 0,
+           chapters_completed: 0,
+           total_chapters: s.total_chapters || 0,
+           average_quiz_score: null,
+           last_accessed: new Date().toISOString(),
+         }));
+       mergedSubjects = [...(progressData || []), ...extras];
+     }
+
       // Calculate overall progress
       if (progressData && progressData.length > 0) {
         const avgProgress = progressData.reduce((sum, item) => 
@@ -77,7 +105,7 @@ export default function Dashboard() {
       if (achievementError) throw achievementError;
 
       setDashboardData({
-        subjects: progressData || [],
+        subjects: mergedSubjects,
         activities: activityData || [],
         achievements: achievementData || [],
       });
@@ -85,7 +113,7 @@ export default function Dashboard() {
       console.error('Error loading dashboard data:', error);
       toast.error('Failed to load dashboard data');
     }
-   }, [user]);
+   }, [user, userProfile]);
 
    const loadSchoolData = useCallback(async () => {
     if (!userProfile?.school_id) return;

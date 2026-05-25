@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import { AuthMethodSelection } from "./AuthMethodSelection";
 import { EmailRegistrationForm } from "./EmailRegistrationForm";
@@ -45,6 +45,9 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
             <DialogTitle className="text-2xl font-serif text-primary">
               {getTitle()}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Authentication dialog for signing in or creating an EduFutura account.
+            </DialogDescription>
             <button
               onClick={handleClose}
               className="rounded-full p-1 hover:bg-muted transition-colors"

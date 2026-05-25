@@ -48,6 +48,7 @@ export const useAdminRole = () => {
     setLoading(true);
 
     const checkRoles = async () => {
+      const startedAt = performance.now();
       try {
         // Prevent scheduling duplicate timeouts
         if (roleCheckTimeoutRef.current) {
@@ -91,6 +92,7 @@ export const useAdminRole = () => {
         lastCheckedUserId.current = user.id;
         setHasChecked(true);
       } catch (error) {
+        console.log(`[AdminRole] checkRoles failed after ${performance.now() - startedAt} ms`);
         console.error('Error checking roles:', error);
         // On error, check email as fallback
         const isAdminEmail = user.email === 'admin_edufutura@gmail.com' || user.email === 'ntlemezal35@gmail.com';

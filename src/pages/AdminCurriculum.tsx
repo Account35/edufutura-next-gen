@@ -1,12 +1,15 @@
 import { useState, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAdminCurriculum, Subject, Chapter } from '@/hooks/useAdminCurriculum';
 import { SubjectCard } from '@/components/admin/curriculum/SubjectCard';
 import { SubjectEditorModal } from '@/components/admin/curriculum/SubjectEditorModal';
 import { ChapterList } from '@/components/admin/curriculum/ChapterList';
 import { ChapterEditorModal } from '@/components/admin/curriculum/ChapterEditorModal';
+import { ContentImportWizard } from '@/components/admin/curriculum/ContentImportWizard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -37,11 +40,14 @@ import {
   Upload, 
   BookOpen,
   Filter,
-  Loader2
+  Loader2,
+  AlertTriangle,
+  Sparkles
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
 export default function AdminCurriculum() {
+  const queryClient = useQueryClient();
   const {
     subjects,
     chapters,
@@ -49,6 +55,10 @@ export default function AdminCurriculum() {
     selectedChapter,
     subjectsLoading,
     chaptersLoading,
+    subjectsError,
+    chaptersError,
+    refetchSubjects,
+    refetchChapters,
     setSelectedSubject,
     setSelectedChapter,
     createSubject,
@@ -65,6 +75,8 @@ export default function AdminCurriculum() {
     isUpdatingSubject,
     isCreatingChapter,
     isUpdatingChapter,
+    togglePublish,
+    toggleCapsAligned,
   } = useAdminCurriculum();
 
   // UI State
@@ -77,13 +89,16 @@ export default function AdminCurriculum() {
   const [deleteSubjectDialog, setDeleteSubjectDialog] = useState<Subject | null>(null);
   const [duplicateDialog, setDuplicateDialog] = useState<Subject | null>(null);
   const [duplicateGrade, setDuplicateGrade] = useState<number>(10);
+  const [importWizardOpen, setImportWizardOpen] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Filter subjects
   const filteredSubjects = subjects.filter(subject => {
-    const matchesSearch = subject.subject_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (subject.description?.toLowerCase().includes(searchQuery.toLowerCase()));
+    const normalizedQuery = searchQuery.toLowerCase();
+    const subjectName = (subject.subject_name || '').toLowerCase();
+    const subjectDescription = (subject.description || '').toLowerCase();
+    const matchesSearch = subjectName.includes(normalizedQuery) || subjectDescription.includes(normalizedQuery);
     const matchesGrade = gradeFilter === 'all' || subject.grade_level === Number(gradeFilter);
     return matchesSearch && matchesGrade;
   });
@@ -159,6 +174,21 @@ export default function AdminCurriculum() {
   if (selectedSubject) {
     return (
       <AdminLayout title="Curriculum Management" subtitle="Edit subject chapters">
+        {chaptersError && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Unable to load chapters</AlertTitle>
+            <AlertDescription className="flex items-center justify-between gap-4">
+              <span>
+                {chaptersError.message || 'There was a problem loading this subject.'}
+              </span>
+              <Button variant="outline" size="sm" onClick={() => void refetchChapters()}>
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <ChapterList
           subject={selectedSubject}
           chapters={chapters}
@@ -186,6 +216,21 @@ export default function AdminCurriculum() {
 
   return (
     <AdminLayout title="Curriculum Management" subtitle="Manage subjects and chapters">
+      {subjectsError && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Unable to load curriculum subjects</AlertTitle>
+          <AlertDescription className="flex items-center justify-between gap-4">
+            <span>
+              {subjectsError.message || 'The curriculum data could not be loaded.'}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => void refetchSubjects()}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
@@ -224,7 +269,12 @@ export default function AdminCurriculum() {
           
           <Button variant="outline" onClick={handleImport}>
             <Upload className="w-4 h-4 mr-2" />
-            Import
+            Import JSON
+          </Button>
+
+          <Button variant="secondary" onClick={() => setImportWizardOpen(true)}>
+            <Sparkles className="w-4 h-4 mr-2" />
+            AI Import
           </Button>
           
           <Button onClick={handleCreateSubject}>
@@ -266,6 +316,8 @@ export default function AdminCurriculum() {
               onDelete={setDeleteSubjectDialog}
               onExport={exportSubject}
               onDuplicate={setDuplicateDialog}
+              onTogglePublish={(s, v) => void togglePublish(s.id, v)}
+              onToggleCapsAligned={(s, v) => void toggleCapsAligned(s.id, v)}
             />
           ))}
         </div>
@@ -341,6 +393,20 @@ export default function AdminCurriculum() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* AI Content Import Wizard */}
+      <ContentImportWizard
+        open={importWizardOpen}
+        onOpenChange={setImportWizardOpen}
+        subjects={subjects}
+        defaultSubjectId={selectedSubject?.id}
+        onCreateSubject={createSubject}
+        onComplete={() => {
+          void refetchSubjects();
+          // Refresh the chapter list so newly-imported chapters appear immediately
+          void queryClient.invalidateQueries({ queryKey: ['admin-chapters'] });
+        }}
+      />
     </AdminLayout>
   );
 }
