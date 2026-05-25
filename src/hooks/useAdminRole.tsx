@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 const ROLE_CHECK_TIMEOUT_MS = 10000; // 10 second timeout for role checks (increase to reduce spurious timeouts)
+const ADMIN_EMAILS = new Set(['admin_edufutura@gmail.com', 'ntlemezal35@gmail.com']);
 
 export const useAdminRole = () => {
   const { user, loading: authLoading } = useAuth();
@@ -14,6 +15,9 @@ export const useAdminRole = () => {
   const roleCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
     // Clear any pending timeout
     if (roleCheckTimeoutRef.current) {
       clearTimeout(roleCheckTimeoutRef.current);
@@ -48,25 +52,18 @@ export const useAdminRole = () => {
     setLoading(true);
 
     const checkRoles = async () => {
+      const isAdminEmail = ADMIN_EMAILS.has(user.email ?? '');
+
       try {
-        // Prevent scheduling duplicate timeouts
-        if (roleCheckTimeoutRef.current) {
-          console.debug('[AdminRole] Role check timeout already scheduled, skipping duplicate');
-        } else {
-          // Set a timeout to prevent infinite loading - but DON'T default to non-admin
-          roleCheckTimeoutRef.current = setTimeout(() => {
-            console.warn('[AdminRole] Role check timeout, completing with current state');
-            setLoading(false);
-            setHasChecked(true);
-            lastCheckedUserId.current = user.id;
-            roleCheckTimeoutRef.current = null;
-          }, ROLE_CHECK_TIMEOUT_MS);
-        }
+        roleCheckTimeoutRef.current = setTimeout(() => {
+          controller.abort();
+        }, ROLE_CHECK_TIMEOUT_MS);
 
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .abortSignal(controller.signal);
 
         // Clear timeout since we got a response
         if (roleCheckTimeoutRef.current) {
@@ -74,39 +71,52 @@ export const useAdminRole = () => {
           roleCheckTimeoutRef.current = null;
         }
 
+        if (cancelled) return;
+
         if (error) {
           console.error('Error fetching roles:', error);
-          // On error, check if user email is admin email as fallback
-          const isAdminEmail = user.email === 'admin_edufutura@gmail.com' || user.email === 'ntlemezal35@gmail.com';
           setIsAdmin(isAdminEmail);
           setIsEducator(false);
         } else {
           const roles = data?.map(r => r.role) || [];
           console.log('[AdminRole] Roles found:', roles, 'for user:', user.email);
-          // Also check email as backup (admin emails always get admin access)
-          const isAdminEmail = user.email === 'admin_edufutura@gmail.com' || user.email === 'ntlemezal35@gmail.com';
           setIsAdmin(roles.includes('admin') || isAdminEmail);
           setIsEducator(roles.includes('educator'));
         }
         lastCheckedUserId.current = user.id;
         setHasChecked(true);
       } catch (error) {
-        console.error('Error checking roles:', error);
-        // On error, check email as fallback
-        const isAdminEmail = user.email === 'admin_edufutura@gmail.com' || user.email === 'ntlemezal35@gmail.com';
+        if (cancelled) return;
+        const didAbort = controller.signal.aborted || (error as Error)?.name === 'AbortError';
+        if (didAbort) {
+          console.warn('[AdminRole] Role check timed out, using email fallback');
+        } else {
+          console.error('Error checking roles:', error);
+        }
         setIsAdmin(isAdminEmail);
         setIsEducator(false);
         setHasChecked(true);
+        lastCheckedUserId.current = user.id;
       } finally {
-        setLoading(false);
+        if (roleCheckTimeoutRef.current) {
+          clearTimeout(roleCheckTimeoutRef.current);
+          roleCheckTimeoutRef.current = null;
+        }
+
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     checkRoles();
 
     return () => {
+      cancelled = true;
+      controller.abort();
       if (roleCheckTimeoutRef.current) {
         clearTimeout(roleCheckTimeoutRef.current);
+        roleCheckTimeoutRef.current = null;
       }
     };
   }, [user?.id, authLoading]);
