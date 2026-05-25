@@ -11,6 +11,9 @@ const corsHeaders = {
 };
 
 const MAX_TEXT_CHARS_FOR_MODEL = 18000;
+const TEXT_CHUNK_CHARS = 9000;
+const MAX_CHUNKS = 8;
+const TRANSIENT_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
 const MAX_PDF_BYTES = 8 * 1024 * 1024;
 const MAX_SPREADSHEET_BYTES = 6 * 1024 * 1024;
 const MAX_TEXT_FILE_BYTES = 2 * 1024 * 1024;
@@ -79,6 +82,34 @@ function buildModelExcerpt(rawText: string, maxChars = MAX_TEXT_CHARS_FOR_MODEL)
     '[... end of document excerpt ...]',
     tail,
   ].join('\n\n');
+}
+
+function splitTextIntoChunks(rawText: string, chunkChars = TEXT_CHUNK_CHARS, maxChunks = MAX_CHUNKS): string[] {
+  const text = normalizeExtractedText(rawText);
+  if (text.length <= chunkChars) return [text];
+
+  const chunks: string[] = [];
+  let i = 0;
+  while (i < text.length && chunks.length < maxChunks) {
+    let end = Math.min(text.length, i + chunkChars);
+    if (end < text.length) {
+      // Try to break at a paragraph or sentence boundary near `end`.
+      const slice = text.slice(i, end);
+      const lastPara = slice.lastIndexOf('\n\n');
+      const lastSentence = slice.lastIndexOf('. ');
+      const boundary = Math.max(lastPara, lastSentence);
+      if (boundary > chunkChars * 0.5) {
+        end = i + boundary + 1;
+      }
+    }
+    chunks.push(text.slice(i, end).trim());
+    i = end;
+  }
+  return chunks.filter(Boolean);
+}
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 const EXTRACTION_TOOL = {
@@ -168,11 +199,10 @@ async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Pro
   throw new Error(`Unsupported file type: ${fileName}`);
 }
 
-async function callOpenRouter(rawText: string, signal: AbortSignal): Promise<unknown> {
+async function callOpenRouterOnce(text: string, signal: AbortSignal): Promise<any> {
   const apiKey = Deno.env.get('OPENROUTER_API_KEY');
   if (!apiKey) throw new Error('OPENROUTER_API_KEY missing');
 
-  const truncated = buildModelExcerpt(rawText);
   const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -185,7 +215,7 @@ async function callOpenRouter(rawText: string, signal: AbortSignal): Promise<unk
       model: 'google/gemini-2.5-flash',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `Source document (filename context will follow):\n\n${truncated}` },
+        { role: 'user', content: `Source document section:\n\n${text}` },
       ],
       tools: [EXTRACTION_TOOL],
       tool_choice: { type: 'function', function: { name: 'extract_curriculum' } },
@@ -196,12 +226,86 @@ async function callOpenRouter(rawText: string, signal: AbortSignal): Promise<unk
 
   if (!resp.ok) {
     const txt = await resp.text();
-    throw new Error(`OpenRouter ${resp.status}: ${txt.slice(0, 300)}`);
+    const err = new Error(`OpenRouter ${resp.status}: ${txt.slice(0, 300)}`) as Error & { status?: number };
+    err.status = resp.status;
+    throw err;
   }
   const json = await resp.json();
   const toolCall = json.choices?.[0]?.message?.tool_calls?.[0];
   if (!toolCall?.function?.arguments) throw new Error('OpenRouter returned no tool call');
   return JSON.parse(toolCall.function.arguments);
+}
+
+async function callOpenRouterWithRetry(text: string, signal: AbortSignal, attempts = 3): Promise<any> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await callOpenRouterOnce(text, signal);
+    } catch (err) {
+      lastErr = err;
+      const status = getErrorStatus(err);
+      const transient = status !== null && TRANSIENT_STATUSES.has(status);
+      if (!transient || attempt === attempts) throw err;
+      // Exponential backoff: 1s, 2s, 4s
+      await sleep(1000 * Math.pow(2, attempt - 1));
+    }
+  }
+  throw lastErr;
+}
+
+function mergeChunkResults(parts: any[]): any {
+  const best = parts.reduce((b, c) => ((c?.confidence ?? 0) > (b?.confidence ?? 0) ? c : b), parts[0]);
+  const seen = new Set<string>();
+  const chapters: any[] = [];
+  for (const part of parts) {
+    for (const ch of (part?.chapters || [])) {
+      const key = (ch.chapter_title || '').trim().toLowerCase();
+      if (key && seen.has(key)) continue;
+      if (key) seen.add(key);
+      chapters.push(ch);
+    }
+  }
+  chapters.forEach((ch, i) => { ch.chapter_number = i + 1; });
+  return {
+    detected_grade: best?.detected_grade ?? 0,
+    detected_subject: best?.detected_subject ?? '',
+    confidence: best?.confidence ?? 0,
+    chapters,
+  };
+}
+
+async function callOpenRouter(rawText: string, signal: AbortSignal): Promise<unknown> {
+  // Try a single call first using the smart excerpt.
+  const excerpt = buildModelExcerpt(rawText);
+  try {
+    return await callOpenRouterWithRetry(excerpt, signal);
+  } catch (err) {
+    const status = getErrorStatus(err);
+    // If it's a token-limit/transient error, fall back to chunked extraction.
+    const shouldChunk = status === null || TRANSIENT_STATUSES.has(status) || status === 400 || status === 413;
+    if (!shouldChunk) throw err;
+
+    const chunks = splitTextIntoChunks(rawText);
+    if (chunks.length <= 1) throw err;
+
+    const results: any[] = [];
+    const failures: string[] = [];
+    for (let i = 0; i < chunks.length; i += 1) {
+      try {
+        const part = await callOpenRouterWithRetry(chunks[i], signal);
+        results.push(part);
+      } catch (chunkErr) {
+        failures.push(`chunk ${i + 1}: ${getErrorMessage(chunkErr)}`);
+      }
+      // Small spacing between chunks to avoid rate limits.
+      if (i < chunks.length - 1) await sleep(500);
+    }
+
+    if (results.length === 0) {
+      throw new Error(`OpenRouter chunked extraction failed. ${failures.join('; ')}`);
+    }
+    return mergeChunkResults(results);
+  }
 }
 
 async function callLovableAI(rawText: string): Promise<unknown> {
@@ -323,7 +427,7 @@ Deno.serve(async (req) => {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const timeoutId = setTimeout(() => controller.abort(), 150000);
     try {
       result = await callOpenRouter(rawText, controller.signal);
       clearTimeout(timeoutId);
