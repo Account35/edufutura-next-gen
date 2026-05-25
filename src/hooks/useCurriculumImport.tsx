@@ -272,6 +272,16 @@ export function useCurriculumImport() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Inherit publish state from the parent subject. If the subject is
+      // already published, new chapters should be visible to students right
+      // away; otherwise they stay as drafts for review.
+      const { data: parentSubject } = await supabase
+        .from('curriculum_subjects')
+        .select('is_published')
+        .eq('id', subjectId)
+        .maybeSingle();
+      const inheritPublished = !!parentSubject?.is_published;
+
       // Find current max chapter_number for this subject to avoid
       // duplicate-key violations on UNIQUE (subject_id, chapter_number).
       const { data: existing } = await supabase
@@ -309,7 +319,7 @@ export function useCurriculumImport() {
         key_concepts: c.key_concepts || [],
         created_by: user.id,
         updated_by: user.id,
-        is_published: false,
+        is_published: inheritPublished,
       }));
 
       const { error } = await supabase.from('curriculum_chapters').insert(rows);
