@@ -539,6 +539,17 @@ export const useAdminCurriculum = () => {
   // Quick toggles for subject card
   const togglePublish = useCallback(async (subjectId: string, value: boolean) => {
     await updateSubjectMutation.mutateAsync({ id: subjectId, is_published: value });
+    // Cascade publish state to the subject's chapters so students see (or stop
+    // seeing) them along with the subject.
+    try {
+      await supabase
+        .from('curriculum_chapters')
+        .update({ is_published: value, updated_at: new Date().toISOString() })
+        .eq('subject_id', subjectId);
+      queryClient.invalidateQueries({ queryKey: ['admin-chapters', subjectId] });
+    } catch {
+      // non-fatal
+    }
   }, [updateSubjectMutation]);
 
   const toggleCapsAligned = useCallback(async (subjectId: string, value: boolean) => {
