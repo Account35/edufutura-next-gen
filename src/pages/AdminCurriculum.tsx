@@ -403,6 +403,8 @@ export default function AdminCurriculum() {
         onCreateSubject={createSubject}
         onComplete={() => {
           void refetchSubjects();
+          // Refresh the chapter list so newly-imported chapters appear immediately
+          void queryClient.invalidateQueries({ queryKey: ['admin-chapters'] });
         }}
       />
     </AdminLayout>
