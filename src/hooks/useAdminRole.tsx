@@ -68,7 +68,6 @@ export const useAdminRole = () => {
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id);
-        console.log(`[AdminRole] checkRoles: ${performance.now() - startedAt} ms`);
 
         // Clear timeout since we got a response
         if (roleCheckTimeoutRef.current) {
