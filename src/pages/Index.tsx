@@ -31,7 +31,7 @@ const Index = () => {
     // If user exists but profile not loaded, start timeout
     if (user && !userProfile) {
       const timeout = setTimeout(() => {
-        console.warn('[Index] Profile loading timed out, showing landing page');
+        console.info('[Index] Profile loading timed out, continuing with session-based routing');
         setLoadingTimedOut(true);
       }, INDEX_LOADING_TIMEOUT_MS);
       return () => clearTimeout(timeout);
@@ -57,24 +57,31 @@ const Index = () => {
     // Prevent double redirects
     if (hasRedirectedRef.current) return;
     
+    // CRITICAL: Wait for role check to COMPLETE before redirecting.
+    // This prevents redirecting to /dashboard or onboarding before we know if user is admin.
+    if (user && roleLoading) {
+      console.log('[Index] Waiting for role check to complete...');
+      return;
+    }
+
+    // Admins/educators should reach the admin side even if their profile row is slow.
+    if (user && !userProfile && loadingTimedOut && (isAdmin || isEducator)) {
+      hasRedirectedRef.current = true;
+      console.log('[Index] Redirecting admin/educator to /admin without waiting for profile');
+      navigate('/admin');
+      return;
+    }
+
     // If user exists but profile is still loading, wait briefly (unless timed out)
     if (user && !userProfile && !loadingTimedOut) {
       return;
     }
 
-    // If profile load timed out but we still have an authenticated session,
-    // send the user to the onboarding entry point so they keep moving forward
-    // instead of showing the landing page.
+    // If profile load timed out for a non-admin authenticated user, send them to onboarding
+    // so they keep moving forward instead of seeing the public landing page.
     if (user && !userProfile && loadingTimedOut) {
       hasRedirectedRef.current = true;
       navigate('/onboarding');
-      return;
-    }
-    
-    // CRITICAL: Wait for role check to COMPLETE before redirecting
-    // This prevents redirecting to /dashboard before we know if user is admin
-    if (user && roleLoading) {
-      console.log('[Index] Waiting for role check to complete...');
       return;
     }
 
@@ -117,7 +124,7 @@ const Index = () => {
   // 1. Auth is loading, OR
   // 2. User exists but profile is still being created/loaded (and not timed out), OR
   // 3. User exists with profile and role is loading
-  const isLoading = loading || (user && !userProfile && !loadingTimedOut) || (user && userProfile && roleLoading);
+  const isLoading = loading || (user && roleLoading) || (user && !userProfile && !loadingTimedOut);
   
   if (isLoading) {
     return (

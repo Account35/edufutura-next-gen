@@ -62,14 +62,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let inFlightPromise: Promise<Tables<'users'> | null>;
 
     inFlightPromise = (async (): Promise<Tables<'users'> | null> => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), PROFILE_LOAD_TIMEOUT_MS);
+
       try {
-        console.time('[Auth] loadUserProfile');
         const { data, error } = await supabase
           .from('users')
           .select('*')
           .eq('id', currentUser.id)
+          .abortSignal(controller.signal)
           .maybeSingle();
-        console.timeEnd('[Auth] loadUserProfile');
+        clearTimeout(timeoutId);
 
         if (error) {
           console.error('Error loading user profile:', error);
@@ -90,26 +93,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const fallbackFullName =
           fullNameFromMeta || currentUser.email?.split('@')[0] || 'Student';
 
-        const { data: created, error: createError } = await supabase
-          .from('users')
-          .insert({
-            id: currentUser.id,
-            email: currentUser.email,
-            full_name: fallbackFullName,
-            onboarding_completed: false,
-          })
-          .select('*')
-          .single();
+        const createController = new AbortController();
+        const createTimeoutId = setTimeout(() => createController.abort(), PROFILE_LOAD_TIMEOUT_MS);
+
+        let created: Tables<'users'> | null = null;
+        let createError: any = null;
+
+        try {
+          const response = await supabase
+            .from('users')
+            .insert({
+              id: currentUser.id,
+              email: currentUser.email,
+              full_name: fallbackFullName,
+              onboarding_completed: false,
+            })
+            .select('*')
+            .abortSignal(createController.signal)
+            .single();
+
+          created = response.data;
+          createError = response.error;
+        } finally {
+          clearTimeout(createTimeoutId);
+        }
 
         if (createError) {
           // If something else created it in the meantime, re-fetch once.
           const isDuplicate = (createError as any)?.code === '23505';
           if (isDuplicate) {
-            const { data: refetched, error: refetchError } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', currentUser.id)
-              .maybeSingle();
+            const refetchController = new AbortController();
+            const refetchTimeoutId = setTimeout(() => refetchController.abort(), PROFILE_LOAD_TIMEOUT_MS);
+
+            let refetched: Tables<'users'> | null = null;
+            let refetchError: any = null;
+
+            try {
+              const response = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', currentUser.id)
+                .abortSignal(refetchController.signal)
+                .maybeSingle();
+
+              refetched = response.data;
+              refetchError = response.error;
+            } finally {
+              clearTimeout(refetchTimeoutId);
+            }
 
             if (refetchError) {
               console.error('Error reloading user profile after duplicate:', refetchError);
@@ -124,7 +155,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         return created;
+      } catch (error) {
+        const didAbort = controller.signal.aborted || (error as Error)?.name === 'AbortError';
+        if (didAbort) {
+          console.warn('[Auth] Profile load timed out and was aborted');
+        } else {
+          console.error('Error loading user profile:', error);
+        }
+        return null;
       } finally {
+        clearTimeout(timeoutId);
         // Deduplicate only while request is in-flight.
         if (profileLoadRef.current?.promise === inFlightPromise) {
           profileLoadRef.current = null;
@@ -202,11 +242,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let authTimeoutId: NodeJS.Timeout | null = null;
     console.time('[Auth] useEffect init');
 
+    const finishAuthLoading = () => {
+      if (authTimeoutId) {
+        clearTimeout(authTimeoutId);
+        authTimeoutId = null;
+      }
+      setLoading(false);
+    };
+
     // Safety timeout to prevent infinite loading
     authTimeoutId = setTimeout(() => {
-      if (mounted && loading) {
+      if (mounted) {
         console.warn('[Auth] Auth timeout reached, forcing loading to false');
         setLoading(false);
+        authTimeoutId = null;
       }
     }, AUTH_TIMEOUT_MS);
 
@@ -243,35 +292,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.debug('[Auth][DEBUG] setSession/setUser done - session present?', !!existingSession, 'user id', existingUser?.id ?? null);
 
         if (existingUser) {
+          // Auth is ready once the session and user are known. Profile loading can
+          // complete in the background without blocking protected routes.
+          finishAuthLoading();
+          initCompleteRef.current = true;
+          console.debug('[Auth][DEBUG] initializeAuth session ready - loading=false, initCompleteRef=true');
+
           try {
-            // Start loading the profile but don't let a timeout prevent the eventual result
             const profilePromise = loadUserProfile(existingUser);
 
-            // Fire-and-forget timeout watcher so we log timeouts but don't cancel the fetch
             void withTimeout(profilePromise, PROFILE_LOAD_TIMEOUT_MS, 'Profile load').catch(err => {
-              console.error('[Auth] Profile load timed out (will continue in background):', err);
+              console.error('[Auth] Profile load timed out:', err);
             });
 
-            const profile = await profilePromise;
-            if (mounted && activeUserIdRef.current === existingUser.id) {
-              setUserProfile(profile);
-              console.debug('[Auth][DEBUG] setUserProfile completed for', existingUser.id, 'profile:', profile);
-            }
+            profilePromise
+              .then(profile => {
+                if (mounted && activeUserIdRef.current === existingUser.id) {
+                  setUserProfile(profile);
+                  console.debug('[Auth][DEBUG] setUserProfile completed for', existingUser.id, 'profile:', profile);
+                }
+              })
+              .catch(error => {
+                console.error('[Auth] Error loading profile:', error);
+              });
           } catch (error) {
             console.error('[Auth] Error loading profile:', error);
           }
-        }
-
-        // Always set loading false after init completes
-        if (mounted) {
-          setLoading(false);
+        } else {
+          // Always set loading false after init has determined there is no user.
+          finishAuthLoading();
           initCompleteRef.current = true;
           console.debug('[Auth][DEBUG] initializeAuth complete - loading=false, initCompleteRef=true');
         }
       } catch (error) {
         console.error('[Auth] Error in initializeAuth:', error);
         if (mounted) {
-          setLoading(false);
+          finishAuthLoading();
           initCompleteRef.current = true;
           console.debug('[Auth][DEBUG] initializeAuth error - loading=false, initCompleteRef=true');
         }
@@ -313,7 +369,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           // Watch for timeout but don't abort the underlying fetch
           void withTimeout(profilePromise, PROFILE_LOAD_TIMEOUT_MS, 'Profile load').catch(err => {
-            console.error('[Auth] Deferred profile load timed out (will continue in background):', err);
+            console.error('[Auth] Deferred profile load timed out:', err);
           });
 
           profilePromise
@@ -333,7 +389,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Ensure loading is false after any auth state change
       if (mounted) {
-        setLoading(false);
+        finishAuthLoading();
         console.debug('[Auth][DEBUG] onAuthStateChange finished - loading=false');
       }
     });
