@@ -263,7 +263,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <PWAInstallPrompt minPageViews={3} />
-             <RouterProvider router={router} />
+             <RouterProvider router={router} future={{ v7_startTransition: true }} />
             <DebugAuthOverlay />
           </TooltipProvider>
         </AuthEventsProvider>

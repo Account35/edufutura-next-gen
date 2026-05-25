@@ -63,12 +63,10 @@ export const useAdminRole = () => {
           }, ROLE_CHECK_TIMEOUT_MS);
         }
 
-        console.time('[AdminRole] checkRoles');
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id);
-        console.timeEnd('[AdminRole] checkRoles');
 
         // Clear timeout since we got a response
         if (roleCheckTimeoutRef.current) {
