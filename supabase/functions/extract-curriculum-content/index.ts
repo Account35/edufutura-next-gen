@@ -427,7 +427,7 @@ Deno.serve(async (req) => {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const timeoutId = setTimeout(() => controller.abort(), 150000);
     try {
       result = await callOpenRouter(rawText, controller.signal);
       clearTimeout(timeoutId);
