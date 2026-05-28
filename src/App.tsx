@@ -6,6 +6,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
  import { createBrowserRouter, RouterProvider, createRoutesFromElements, Route, Outlet, Navigate } from "react-router-dom";
 import createQueryClient from '@/lib/query-client';
 import { AuthProvider } from "@/hooks/useAuth";
+import { PlatformSettingsProvider } from "@/hooks/usePlatformSettings";
 import { AdminPermissionsProvider } from "@/hooks/useAdminPermissions";
 import { AuthEventsProvider } from "@/components/AuthEventsProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -29,6 +30,7 @@ import DebugAuthOverlay from '@/components/DebugAuthOverlay';
 // Critical path - loaded immediately (essential screens)
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import MaintenancePage from "./pages/Maintenance";
  
  // Dashboard & Onboarding - using chunk naming for better debugging
  const Dashboard = lazy(() => import(/* webpackChunkName: "dashboard" */ "./pages/Dashboard"));
@@ -97,6 +99,7 @@ import NotFound from "./pages/NotFound";
  const AdminCurriculum = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminCurriculum"));
  const AdminQuizzes = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminQuizzes"));
  const AdminQuizCreate = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminQuizCreate"));
+ const AdminQuizEdit = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminQuizEdit"));
  const AdminAnalytics = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminAnalytics"));
  const AdminUsers = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminUsers"));
  const AdminSettings = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminSettings"));
@@ -175,6 +178,7 @@ const router = createBrowserRouter(
      <Route element={<AppLayout />} errorElement={<RouteErrorBoundary><div/></RouteErrorBoundary>}>
       {/* Critical path */}
       <Route path="/" element={<Index />} />
+      <Route path="/maintenance" element={<MaintenancePage />} />
       
       {/* Phase 1: Auth & Onboarding */}
        <Route path="/onboarding" element={<OnboardingWrapper Component={Onboarding} />} />
@@ -240,6 +244,7 @@ const router = createBrowserRouter(
        <Route path="/admin/jobs" element={<AdminWrapper Component={JobMonitoring} />} />
        <Route path="/admin/quizzes" element={<AdminWrapper Component={AdminQuizzes} />} />
        <Route path="/admin/quizzes/create" element={<AdminWrapper Component={AdminQuizCreate} />} />
+       <Route path="/admin/quizzes/edit/:id" element={<AdminWrapper Component={AdminQuizEdit} />} />
        <Route path="/admin/analytics" element={<AdminWrapper Component={AdminAnalytics} />} />
        <Route path="/admin/users" element={<AdminWrapper Component={AdminUsers} />} />
        <Route path="/admin/settings" element={<AdminWrapper Component={AdminSettings} />} />
@@ -260,6 +265,7 @@ const router = createBrowserRouter(
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
+      <PlatformSettingsProvider>
       <AuthProvider>
         <AuthEventsProvider>
           <TooltipProvider>
@@ -273,6 +279,7 @@ const App = () => (
           </TooltipProvider>
         </AuthEventsProvider>
       </AuthProvider>
+      </PlatformSettingsProvider>
     </QueryClientProvider>
   </ErrorBoundary>
 );

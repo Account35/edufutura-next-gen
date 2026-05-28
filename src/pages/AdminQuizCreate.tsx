@@ -1,22 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { useAdminRole } from '@/hooks/useAdminRole';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { FullPageLoader } from '@/components/ui/loading';
-import { ArrowLeft, Save, Eye } from 'lucide-react';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { QuizMetadataForm } from '@/components/admin/quiz/QuizMetadataForm';
 import { QuizQuestionsBuilder } from '@/components/admin/quiz/QuizQuestionsBuilder';
 import { QuizReviewPublish } from '@/components/admin/quiz/QuizReviewPublish';
+import { AIQuizGeneratorModal } from '@/components/admin/quiz/AIQuizGeneratorModal';
 
 export default function AdminQuizCreate() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
-  const { isAdmin, loading: roleLoading } = useAdminRole();
   const [currentStep, setCurrentStep] = useState('metadata');
+  const [aiModalOpen, setAiModalOpen] = useState(false);
   const [quizData, setQuizData] = useState<any>({
     quiz_title: '',
     quiz_description: '',
@@ -31,15 +28,16 @@ export default function AdminQuizCreate() {
   });
   const [questions, setQuestions] = useState<any[]>([]);
 
-  // Access control is handled by AdminLayout - no need for duplicate redirect logic
-
-  if (authLoading || roleLoading) {
-    return <FullPageLoader message="Loading..." />;
-  }
-
-  if (!isAdmin) {
-    return null;
-  }
+  const handleAIGenerated = (generatedQuestions: any[], metadata: any) => {
+    setQuizData((prev: any) => ({
+      ...prev,
+      subject_name: metadata.subject_name,
+      chapter_id: metadata.chapter_id || null,
+      quiz_title: prev.quiz_title || `${metadata.subject_name}${metadata.chapter_title ? ` — ${metadata.chapter_title}` : ''} Quiz`,
+    }));
+    setQuestions(generatedQuestions);
+    setCurrentStep('questions');
+  };
 
   return (
     <AdminLayout title="Create Quiz">
@@ -47,11 +45,7 @@ export default function AdminQuizCreate() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/admin/quizzes')}
-            >
+            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/quizzes')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
@@ -60,9 +54,13 @@ export default function AdminQuizCreate() {
               <p className="text-muted-foreground">Build a new assessment quiz</p>
             </div>
           </div>
+          <Button variant="outline" onClick={() => setAiModalOpen(true)}>
+            <Sparkles className="h-4 w-4 mr-2 text-secondary" />
+            Create with AI
+          </Button>
         </div>
 
-        {/* Wizard Steps */}
+        {/* Wizard */}
         <Card className="p-6">
           <Tabs value={currentStep} onValueChange={setCurrentStep}>
             <TabsList className="grid w-full grid-cols-3">
@@ -103,6 +101,12 @@ export default function AdminQuizCreate() {
           </Tabs>
         </Card>
       </div>
+
+      <AIQuizGeneratorModal
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        onGenerated={handleAIGenerated}
+      />
     </AdminLayout>
   );
 }

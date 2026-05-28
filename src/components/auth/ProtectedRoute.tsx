@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { DashboardSkeleton, OnboardingSkeleton, GenericPageSkeleton } from '@/components/ui/PageSkeletons';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 
 // Safety timeouts to prevent infinite loading
 const PROTECTED_ROUTE_TIMEOUT_MS = 8000; // 8 seconds max wait for all checks
@@ -36,6 +37,7 @@ export const ProtectedRoute = ({
   const location = useLocation();
   const { user, userProfile, loading: authLoading } = useAuth();
   const { isAdmin, isEducator, loading: roleLoading, hasChecked } = useAdminRole();
+  const { maintenanceMode } = usePlatformSettings();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [checkComplete, setCheckComplete] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
@@ -113,6 +115,13 @@ export const ProtectedRoute = ({
       }
     }
 
+    // Block non-admin users from all protected routes during maintenance
+    const hasAdminAccess = isAdmin || (user?.email && ADMIN_EMAILS.includes(user.email));
+    if (maintenanceMode && !requireAdmin && !hasAdminAccess) {
+      navigate('/maintenance', { replace: true });
+      return;
+    }
+
     // Check educator role (admins have educator access too)
     if (requireEducator) {
       const hasEducatorAccess = isAdmin || isEducator || (timedOut && user?.email && ADMIN_EMAILS.includes(user.email));
@@ -140,6 +149,7 @@ export const ProtectedRoute = ({
     location.pathname,
     location.search,
     timedOut,
+    maintenanceMode,
   ]);
 
   // Show appropriate skeleton while loading (but respect timeout)

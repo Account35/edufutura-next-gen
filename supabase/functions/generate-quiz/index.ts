@@ -23,17 +23,28 @@ serve(async (req) => {
   }
 
   try {
+    // Check API key first — fail fast with a clear message
+    const apiKey = Deno.env.get('OPENROUTER_API_KEY');
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'OPENROUTER_API_KEY is not set. Go to Supabase Dashboard → Settings → Edge Functions → Secrets and add OPENROUTER_API_KEY.' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    const { data: { user } } = await supabaseClient.auth.getUser(
-      req.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
-    );
+    // Authenticate user
+    const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '') ?? '';
+    const { data: { user } } = await supabaseClient.auth.getUser(authHeader);
     if (!user) throw new Error('Unauthorized');
 
     const { chapter_id, question_count, difficulty_level, question_type_distribution } = await req.json();
+
+    if (!chapter_id) throw new Error('chapter_id is required');
 
     const { data: chapter, error: chapterError } = await supabaseClient
       .from('curriculum_chapters')
@@ -114,7 +125,7 @@ serve(async (req) => {
         if (!aiResponse.ok) {
           const errorText = await aiResponse.text();
           console.error('OpenRouter API error:', errorText);
-          throw new Error('OpenRouter API failed');
+          throw new Error(`OpenRouter API failed: ${aiResponse.status} ${errorText.slice(0, 200)}`);
         }
 
         aiData = await aiResponse.json();
@@ -127,26 +138,26 @@ serve(async (req) => {
     }
 
     const responseTime = Date.now() - startTime;
-    const aiResponse = aiData.choices[0].message.content;
+    const aiResponseText = aiData.choices[0].message.content;
     const tokensUsed = aiData.usage?.total_tokens || 0;
-    
+
     let questions;
     try {
-      const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+      const jsonMatch = aiResponseText.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         questions = JSON.parse(jsonMatch[0]);
       } else {
-        questions = JSON.parse(aiResponse);
+        questions = JSON.parse(aiResponseText);
       }
     } catch (e) {
-      console.error('Failed to parse AI response:', aiResponse);
+      console.error('Failed to parse AI response:', aiResponseText);
       if (template) {
         await supabaseClient.from('failed_ai_responses').insert({
           template_name: templateName,
           template_version: template.template_version,
           model_name: template.model_name,
           input_data: { chapter_id, question_count, difficulty_level, variables },
-          ai_response: aiResponse,
+          ai_response: aiResponseText,
           failure_reason: 'Invalid JSON format in response',
         });
       }
@@ -174,22 +185,27 @@ serve(async (req) => {
       });
     }
 
+    // Save as DRAFT so admin can review before publishing
+    // Use authenticated user's ID for created_by (not 'ai' which breaks UUID constraint)
     const { data: quiz, error: quizError } = await supabaseClient
       .from('quizzes')
       .insert({
         chapter_id,
         subject_name: subject,
-        quiz_title: `${chapter.chapter_title} - Assessment`,
-        quiz_description: `AI-generated quiz covering ${chapter.chapter_title}`,
+        quiz_title: `${chapter.chapter_title} - AI Generated Quiz`,
+        quiz_description: `AI-generated quiz covering ${chapter.chapter_title} for Grade ${grade} ${subject}`,
         difficulty_level,
-        total_questions: question_count,
-        created_by: 'ai',
-        is_published: true,
+        total_questions: validatedQuestions.length,
+        created_by: user.id,
+        is_published: false, // draft — admin reviews before publishing
       })
       .select()
       .single();
 
-    if (quizError || !quiz) throw new Error('Failed to create quiz');
+    if (quizError || !quiz) {
+      console.error('Quiz insert error:', quizError);
+      throw new Error(`Failed to create quiz: ${quizError?.message}`);
+    }
 
     const questionsToInsert = validatedQuestions.map((q: any) => ({
       ...q,
@@ -200,7 +216,10 @@ serve(async (req) => {
       .from('quiz_questions')
       .insert(questionsToInsert);
 
-    if (questionsError) throw new Error('Failed to insert questions');
+    if (questionsError) {
+      console.error('Questions insert error:', questionsError);
+      throw new Error(`Failed to insert questions: ${questionsError.message}`);
+    }
 
     return new Response(
       JSON.stringify({
@@ -221,10 +240,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Quiz generation error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const status = errorMessage.includes('Unauthorized') ? 401 : 
+    const status = errorMessage.includes('Unauthorized') ? 401 :
                    errorMessage.includes('not found') ? 404 :
-                   errorMessage.includes('not configured') ? 503 : 500;
-    
+                   errorMessage.includes('not configured') || errorMessage.includes('not set') ? 503 : 500;
+
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),
       { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

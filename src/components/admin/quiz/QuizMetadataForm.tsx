@@ -129,7 +129,7 @@ export const QuizMetadataForm = ({ data, onChange, onNext }: QuizMetadataFormPro
                 <SelectContent>
                   {subjects.map((s) => (
                     <SelectItem key={s.id} value={s.subject_name}>
-                      {s.subject_name}
+                      {s.subject_name} — Grade {s.grade_level}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -142,15 +142,15 @@ export const QuizMetadataForm = ({ data, onChange, onNext }: QuizMetadataFormPro
             <div>
               <Label htmlFor="chapter">Chapter (Optional)</Label>
               <Select
-                value={data.chapter_id || ''}
-                onValueChange={(v) => updateField('chapter_id', v || null)}
+                value={data.chapter_id || 'none'}
+                onValueChange={(v) => updateField('chapter_id', v === 'none' ? null : v)}
                 disabled={!data.subject_name}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select chapter" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No specific chapter</SelectItem>
+                  <SelectItem value="none">No specific chapter</SelectItem>
                   {chapters.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       Ch {c.chapter_number}: {c.chapter_title}

@@ -1,15 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { useAdminRole } from '@/hooks/useAdminRole';
 import { useAdminQuizzes } from '@/hooks/useAdminQuizzes';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { FullPageLoader } from '@/components/ui/loading';
 import { Progress } from '@/components/ui/progress';
+import { AIQuizGeneratorModal } from '@/components/admin/quiz/AIQuizGeneratorModal';
 import {
   Select,
   SelectContent,
@@ -37,7 +35,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Plus, Search, MoreVertical, Edit, Copy, Trash2, BarChart3, Eye, EyeOff,
-  FileQuestion, Users, Target, Clock, TrendingUp
+  FileQuestion, Users, Target, Clock, TrendingUp, Sparkles
 } from 'lucide-react';
 
 interface QuizStatsDisplay {
@@ -50,10 +48,9 @@ interface QuizStatsDisplay {
 
 export default function AdminQuizzes() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
-  const { isAdmin, loading: roleLoading } = useAdminRole();
   const { quizzes, loading: quizzesLoading, deleteQuiz, duplicateQuiz, bulkPublish, bulkUnpublish, getQuizStats } = useAdminQuizzes();
 
+  const [aiModalOpen, setAiModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [subjectFilter, setSubjectFilter] = useState<string>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
@@ -66,13 +63,7 @@ export default function AdminQuizzes() {
   });
   const [loadingStats, setLoadingStats] = useState(false);
 
-  // Access control is handled by AdminLayout - no need for duplicate redirect logic
-
-  if (authLoading || roleLoading || quizzesLoading) {
-    return <FullPageLoader message="Loading admin panel..." />;
-  }
-
-  if (!isAdmin) {
+  if (quizzesLoading) {
     return null;
   }
 
@@ -152,10 +143,16 @@ export default function AdminQuizzes() {
             <h1 className="text-3xl font-bold text-primary">Quiz Management</h1>
             <p className="text-muted-foreground">Create and manage assessment quizzes</p>
           </div>
-          <Button onClick={() => navigate('/admin/quizzes/create')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Quiz
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setAiModalOpen(true)}>
+              <Sparkles className="h-4 w-4 mr-2 text-secondary" />
+              Create with AI
+            </Button>
+            <Button onClick={() => navigate('/admin/quizzes/create')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Quiz
+            </Button>
+          </div>
         </div>
 
         {/* Overview Stats */}
@@ -434,6 +431,15 @@ export default function AdminQuizzes() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <AIQuizGeneratorModal
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        onGenerated={(_questions, metadata) => {
+          setAiModalOpen(false);
+          navigate('/admin/quizzes/create', { state: { aiMetadata: metadata } });
+        }}
+      />
     </AdminLayout>
   );
 }

@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, Play, Trash2, AlertCircle, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { RefreshCw, Play, Trash2, AlertCircle, CheckCircle2, Clock, XCircle, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -24,6 +25,7 @@ interface BackgroundJob {
 }
 
 export default function JobMonitoring() {
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState<BackgroundJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -143,9 +145,14 @@ export default function JobMonitoring() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold font-heading text-primary">Background Jobs</h1>
-          <p className="text-muted-foreground">Monitor and manage asynchronous tasks</p>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold font-heading text-primary">Background Jobs</h1>
+            <p className="text-muted-foreground">Monitor and manage asynchronous tasks</p>
+          </div>
         </div>
         <Button onClick={fetchJobs} disabled={loading}>
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />

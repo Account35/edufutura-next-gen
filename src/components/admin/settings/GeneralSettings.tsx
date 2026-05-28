@@ -8,40 +8,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { 
-  Globe, 
-  Palette, 
-  Upload, 
-  AlertTriangle,
-  Save,
-  ExternalLink
-} from 'lucide-react';
+import { Globe, Palette, Upload, AlertTriangle, Save, ExternalLink } from 'lucide-react';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 
 export function GeneralSettings() {
-  const [settings, setSettings] = useState({
+  const { maintenanceMode, maintenanceMessage, branding, updateSettings, updateBranding } = usePlatformSettings();
+
+  const [localSettings, setLocalSettings] = useState({
     siteName: 'EduFutura',
     siteUrl: 'https://edufutura.co.za',
     defaultLanguage: 'en',
     timezone: 'Africa/Johannesburg',
-    maintenanceMode: false,
-    maintenanceMessage: 'We are currently performing scheduled maintenance. Please check back soon.',
+    maintenanceMode,
+    maintenanceMessage,
     contactEmail: 'support@edufutura.co.za',
     termsUrl: '/terms',
     privacyUrl: '/privacy',
   });
 
-  const [branding, setBranding] = useState({
-    primaryColor: '#1B4332',
-    secondaryColor: '#D4AF37',
-    accentColor: '#800020',
-  });
-
+  const [localBranding, setLocalBranding] = useState({ ...branding });
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 500));
+    updateSettings({
+      maintenanceMode: localSettings.maintenanceMode,
+      maintenanceMessage: localSettings.maintenanceMessage,
+    });
+    updateBranding(localBranding);
     toast.success('General settings saved successfully');
     setSaving(false);
   };
@@ -63,8 +58,8 @@ export function GeneralSettings() {
               <Label htmlFor="siteName">Site Name</Label>
               <Input
                 id="siteName"
-                value={settings.siteName}
-                onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
+                value={localSettings.siteName}
+                onChange={(e) => setLocalSettings({ ...localSettings, siteName: e.target.value })}
               />
             </div>
             <div className="space-y-2">
@@ -72,11 +67,11 @@ export function GeneralSettings() {
               <div className="flex gap-2">
                 <Input
                   id="siteUrl"
-                  value={settings.siteUrl}
-                  onChange={(e) => setSettings({ ...settings, siteUrl: e.target.value })}
+                  value={localSettings.siteUrl}
+                  onChange={(e) => setLocalSettings({ ...localSettings, siteUrl: e.target.value })}
                 />
                 <Button variant="outline" size="icon" asChild>
-                  <a href={settings.siteUrl} target="_blank" rel="noopener noreferrer">
+                  <a href={localSettings.siteUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="w-4 h-4" />
                   </a>
                 </Button>
@@ -88,8 +83,8 @@ export function GeneralSettings() {
             <div className="space-y-2">
               <Label htmlFor="language">Default Language</Label>
               <Select
-                value={settings.defaultLanguage}
-                onValueChange={(value) => setSettings({ ...settings, defaultLanguage: value })}
+                value={localSettings.defaultLanguage}
+                onValueChange={(value) => setLocalSettings({ ...localSettings, defaultLanguage: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -105,8 +100,8 @@ export function GeneralSettings() {
             <div className="space-y-2">
               <Label htmlFor="timezone">Timezone</Label>
               <Select
-                value={settings.timezone}
-                onValueChange={(value) => setSettings({ ...settings, timezone: value })}
+                value={localSettings.timezone}
+                onValueChange={(value) => setLocalSettings({ ...localSettings, timezone: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -124,8 +119,8 @@ export function GeneralSettings() {
             <Input
               id="contactEmail"
               type="email"
-              value={settings.contactEmail}
-              onChange={(e) => setSettings({ ...settings, contactEmail: e.target.value })}
+              value={localSettings.contactEmail}
+              onChange={(e) => setLocalSettings({ ...localSettings, contactEmail: e.target.value })}
             />
           </div>
 
@@ -134,16 +129,16 @@ export function GeneralSettings() {
               <Label htmlFor="termsUrl">Terms & Conditions URL</Label>
               <Input
                 id="termsUrl"
-                value={settings.termsUrl}
-                onChange={(e) => setSettings({ ...settings, termsUrl: e.target.value })}
+                value={localSettings.termsUrl}
+                onChange={(e) => setLocalSettings({ ...localSettings, termsUrl: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="privacyUrl">Privacy Policy URL</Label>
               <Input
                 id="privacyUrl"
-                value={settings.privacyUrl}
-                onChange={(e) => setSettings({ ...settings, privacyUrl: e.target.value })}
+                value={localSettings.privacyUrl}
+                onChange={(e) => setLocalSettings({ ...localSettings, privacyUrl: e.target.value })}
               />
             </div>
           </div>
@@ -151,17 +146,15 @@ export function GeneralSettings() {
       </Card>
 
       {/* Maintenance Mode */}
-      <Card className={settings.maintenanceMode ? 'border-destructive' : ''}>
+      <Card className={localSettings.maintenanceMode ? 'border-destructive' : ''}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className={`w-5 h-5 ${settings.maintenanceMode ? 'text-destructive' : ''}`} />
+            <AlertTriangle className={`w-5 h-5 ${localSettings.maintenanceMode ? 'text-destructive' : ''}`} />
             Maintenance Mode
-            {settings.maintenanceMode && (
-              <Badge variant="destructive">Active</Badge>
-            )}
+            {localSettings.maintenanceMode && <Badge variant="destructive">Active</Badge>}
           </CardTitle>
           <CardDescription>
-            Enable maintenance mode to temporarily disable access for updates
+            When enabled, existing users cannot log in but new users can still register. Registered users without dashboard access will see the maintenance message.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -169,26 +162,28 @@ export function GeneralSettings() {
             <div>
               <p className="font-medium">Enable Maintenance Mode</p>
               <p className="text-sm text-muted-foreground">
-                Users will see a maintenance page when enabled
+                Blocks login for existing users — new registrations still allowed
               </p>
             </div>
             <Switch
-              checked={settings.maintenanceMode}
-              onCheckedChange={(checked) => setSettings({ ...settings, maintenanceMode: checked })}
+              checked={localSettings.maintenanceMode}
+              onCheckedChange={(checked) => setLocalSettings({ ...localSettings, maintenanceMode: checked })}
             />
           </div>
 
-          {settings.maintenanceMode && (
-            <div className="space-y-2">
-              <Label htmlFor="maintenanceMessage">Maintenance Message</Label>
-              <Textarea
-                id="maintenanceMessage"
-                value={settings.maintenanceMessage}
-                onChange={(e) => setSettings({ ...settings, maintenanceMessage: e.target.value })}
-                rows={3}
-              />
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="maintenanceMessage">Maintenance Message</Label>
+            <Textarea
+              id="maintenanceMessage"
+              value={localSettings.maintenanceMessage}
+              onChange={(e) => setLocalSettings({ ...localSettings, maintenanceMessage: e.target.value })}
+              rows={3}
+              placeholder="Message shown to users when they try to log in..."
+            />
+            <p className="text-xs text-muted-foreground">
+              This message is shown on the login form when maintenance mode is active.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -199,7 +194,7 @@ export function GeneralSettings() {
             <Palette className="w-5 h-5" />
             Branding
           </CardTitle>
-          <CardDescription>Customize platform appearance and logos</CardDescription>
+          <CardDescription>Customize platform colors — changes apply across the entire student-facing app after saving</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -208,13 +203,13 @@ export function GeneralSettings() {
               <div className="flex gap-2">
                 <Input
                   type="color"
-                  value={branding.primaryColor}
-                  onChange={(e) => setBranding({ ...branding, primaryColor: e.target.value })}
+                  value={localBranding.primaryColor}
+                  onChange={(e) => setLocalBranding({ ...localBranding, primaryColor: e.target.value })}
                   className="w-12 h-10 p-1 cursor-pointer"
                 />
                 <Input
-                  value={branding.primaryColor}
-                  onChange={(e) => setBranding({ ...branding, primaryColor: e.target.value })}
+                  value={localBranding.primaryColor}
+                  onChange={(e) => setLocalBranding({ ...localBranding, primaryColor: e.target.value })}
                   className="flex-1"
                 />
               </div>
@@ -224,13 +219,13 @@ export function GeneralSettings() {
               <div className="flex gap-2">
                 <Input
                   type="color"
-                  value={branding.secondaryColor}
-                  onChange={(e) => setBranding({ ...branding, secondaryColor: e.target.value })}
+                  value={localBranding.secondaryColor}
+                  onChange={(e) => setLocalBranding({ ...localBranding, secondaryColor: e.target.value })}
                   className="w-12 h-10 p-1 cursor-pointer"
                 />
                 <Input
-                  value={branding.secondaryColor}
-                  onChange={(e) => setBranding({ ...branding, secondaryColor: e.target.value })}
+                  value={localBranding.secondaryColor}
+                  onChange={(e) => setLocalBranding({ ...localBranding, secondaryColor: e.target.value })}
                   className="flex-1"
                 />
               </div>
@@ -240,13 +235,13 @@ export function GeneralSettings() {
               <div className="flex gap-2">
                 <Input
                   type="color"
-                  value={branding.accentColor}
-                  onChange={(e) => setBranding({ ...branding, accentColor: e.target.value })}
+                  value={localBranding.accentColor}
+                  onChange={(e) => setLocalBranding({ ...localBranding, accentColor: e.target.value })}
                   className="w-12 h-10 p-1 cursor-pointer"
                 />
                 <Input
-                  value={branding.accentColor}
-                  onChange={(e) => setBranding({ ...branding, accentColor: e.target.value })}
+                  value={localBranding.accentColor}
+                  onChange={(e) => setLocalBranding({ ...localBranding, accentColor: e.target.value })}
                   className="flex-1"
                 />
               </div>
@@ -256,30 +251,18 @@ export function GeneralSettings() {
           <div className="space-y-4">
             <Label>Logo Images</Label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm font-medium">Header Logo</p>
-                <p className="text-xs text-muted-foreground">PNG, max 2MB</p>
-                <Button variant="outline" size="sm" className="mt-2">
-                  Upload
-                </Button>
-              </div>
-              <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm font-medium">Favicon</p>
-                <p className="text-xs text-muted-foreground">ICO or PNG, 32x32</p>
-                <Button variant="outline" size="sm" className="mt-2">
-                  Upload
-                </Button>
-              </div>
-              <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm font-medium">Email Logo</p>
-                <p className="text-xs text-muted-foreground">PNG, 200x50 recommended</p>
-                <Button variant="outline" size="sm" className="mt-2">
-                  Upload
-                </Button>
-              </div>
+              {[
+                { label: 'Header Logo', hint: 'PNG, max 2MB' },
+                { label: 'Favicon', hint: 'ICO or PNG, 32x32' },
+                { label: 'Email Logo', hint: 'PNG, 200x50 recommended' },
+              ].map(({ label, hint }) => (
+                <div key={label} className="border-2 border-dashed rounded-lg p-4 text-center">
+                  <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm font-medium">{label}</p>
+                  <p className="text-xs text-muted-foreground">{hint}</p>
+                  <Button variant="outline" size="sm" className="mt-2">Upload</Button>
+                </div>
+              ))}
             </div>
           </div>
         </CardContent>
