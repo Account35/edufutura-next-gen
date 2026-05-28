@@ -91,8 +91,21 @@ export function AIQuizGeneratorModal({ isOpen, onClose, onGenerated }: AIQuizGen
     setGenerating(true);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('generate-quiz', {
-        body: {
+      // Use raw fetch so we can always read the response body,
+      // even on non-2xx — supabase.functions.invoke discards it
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? '';
+      const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const fnUrl = `https://${projectRef}.supabase.co/functions/v1/generate-quiz`;
+
+      const res = await fetch(fnUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({
           chapter_id: selectedChapterId,
           question_count: totalQuestions,
           difficulty_level: difficulty,
@@ -101,11 +114,14 @@ export function AIQuizGeneratorModal({ isOpen, onClose, onGenerated }: AIQuizGen
             true_false: questionTypes.true_false,
             short_answer: questionTypes.short_answer,
           },
-        },
+        }),
       });
 
-      if (fnError) throw new Error(fnError.message || 'Generation failed');
-      if (!data?.success) throw new Error(data?.error || 'Generation failed');
+      const data = await res.json();
+
+      if (!data?.success) {
+        throw new Error(data?.error || `Server error ${res.status}`);
+      }
 
       const questions: any[] = data.generated_questions || [];
       const quizId: string = data.quiz_id;
