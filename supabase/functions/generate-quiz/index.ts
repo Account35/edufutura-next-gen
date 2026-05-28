@@ -9,6 +9,15 @@ const corsHeaders = {
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
+// Free models on OpenRouter — tried in order until one succeeds
+const FREE_MODELS = [
+  'google/gemini-2.5-flash',
+  'google/gemini-2.0-flash-exp:free',
+  'meta-llama/llama-3.1-8b-instruct:free',
+  'mistralai/mistral-7b-instruct:free',
+  'qwen/qwen-2-7b-instruct:free',
+];
+
 function ok(body: unknown) {
   return new Response(JSON.stringify(body), {
     status: 200,
@@ -16,13 +25,42 @@ function ok(body: unknown) {
   });
 }
 
-function getQuizTemplateName(subjectName: string): string {
-  const n = subjectName.toLowerCase();
-  if (n.includes('math')) return 'quiz_generation_mathematics';
-  if (n.includes('life science') || n.includes('biology')) return 'quiz_generation_life_sciences';
-  if (n.includes('english')) return 'quiz_generation_english';
-  if (n.includes('physical science') || n.includes('physics') || n.includes('chemistry')) return 'quiz_generation_physical_sciences';
-  return 'quiz_generation_mathematics';
+// Normalize difficulty to title case for DB (Beginner / Intermediate / Advanced)
+function normalizeDifficulty(d: string): string {
+  const map: Record<string, string> = {
+    beginner: 'Beginner',
+    intermediate: 'Intermediate',
+    advanced: 'Advanced',
+  };
+  return map[d?.toLowerCase()] || 'Intermediate';
+}
+
+async function callOpenRouter(apiKey: string, model: string, systemPrompt: string, userPrompt: string, temperature: number, maxTokens: number): Promise<any> {
+  const res = await fetch(OPENROUTER_BASE_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': Deno.env.get('SUPABASE_URL') || 'https://edufutura.app',
+      'X-Title': 'EduFutura',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature,
+      max_tokens: maxTokens,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`${res.status}: ${errText.slice(0, 200)}`);
+  }
+
+  return await res.json();
 }
 
 serve(async (req) => {
@@ -31,13 +69,10 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Check API key first
+    // 1. Check API key
     const apiKey = Deno.env.get('OPENROUTER_API_KEY');
     if (!apiKey) {
-      return ok({
-        success: false,
-        error: 'OPENROUTER_API_KEY is not set. Go to Supabase Dashboard → Settings → Edge Functions → Secrets and add OPENROUTER_API_KEY.',
-      });
+      return ok({ success: false, error: 'OPENROUTER_API_KEY is not set in Supabase Edge Function secrets.' });
     }
 
     // 2. Auth
@@ -71,114 +106,58 @@ serve(async (req) => {
     const subject = subjectData?.subject_name || 'Unknown';
     const grade = subjectData?.grade_level || 10;
 
-    // 5. Try to load a prompt template (optional — fall back to hardcoded prompt)
-    const templateName = getQuizTemplateName(subject);
-    const { data: templateRows } = await supabase.rpc('get_active_template', { p_template_name: templateName });
-    let template = templateRows?.[0];
-    if (!template) {
-      const { data: fallback } = await supabase.rpc('get_active_template', { p_template_name: 'quiz_generation_mathematics' });
-      template = fallback?.[0];
-    }
-
-    // 6. Build prompts
+    // 5. Build prompts
     const dist = question_type_distribution || { multiple_choice: question_count, true_false: 0, short_answer: 0 };
     const difficulty = difficulty_level || 'intermediate';
+    const difficultyDb = normalizeDifficulty(difficulty); // title case for DB
     const contentSnippet = chapter.content_markdown?.substring(0, 2000) || 'No content available';
     const concepts = chapter.key_concepts?.join(', ') || 'key chapter concepts';
     const outcomes = chapter.learning_outcomes?.join('. ') || 'General understanding';
 
-    let systemPrompt: string;
-    let userPrompt: string;
-    let temperature = 0.7;
-    let maxTokens = 4000;
-    let model = 'google/gemini-2.5-flash';
+    const systemPrompt = `You are an expert South African CAPS curriculum educator for Grade ${grade} ${subject}. Return ONLY a valid JSON array of quiz questions with no markdown, no code blocks, no extra text. Each item must have exactly: {"question_number":number,"question_text":"string","question_type":"multiple_choice|true_false|short_answer","options":["string","string","string","string"],"correct_answer":"string","explanation":"string","difficulty_level":"${difficultyDb}","points":1}. For true_false: options must be [] and correct_answer must be "true" or "false". For short_answer: options must be [].`;
 
-    if (template) {
-      systemPrompt = template.system_context || '';
-      userPrompt = template.prompt_text;
-      temperature = Number(template.temperature) || 0.7;
-      maxTokens = template.max_tokens || 4000;
-      model = template.model_name || model;
+    const userPrompt = `Generate exactly ${question_count} questions about "${chapter.chapter_title}" for Grade ${grade} ${subject}.\n\nDistribution: ${dist.multiple_choice} multiple choice, ${dist.true_false} true/false, ${dist.short_answer} short answer.\nDifficulty: ${difficultyDb}\nKey concepts: ${concepts}\nContent: ${contentSnippet}\nLearning outcomes: ${outcomes}\n\nReturn ONLY the JSON array. No markdown. No explanation outside the array.`;
 
-      const vars: Record<string, string> = {
-        grade_level: String(grade),
-        chapter_title: chapter.chapter_title,
-        question_count: String(question_count),
-        key_concepts: concepts,
-        question_type_distribution: JSON.stringify(dist),
-        difficulty_level: difficulty,
-      };
-      for (const [k, v] of Object.entries(vars)) {
-        userPrompt = userPrompt.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
-        systemPrompt = systemPrompt.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
-      }
-      userPrompt += `\n\nContent: ${contentSnippet}\nLearning outcomes: ${outcomes}\n\nReturn ONLY a valid JSON array, no markdown.`;
-    } else {
-      systemPrompt = `You are an expert South African CAPS curriculum educator for Grade ${grade} ${subject}. Return ONLY a valid JSON array of quiz questions. Each item: {"question_number":number,"question_text":"string","question_type":"multiple_choice|true_false|short_answer","options":["A","B","C","D"],"correct_answer":"string","explanation":"string","difficulty_level":"${difficulty}","points":1}. For true_false use options:[] and correct_answer "true" or "false". For short_answer use options:[].`;
-      userPrompt = `Generate exactly ${question_count} questions about "${chapter.chapter_title}" with this distribution: ${dist.multiple_choice} multiple choice, ${dist.true_false} true/false, ${dist.short_answer} short answer.\n\nKey concepts: ${concepts}\nContent: ${contentSnippet}\nLearning outcomes: ${outcomes}\n\nReturn ONLY the JSON array.`;
-    }
-
-    // Map model name to OpenRouter format
-    const modelMap: Record<string, string> = {
-      'gpt-4o-mini': 'openai/gpt-4o-mini',
-      'gpt-4o': 'openai/gpt-4o',
-      'gpt-4': 'openai/gpt-4',
-      'gpt-3.5-turbo': 'openai/gpt-3.5-turbo',
-    };
-    // Use the same model confirmed working in extract-curriculum-content
-    const resolvedModel = modelMap[model] || (model.includes('/') ? model : 'google/gemini-2.5-flash');
-
-    // 7. Call OpenRouter with retry
-    let aiData: any;
+    // 6. Try free models in order until one works
+    let aiData: any = null;
+    let usedModel = '';
+    const modelErrors: string[] = [];
     const startTime = Date.now();
 
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const res = await fetch(OPENROUTER_BASE_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': Deno.env.get('SUPABASE_URL') || 'https://edufutura.app',
-          'X-Title': 'EduFutura',
-        },
-        body: JSON.stringify({
-          model: resolvedModel,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature,
-          max_tokens: maxTokens,
-        }),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error(`OpenRouter attempt ${attempt + 1} failed:`, res.status, errText);
-        if (attempt === 2) {
-          return ok({ success: false, error: `OpenRouter API error ${res.status}: ${errText.slice(0, 300)}` });
-        }
-        await new Promise(r => setTimeout(r, Math.pow(2, attempt + 1) * 1000));
-        continue;
+    for (const model of FREE_MODELS) {
+      try {
+        console.log(`Trying model: ${model}`);
+        aiData = await callOpenRouter(apiKey, model, systemPrompt, userPrompt, 0.7, 4000);
+        usedModel = model;
+        console.log(`Success with model: ${model}`);
+        break;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`Model ${model} failed: ${msg}`);
+        modelErrors.push(`${model}: ${msg}`);
       }
+    }
 
-      aiData = await res.json();
-      break;
+    if (!aiData) {
+      return ok({
+        success: false,
+        error: `All models failed. Errors: ${modelErrors.join(' | ')}`,
+      });
     }
 
     const responseTime = Date.now() - startTime;
     const rawContent: string = aiData?.choices?.[0]?.message?.content || '';
     const tokensUsed = aiData?.usage?.total_tokens || 0;
 
-    // 8. Parse questions
+    // 7. Parse questions
     let questions: any[];
     try {
       const match = rawContent.match(/\[[\s\S]*\]/);
       questions = JSON.parse(match ? match[0] : rawContent);
       if (!Array.isArray(questions)) throw new Error('Not an array');
     } catch {
-      console.error('Failed to parse AI response:', rawContent);
-      return ok({ success: false, error: 'AI returned an unexpected format. Please try again.' });
+      console.error('Failed to parse AI response:', rawContent.slice(0, 500));
+      return ok({ success: false, error: `AI returned unexpected format. Raw: ${rawContent.slice(0, 200)}` });
     }
 
     const validated = questions.map((q: any, i: number) => ({
@@ -187,12 +166,12 @@ serve(async (req) => {
       question_type: q.question_type || 'multiple_choice',
       options: Array.isArray(q.options) ? q.options : [],
       correct_answer: q.correct_answer || '',
-      explanation: q.explanation || q.detailed_explanation || '',
-      difficulty_level: q.difficulty_level || difficulty,
+      explanation: q.explanation || '',
+      difficulty_level: normalizeDifficulty(q.difficulty_level || difficulty),
       points: q.points || 1,
     }));
 
-    // 9. Save quiz as draft
+    // 8. Save quiz as draft — use title-case difficulty for DB
     const { data: quiz, error: quizError } = await supabase
       .from('quizzes')
       .insert({
@@ -200,7 +179,7 @@ serve(async (req) => {
         subject_name: subject,
         quiz_title: `${chapter.chapter_title} — AI Quiz`,
         quiz_description: `AI-generated quiz for Grade ${grade} ${subject}: ${chapter.chapter_title}`,
-        difficulty_level: difficulty,
+        difficulty_level: difficultyDb,
         total_questions: validated.length,
         created_by: user.id,
         is_published: false,
@@ -213,28 +192,20 @@ serve(async (req) => {
       .single();
 
     if (quizError || !quiz) {
-      console.error('Quiz insert error:', quizError);
-      return ok({ success: false, error: `Failed to save quiz: ${quizError?.message}` });
+      console.error('Quiz insert error:', JSON.stringify(quizError));
+      return ok({ success: false, error: `Failed to create quiz: ${quizError?.message} (code: ${quizError?.code})` });
     }
 
+    // 9. Save questions
     const { error: qError } = await supabase
       .from('quiz_questions')
       .insert(validated.map((q: any) => ({ ...q, quiz_id: quiz.id })));
 
     if (qError) {
-      console.error('Questions insert error:', qError);
-      return ok({ success: false, error: `Failed to save questions: ${qError.message}` });
-    }
-
-    // 10. Update template metrics (best-effort)
-    if (template) {
-      await supabase.rpc('update_template_metrics', {
-        p_template_name: templateName,
-        p_template_version: template.template_version,
-        p_success: true,
-        p_rating: null,
-        p_cost: tokensUsed * 0.00001,
-      }).catch(() => {});
+      console.error('Questions insert error:', JSON.stringify(qError));
+      // Clean up the quiz if questions failed
+      await supabase.from('quizzes').delete().eq('id', quiz.id);
+      return ok({ success: false, error: `Failed to save questions: ${qError.message} (code: ${qError.code})` });
     }
 
     return ok({
@@ -243,7 +214,7 @@ serve(async (req) => {
       generated_questions: validated,
       generation_metadata: {
         tokens_used: tokensUsed,
-        model: resolvedModel,
+        model: usedModel,
         response_time_ms: responseTime,
       },
     });
