@@ -50,8 +50,34 @@ export default function Dashboard() {
 
      // Auto-include any published subjects matching the student's grade
      // so newly published admin subjects appear immediately for existing users.
-     let mergedSubjects: any[] = progressData || [];
+     let mergedSubjects: any[] = (progressData || []).map((item: any) => ({
+       ...item,
+       thumbnail_url: null,
+     }));
      const studentGrade = (userProfile as any)?.grade_level;
+     const progressSubjectNames = Array.from(
+       new Set((progressData || []).map((p: any) => (p.subject_name || '').trim()).filter(Boolean))
+     );
+
+     if (progressSubjectNames.length > 0) {
+       const { data: progressSubjects } = await supabase
+         .from('curriculum_subjects')
+         .select('subject_name, thumbnail_url')
+         .in('subject_name', progressSubjectNames);
+
+       const thumbnailMap = (progressSubjects || []).reduce<Record<string, string | null>>((acc, subject) => {
+         if (subject.subject_name) {
+           acc[subject.subject_name.toLowerCase()] = subject.thumbnail_url || null;
+         }
+         return acc;
+       }, {});
+
+       mergedSubjects = mergedSubjects.map((item: any) => ({
+         ...item,
+         thumbnail_url: thumbnailMap[(item.subject_name || '').toLowerCase()] || null,
+       }));
+     }
+
      if (studentGrade) {
        const { data: publishedSubjects } = await supabase
          .from('curriculum_subjects')
@@ -60,7 +86,7 @@ export default function Dashboard() {
          .eq('grade_level', studentGrade);
 
        const existingNames = new Set(
-         (progressData || []).map((p: any) => (p.subject_name || '').toLowerCase())
+         (mergedSubjects || []).map((p: any) => (p.subject_name || '').toLowerCase())
        );
        const extras = (publishedSubjects || [])
          .filter((s: any) => !existingNames.has((s.subject_name || '').toLowerCase()))
@@ -74,7 +100,7 @@ export default function Dashboard() {
            last_accessed: new Date().toISOString(),
            thumbnail_url: s.thumbnail_url,
          }));
-       mergedSubjects = [...(progressData || []), ...extras];
+       mergedSubjects = [...mergedSubjects, ...extras];
      }
 
       // Calculate overall progress
