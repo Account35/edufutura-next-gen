@@ -97,7 +97,18 @@ const SidebarContent = ({ currentPath, onNavigate, onSignOut }: SidebarContentPr
         <Button
           variant="ghost"
           className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 min-h-[48px]"
-          onClick={() => onNavigate('/dashboard')}
+          onClick={() => {
+            try {
+              sessionStorage.setItem('admin_preview', '1');
+              sessionStorage.setItem('admin_preview_from', currentPath || '/admin');
+              try {
+                window.dispatchEvent(new CustomEvent('adminPreviewChanged', { detail: { admin_preview: '1', from: currentPath || '/admin' } }));
+              } catch (e) {}
+            } catch (e) {
+              // ignore storage errors
+            }
+            onNavigate('/dashboard');
+          }}
         >
           <Users className="w-5 h-5 mr-3" />
           Student View
@@ -269,7 +280,16 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
                 variant="ghost"
                 size="icon"
                 className="text-primary-foreground h-10 w-10"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem('admin_preview', '1');
+                    sessionStorage.setItem('admin_preview_from', location.pathname || '/admin');
+                    try {
+                      window.dispatchEvent(new CustomEvent('adminPreviewChanged', { detail: { admin_preview: '1', from: location.pathname || '/admin' } }));
+                    } catch (e) {}
+                  } catch (e) {}
+                  navigate('/dashboard');
+                }}
               >
                 <Users className="w-5 h-5" />
               </Button>

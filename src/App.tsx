@@ -106,9 +106,12 @@ import NotFound from "./pages/NotFound";
  const AdminOnboardingAnalytics = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/admin/AdminOnboardingAnalytics"));
  
  // Layout wrapper with route progress bar
- const AppLayout = () => (
+import AdminPreviewBanner from '@/components/admin/AdminPreviewBanner';
+
+  const AppLayout = () => (
    <>
      <RouteProgressBar />
+     <AdminPreviewBanner />
      <Outlet />
    </>
  );
