@@ -49,9 +49,23 @@ export const SubjectCard = ({
 
   return (
     <Card 
-      className="hover:shadow-md transition-shadow cursor-pointer group"
+      className="hover:shadow-md transition-shadow cursor-pointer group overflow-hidden"
       onClick={() => onSelect(subject)}
     >
+      {/* Thumbnail Image */}
+      {subject.thumbnail_url && (
+        <div className="h-24 w-full overflow-hidden bg-gradient-to-br from-muted to-muted-foreground/20">
+          <img
+            src={subject.thumbnail_url}
+            alt={subject.subject_name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div 

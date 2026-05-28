@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -19,8 +19,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Subject } from '@/hooks/useAdminCurriculum';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Upload, X } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const ICON_OPTIONS = [
   'BookOpen', 'Calculator', 'FlaskConical', 'Globe', 'Palette', 
@@ -67,8 +69,12 @@ export const SubjectEditorModal = ({
     is_published: false,
     caps_aligned: true,
     learning_objectives: [] as string[],
+    thumbnail_url: '',
   });
   const [objectiveInput, setObjectiveInput] = useState('');
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (subject) {
@@ -82,6 +88,7 @@ export const SubjectEditorModal = ({
         is_published: subject.is_published || false,
         caps_aligned: subject.caps_aligned ?? true,
         learning_objectives: subject.learning_objectives || [],
+        thumbnail_url: subject.thumbnail_url || '',
       });
     } else {
       setFormData({
@@ -94,9 +101,40 @@ export const SubjectEditorModal = ({
         is_published: false,
         caps_aligned: true,
         learning_objectives: [],
+        thumbnail_url: '',
       });
     }
+    setThumbnailFile(null);
   }, [subject, open]);
+
+  const handleUploadThumbnail = async () => {
+    if (!thumbnailFile || !formData.subject_name) return;
+    
+    setUploadingThumbnail(true);
+    try {
+      const ext = thumbnailFile.name.split('.').pop() || 'png';
+      const path = `subjects/${Date.now()}-${formData.subject_name.replace(/\s+/g, '-').toLowerCase()}.${ext}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('curriculum-images')
+        .upload(path, thumbnailFile, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('curriculum-images')
+        .getPublicUrl(path);
+      
+      setFormData(prev => ({ ...prev, thumbnail_url: publicUrl }));
+      setThumbnailFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      toast.success('Thumbnail uploaded successfully');
+    } catch (error: any) {
+      toast.error(`Failed to upload thumbnail: ${error.message}`);
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
 
   const handleSave = async () => {
     const data = subject 
@@ -157,6 +195,64 @@ export const SubjectEditorModal = ({
               placeholder="Brief description of the subject..."
               rows={3}
             />
+          </div>
+
+          {/* Thumbnail Image */}
+          <div className="space-y-2">
+            <Label>Subject Thumbnail Image</Label>
+            <div className="border-2 border-dashed rounded-lg p-4 text-center space-y-2">
+              {formData.thumbnail_url && (
+                <div className="relative w-full h-32 mb-2">
+                  <img 
+                    src={formData.thumbnail_url} 
+                    alt="Thumbnail preview"
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, thumbnail_url: '' }))}
+                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded hover:bg-red-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              <div className="space-y-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => setThumbnailFile(e.target.files?.[0] || null)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingThumbnail}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Choose Image
+                </Button>
+                {thumbnailFile && (
+                  <>
+                    <p className="text-sm text-muted-foreground">{thumbnailFile.name}</p>
+                    <Button
+                      type="button"
+                      onClick={handleUploadThumbnail}
+                      disabled={uploadingThumbnail}
+                      className="w-full"
+                    >
+                      {uploadingThumbnail && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      {uploadingThumbnail ? 'Uploading...' : 'Upload Thumbnail'}
+                    </Button>
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Upload a representative image for this subject (PNG, JPG, etc.)
+              </p>
+            </div>
           </div>
 
           {/* Icon and Color */}

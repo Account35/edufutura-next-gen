@@ -14,6 +14,7 @@ export interface Subject {
   icon_name: string | null;
   color_scheme: string | null;
   caps_aligned: boolean;
+  thumbnail_url?: string | null;
 }
 
 export interface Chapter {

@@ -55,7 +55,7 @@ export default function Dashboard() {
      if (studentGrade) {
        const { data: publishedSubjects } = await supabase
          .from('curriculum_subjects')
-         .select('id, subject_name, total_chapters, grade_level')
+         .select('id, subject_name, total_chapters, grade_level, thumbnail_url')
          .eq('is_published', true)
          .eq('grade_level', studentGrade);
 
@@ -72,6 +72,7 @@ export default function Dashboard() {
            total_chapters: s.total_chapters || 0,
            average_quiz_score: null,
            last_accessed: new Date().toISOString(),
+           thumbnail_url: s.thumbnail_url,
          }));
        mergedSubjects = [...(progressData || []), ...extras];
      }

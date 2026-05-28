@@ -15,6 +15,7 @@ const SUBJECT_SELECT = `
   is_published,
   caps_aligned,
   learning_objectives,
+  thumbnail_url,
   created_at,
   updated_at
 `;
@@ -70,6 +71,7 @@ export interface Subject {
   is_published: boolean | null;
   caps_aligned: boolean | null;
   learning_objectives: string[] | null;
+  thumbnail_url: string | null;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -205,6 +207,7 @@ export const useAdminCurriculum = () => {
         is_published: subjectData.is_published,
         caps_aligned: subjectData.caps_aligned,
         learning_objectives: subjectData.learning_objectives,
+        thumbnail_url: subjectData.thumbnail_url,
       };
       
       const { data, error } = await supabase
@@ -538,19 +541,28 @@ export const useAdminCurriculum = () => {
 
   // Quick toggles for subject card
   const togglePublish = useCallback(async (subjectId: string, value: boolean) => {
-    await updateSubjectMutation.mutateAsync({ id: subjectId, is_published: value });
-    // Cascade publish state to the subject's chapters so students see (or stop
-    // seeing) them along with the subject.
     try {
-      await supabase
+      await updateSubjectMutation.mutateAsync({ id: subjectId, is_published: value });
+      
+      // Cascade publish state to the subject's chapters so students see (or stop
+      // seeing) them along with the subject.
+      const { error: updateError } = await supabase
         .from('curriculum_chapters')
         .update({ is_published: value, updated_at: new Date().toISOString() })
         .eq('subject_id', subjectId);
+      
+      if (updateError) {
+        console.warn('Failed to cascade publish state to chapters:', updateError);
+        toast.warning('Subject published but some chapters may not have been updated');
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['admin-chapters', subjectId] });
-    } catch {
-      // non-fatal
+      queryClient.invalidateQueries({ queryKey: ['admin-subjects'] });
+      toast.success(`Subject ${value ? 'published' : 'unpublished'} and all chapters updated`);
+    } catch (error: unknown) {
+      toast.error('Failed to update publish state: ' + getErrorMessage(error, 'Unknown error'));
     }
-  }, [updateSubjectMutation]);
+  }, [updateSubjectMutation, queryClient]);
 
   const toggleCapsAligned = useCallback(async (subjectId: string, value: boolean) => {
     await updateSubjectMutation.mutateAsync({ id: subjectId, caps_aligned: value });

@@ -16,6 +16,7 @@ interface Subject {
   total_chapters: number;
   average_quiz_score: number | null;
   last_accessed: string;
+  thumbnail_url?: string | null;
 }
 
 interface SubjectGridProps {
@@ -76,6 +77,20 @@ export const SubjectGrid = ({ subjects, isPremium, onUpgrade }: SubjectGridProps
               "absolute top-0 left-0 right-0 h-1 bg-gradient-to-r",
               getSubjectColor(subject.subject_name)
             )} />
+
+            {/* Thumbnail Image */}
+            {subject.thumbnail_url && (
+              <div className="h-32 w-full overflow-hidden bg-gradient-to-br from-muted to-muted-foreground/20">
+                <img
+                  src={subject.thumbnail_url}
+                  alt={subject.subject_name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
 
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-4">
