@@ -64,7 +64,13 @@ export default function AdminQuizzes() {
   const [loadingStats, setLoadingStats] = useState(false);
 
   if (quizzesLoading) {
-    return null;
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center py-24">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </AdminLayout>
+    );
   }
 
   // Get unique subjects for filter
