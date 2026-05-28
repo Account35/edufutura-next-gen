@@ -108,6 +108,118 @@ function splitTextIntoChunks(rawText: string, chunkChars = TEXT_CHUNK_CHARS, max
   return chunks.filter(Boolean);
 }
 
+function titleCase(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+}
+
+function detectGrade(rawText: string, fileName: string): number {
+  const haystack = `${fileName}\n${rawText}`.toLowerCase();
+  const gradeMatch = haystack.match(/\bgrade\s*(\d{1,2})\b/);
+  if (gradeMatch) {
+    const grade = Number(gradeMatch[1]);
+    if (grade >= 4 && grade <= 12) return grade;
+  }
+
+  const numericMatch = fileName.match(/\b(?:gr|g)(\d{1,2})\b/i);
+  if (numericMatch) {
+    const grade = Number(numericMatch[1]);
+    if (grade >= 4 && grade <= 12) return grade;
+  }
+
+  return 10;
+}
+
+function detectSubject(rawText: string, fileName: string): string {
+  const haystack = `${fileName}\n${rawText}`.toLowerCase();
+  const candidates = [
+    'Mathematics',
+    'Physical Sciences',
+    'Life Sciences',
+    'English',
+    'Geography',
+    'History',
+    'Accounting',
+    'Business Studies',
+    'Economics',
+    'Life Orientation',
+    'Natural Sciences',
+    'Technology',
+  ];
+
+  return candidates.find((subject) => haystack.includes(subject.toLowerCase())) || 'Imported Curriculum';
+}
+
+function getKeyConcepts(text: string): string[] {
+  const stopWords = new Set([
+    'about', 'after', 'again', 'also', 'because', 'before', 'being', 'between', 'chapter', 'content',
+    'could', 'during', 'each', 'from', 'grade', 'have', 'into', 'learn', 'lesson', 'must', 'should',
+    'students', 'their', 'there', 'these', 'this', 'through', 'under', 'using', 'where', 'which', 'with',
+  ]);
+
+  const counts = new Map<string, number>();
+  for (const match of text.toLowerCase().matchAll(/\b[a-z][a-z-]{3,}\b/g)) {
+    const word = match[0];
+    if (stopWords.has(word)) continue;
+    counts.set(word, (counts.get(word) || 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([word]) => titleCase(word));
+}
+
+function buildLocalExtraction(rawText: string, fileName: string, aiError: string): Record<string, unknown> {
+  const normalized = normalizeExtractedText(rawText);
+  const headingPattern = /^(?:#{1,4}\s*)?(?:chapter|unit|module|topic|section)\s+\d+[:.\-\s]+(.+)$/gim;
+  const matches = [...normalized.matchAll(headingPattern)];
+
+  const sections: { title: string; content: string }[] = [];
+  if (matches.length > 0) {
+    for (let index = 0; index < matches.length; index += 1) {
+      const match = matches[index];
+      const next = matches[index + 1];
+      const start = match.index ?? 0;
+      const end = next?.index ?? normalized.length;
+      const content = normalized.slice(start, end).trim();
+      const title = match[1]?.trim() || `Chapter ${index + 1}`;
+      if (content) sections.push({ title, content });
+    }
+  }
+
+  if (sections.length === 0) {
+    const chunks = splitTextIntoChunks(normalized, 6000, 10);
+    chunks.forEach((content, index) => {
+      sections.push({
+        title: chunks.length === 1 ? fileName.replace(/\.[^.]+$/, '') : `Imported Section ${index + 1}`,
+        content,
+      });
+    });
+  }
+
+  const chapters = sections.slice(0, 20).map((section, index) => ({
+    chapter_number: index + 1,
+    chapter_title: titleCase(section.title.replace(/[_-]+/g, ' ').slice(0, 90)) || `Imported Section ${index + 1}`,
+    chapter_description: section.content.slice(0, 220).replace(/\s+/g, ' '),
+    content_markdown: section.content,
+    difficulty_level: 'Intermediate',
+    estimated_duration_minutes: Math.max(20, Math.min(90, Math.round(section.content.length / 1200) * 15 || 30)),
+    caps_code: '',
+    key_concepts: getKeyConcepts(section.content),
+  }));
+
+  return {
+    detected_grade: detectGrade(normalized, fileName),
+    detected_subject: detectSubject(normalized, fileName),
+    confidence: 0.45,
+    provider_used: 'local',
+    ai_error: `AI extraction is unavailable: ${aiError}. A local text-based extraction was created so you can still review and save the content.`,
+    chapters,
+  };
+}
+
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -420,10 +532,13 @@ Deno.serve(async (req) => {
 
     // OpenRouter only (per user request — no Lovable AI fallback)
     let result: unknown;
-    const providerUsed: 'openrouter' = 'openrouter';
+    let providerUsed: 'openrouter' | 'local' = 'openrouter';
+    let aiError: string | null = null;
 
     if (!Deno.env.get('OPENROUTER_API_KEY')) {
-      return createJsonResponse({ error: 'OPENROUTER_API_KEY not configured' }, 500);
+      return createJsonResponse(
+        buildLocalExtraction(rawText, file_name, 'OPENROUTER_API_KEY is not configured')
+      );
     }
 
     const controller = new AbortController();
@@ -435,13 +550,20 @@ Deno.serve(async (req) => {
       clearTimeout(timeoutId);
       const message = getErrorMessage(err);
       const status = getErrorStatus(err) ?? 500;
-      return createJsonResponse({ error: `OpenRouter extraction failed: ${message}` }, status);
+      if (status === 402 || status === 429) {
+        aiError = `OpenRouter returned ${status}: ${message}`;
+        result = buildLocalExtraction(rawText, file_name, aiError);
+        providerUsed = 'local';
+      } else {
+        return createJsonResponse({ error: `OpenRouter extraction failed: ${message}` }, status);
+      }
     }
 
     return createJsonResponse({
       ...result,
       provider_used: providerUsed,
-      openrouter_error: null,
+      openrouter_error: aiError,
+      ai_error: aiError,
     });
   } catch (err) {
     console.error('extract-curriculum-content error:', err);

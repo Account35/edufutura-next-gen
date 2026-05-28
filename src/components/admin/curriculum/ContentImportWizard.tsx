@@ -236,7 +236,11 @@ export const ContentImportWizard = ({
               <div className="flex flex-wrap items-center gap-2 p-3 bg-muted rounded-lg">
                 <Badge variant="default" className="gap-1">
                   <CheckCircle2 className="w-3 h-3" />
-                  {result.provider_used === 'openrouter' ? 'OpenRouter' : 'Lovable AI (fallback)'}
+                  {result.provider_used === 'openrouter'
+                    ? 'OpenRouter'
+                    : result.provider_used === 'lovable'
+                      ? 'Lovable AI (fallback)'
+                      : 'Local extraction'}
                 </Badge>
                 <Badge variant="outline">
                   Detected: Grade {result.detected_grade} | {result.detected_subject}
@@ -245,6 +249,15 @@ export const ContentImportWizard = ({
                   Confidence: {Math.round((result.confidence || 0) * 100)}%
                 </Badge>
               </div>
+
+              {result.ai_error && (
+                <Alert>
+                  <AlertTitle>AI provider unavailable</AlertTitle>
+                  <AlertDescription>
+                    {result.ai_error}
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <div className="space-y-2">
                 <Label>Save chapters into subject</Label>

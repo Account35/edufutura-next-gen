@@ -18,8 +18,9 @@ export interface ExtractionResult {
   detected_grade: number;
   detected_subject: string;
   confidence: number;
-  provider_used: 'openrouter' | 'lovable';
+  provider_used: 'openrouter' | 'lovable' | 'local';
   chapters: ExtractedChapter[];
+  ai_error?: string | null;
 }
 
 export interface ImportProgress {
@@ -102,7 +103,7 @@ function mergeResults(parts: ExtractionResult[]): ExtractionResult {
   }, {});
 
   const provider_used =
-    (Object.entries(providerCounts).sort((a, b) => b[1] - a[1])[0]?.[0] as 'openrouter' | 'lovable') ||
+    (Object.entries(providerCounts).sort((a, b) => b[1] - a[1])[0]?.[0] as 'openrouter' | 'lovable' | 'local') ||
     bestResult.provider_used;
 
   const seenTitles = new Set<string>();
@@ -224,10 +225,22 @@ export function useCurriculumImport() {
 
         if (result) {
           partResults.push(result);
+          if (result.ai_error && chunks.length === 1) {
+            toast.warning(result.ai_error);
+          }
         } else {
           failedChunks.push(`Part ${index + 1}: ${error || 'unknown error'}`);
           if (chunks.length === 1) {
             toast.error(error || 'Extraction failed');
+            return null;
+          }
+
+          const fatalAiFailure =
+            (error || '').toLowerCase().includes('ai credits') ||
+            (error || '').toLowerCase().includes('payment') ||
+            (error || '').toLowerCase().includes('openrouter');
+          if (fatalAiFailure) {
+            toast.error(error || 'AI extraction is unavailable.');
             return null;
           }
         }
@@ -247,6 +260,9 @@ export function useCurriculumImport() {
       }
 
       const mergedResult = mergeResults(partResults);
+      if (mergedResult.ai_error) {
+        toast.warning(mergedResult.ai_error);
+      }
       toast.success(`Extracted ${mergedResult.chapters.length} chapter(s) via ${mergedResult.provider_used}`);
       return mergedResult;
     } catch (err: unknown) {
