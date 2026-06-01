@@ -9,14 +9,17 @@ const corsHeaders = {
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-// Free models tried in order until one succeeds
+// Models tried in order until one succeeds. Free models first, paid as fallback.
 const FREE_MODELS = [
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  "deepseek/deepseek-chat-v3.1:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "google/gemma-2-9b-it:free",
   "google/gemini-2.5-flash",
-  "google/gemini-2.0-flash-exp:free",
-  "meta-llama/llama-3.1-8b-instruct:free",
-  "mistralai/mistral-7b-instruct:free",
-  "qwen/qwen-2-7b-instruct:free",
 ];
+
+const DEFAULT_MAX_TOKENS = 2000;
+const MIN_MAX_TOKENS = 600;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -39,6 +42,7 @@ async function tryModel(
   model: string,
   systemPrompt: string,
   userPrompt: string,
+  maxTokens = DEFAULT_MAX_TOKENS,
 ): Promise<any> {
   const res = await fetch(OPENROUTER_BASE_URL, {
     method: "POST",
@@ -55,16 +59,42 @@ async function tryModel(
         { role: "user", content: userPrompt },
       ],
       temperature: 0.7,
-      max_tokens: 4000,
+      max_tokens: maxTokens,
     }),
   });
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`${res.status}: ${text.slice(0, 200)}`);
+    const err = new Error(`${res.status}: ${text.slice(0, 300)}`) as Error & {
+      status?: number;
+      body?: string;
+    };
+    err.status = res.status;
+    err.body = text;
+    throw err;
   }
 
   return res.json();
+}
+
+// Try a model; if it returns 402 ("can only afford N tokens"), retry once with
+// a reduced max_tokens — this is the "loop again when limit reached" behavior.
+async function tryModelWithCreditRetry(
+  apiKey: string,
+  model: string,
+  systemPrompt: string,
+  userPrompt: string,
+): Promise<any> {
+  try {
+    return await tryModel(apiKey, model, systemPrompt, userPrompt, DEFAULT_MAX_TOKENS);
+  } catch (err) {
+    const e = err as Error & { status?: number; body?: string };
+    if (e.status !== 402) throw err;
+    const match = e.body?.match(/can only afford (\d+)/i);
+    const affordable = match ? Math.max(MIN_MAX_TOKENS, parseInt(match[1], 10) - 100) : MIN_MAX_TOKENS;
+    console.log(`Retrying ${model} with reduced max_tokens=${affordable}`);
+    return await tryModel(apiKey, model, systemPrompt, userPrompt, affordable);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -152,7 +182,7 @@ Deno.serve(async (req) => {
     for (const model of FREE_MODELS) {
       try {
         console.log(`Trying model: ${model}`);
-        aiData = await tryModel(apiKey, model, systemPrompt, userPrompt);
+        aiData = await tryModelWithCreditRetry(apiKey, model, systemPrompt, userPrompt);
         usedModel = model;
         console.log(`Success with model: ${model}`);
         break;

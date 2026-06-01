@@ -311,10 +311,52 @@ async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Pro
   throw new Error(`Unsupported file type: ${fileName}`);
 }
 
-async function callOpenRouterOnce(text: string, signal: AbortSignal): Promise<any> {
+const OPENROUTER_MODELS = [
+  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+  'deepseek/deepseek-chat-v3.1:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'google/gemini-2.5-flash',
+];
+
+async function callOpenRouterOnce(text: string, signal: AbortSignal, maxTokens = 3500): Promise<any> {
   const apiKey = Deno.env.get('OPENROUTER_API_KEY');
   if (!apiKey) throw new Error('OPENROUTER_API_KEY missing');
 
+  const modelErrors: string[] = [];
+  for (const model of OPENROUTER_MODELS) {
+    try {
+      return await callOpenRouterModel(apiKey, model, text, signal, maxTokens);
+    } catch (err) {
+      const e = err as Error & { status?: number; body?: string };
+      // 402 = credit limit — retry once with reduced max_tokens (loop again)
+      if (e.status === 402) {
+        const match = e.body?.match(/can only afford (\d+)/i);
+        const reduced = match ? Math.max(500, parseInt(match[1], 10) - 100) : 1500;
+        try {
+          console.log(`Retrying ${model} with reduced max_tokens=${reduced}`);
+          return await callOpenRouterModel(apiKey, model, text, signal, reduced);
+        } catch (retryErr) {
+          modelErrors.push(`${model}: ${getErrorMessage(retryErr)}`);
+          continue;
+        }
+      }
+      modelErrors.push(`${model}: ${getErrorMessage(err)}`);
+      // Try next model on 4xx; rethrow on transient (let retry wrapper handle)
+      if (e.status && TRANSIENT_STATUSES.has(e.status)) throw err;
+    }
+  }
+  const combined = new Error(`OpenRouter: all models failed. ${modelErrors.join(' | ')}`) as Error & { status?: number };
+  combined.status = 502;
+  throw combined;
+}
+
+async function callOpenRouterModel(
+  apiKey: string,
+  model: string,
+  text: string,
+  signal: AbortSignal,
+  maxTokens: number,
+): Promise<any> {
   const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -324,27 +366,31 @@ async function callOpenRouterOnce(text: string, signal: AbortSignal): Promise<an
       'X-Title': 'EduFutura',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
+      model,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: `Source document section:\n\n${text}` },
       ],
       tools: [EXTRACTION_TOOL],
       tool_choice: { type: 'function', function: { name: 'extract_curriculum' } },
-      max_tokens: 3500,
+      max_tokens: maxTokens,
     }),
     signal,
   });
 
   if (!resp.ok) {
     const txt = await resp.text();
-    const err = new Error(`OpenRouter ${resp.status}: ${txt.slice(0, 300)}`) as Error & { status?: number };
+    const err = new Error(`OpenRouter ${resp.status} (${model}): ${txt.slice(0, 300)}`) as Error & {
+      status?: number;
+      body?: string;
+    };
     err.status = resp.status;
+    err.body = txt;
     throw err;
   }
   const json = await resp.json();
   const toolCall = json.choices?.[0]?.message?.tool_calls?.[0];
-  if (!toolCall?.function?.arguments) throw new Error('OpenRouter returned no tool call');
+  if (!toolCall?.function?.arguments) throw new Error(`OpenRouter (${model}) returned no tool call`);
   return JSON.parse(toolCall.function.arguments);
 }
 
