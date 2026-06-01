@@ -1650,6 +1650,7 @@ export type Database = {
           learning_objectives: string[] | null
           subject_code: string | null
           subject_name: string
+          thumbnail_url: string | null
           total_chapters: number | null
           updated_at: string | null
         }
@@ -1666,6 +1667,7 @@ export type Database = {
           learning_objectives?: string[] | null
           subject_code?: string | null
           subject_name: string
+          thumbnail_url?: string | null
           total_chapters?: number | null
           updated_at?: string | null
         }
@@ -1682,6 +1684,7 @@ export type Database = {
           learning_objectives?: string[] | null
           subject_code?: string | null
           subject_name?: string
+          thumbnail_url?: string | null
           total_chapters?: number | null
           updated_at?: string | null
         }
