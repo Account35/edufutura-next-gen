@@ -21,6 +21,10 @@ const FREE_MODELS = [
 const DEFAULT_MAX_TOKENS = 2000;
 const MIN_MAX_TOKENS = 600;
 
+type ParsedQuestionsResult =
+  | { questions: any[]; error?: never }
+  | { questions?: never; error: string };
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -94,6 +98,67 @@ async function tryModelWithCreditRetry(
     const affordable = match ? Math.max(MIN_MAX_TOKENS, parseInt(match[1], 10) - 100) : MIN_MAX_TOKENS;
     console.log(`Retrying ${model} with reduced max_tokens=${affordable}`);
     return await tryModel(apiKey, model, systemPrompt, userPrompt, affordable);
+  }
+}
+
+function getMessageContent(aiData: any): string {
+  const content = aiData?.choices?.[0]?.message?.content;
+
+  if (typeof content === "string") return content.trim();
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (typeof part?.text === "string") return part.text;
+        if (typeof part?.content === "string") return part.content;
+        return "";
+      })
+      .join("")
+      .trim();
+  }
+
+  return "";
+}
+
+function extractJsonCandidate(rawContent: string): string {
+  const fenced = rawContent.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const content = (fenced?.[1] ?? rawContent).trim();
+
+  const objectStart = content.indexOf("{");
+  const arrayStart = content.indexOf("[");
+
+  if (arrayStart !== -1 && (objectStart === -1 || arrayStart < objectStart)) {
+    const arrayEnd = content.lastIndexOf("]");
+    if (arrayEnd > arrayStart) return content.slice(arrayStart, arrayEnd + 1);
+  }
+
+  if (objectStart !== -1) {
+    const objectEnd = content.lastIndexOf("}");
+    if (objectEnd > objectStart) return content.slice(objectStart, objectEnd + 1);
+  }
+
+  return content;
+}
+
+function parseQuestions(rawContent: string): ParsedQuestionsResult {
+  if (!rawContent.trim()) return { error: "Response content was empty" };
+
+  try {
+    const parsed = JSON.parse(extractJsonCandidate(rawContent));
+    const questions = Array.isArray(parsed) ? parsed : parsed?.questions;
+
+    if (!Array.isArray(questions)) {
+      return { error: "JSON did not contain a questions array" };
+    }
+
+    if (questions.length === 0) {
+      return { error: "Questions array was empty" };
+    }
+
+    return { questions };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { error: `Could not parse JSON: ${message}` };
   }
 }
 
@@ -174,15 +239,26 @@ Deno.serve(async (req) => {
       `Return ONLY the JSON array.`;
 
     // 6. Try free models in order
-    let aiData: any = null;
     let usedModel = "";
+    let questions: any[] | null = null;
+    let tokensUsed = 0;
     const modelErrors: string[] = [];
     const startTime = Date.now();
 
     for (const model of FREE_MODELS) {
       try {
         console.log(`Trying model: ${model}`);
-        aiData = await tryModelWithCreditRetry(apiKey, model, systemPrompt, userPrompt);
+        const aiData = await tryModelWithCreditRetry(apiKey, model, systemPrompt, userPrompt);
+        const rawContent = getMessageContent(aiData);
+        const parsed = parseQuestions(rawContent);
+
+        if (parsed.error) {
+          const preview = rawContent.slice(0, 200) || "[empty response]";
+          throw new Error(`AI returned unexpected format: ${parsed.error}. Preview: ${preview}`);
+        }
+
+        questions = parsed.questions;
+        tokensUsed = aiData?.usage?.total_tokens ?? 0;
         usedModel = model;
         console.log(`Success with model: ${model}`);
         break;
@@ -193,7 +269,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (!aiData) {
+    if (!questions) {
       return jsonResponse({
         success: false,
         error: `All models failed. ${modelErrors.join(" | ")}`,
@@ -201,23 +277,6 @@ Deno.serve(async (req) => {
     }
 
     const responseTime = Date.now() - startTime;
-    const rawContent: string = aiData?.choices?.[0]?.message?.content ?? "";
-    const tokensUsed: number = aiData?.usage?.total_tokens ?? 0;
-
-    // 7. Parse questions
-    let questions: any[];
-    try {
-      const match = rawContent.match(/\[[\s\S]*\]/);
-      const parsed = JSON.parse(match ? match[0] : rawContent);
-      if (!Array.isArray(parsed)) throw new Error("Not an array");
-      questions = parsed;
-    } catch {
-      console.error("Failed to parse AI response:", rawContent.slice(0, 500));
-      return jsonResponse({
-        success: false,
-        error: `AI returned unexpected format. Preview: ${rawContent.slice(0, 200)}`,
-      });
-    }
 
     const validated = questions.map((q: any, i: number) => ({
       question_number: i + 1,
