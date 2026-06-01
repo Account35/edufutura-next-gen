@@ -52,6 +52,7 @@ export const useAdminRole = () => {
     setLoading(true);
 
     const checkRoles = async () => {
+      const isAdminEmail = !!user.email && ADMIN_EMAILS.has(user.email);
       try {
         roleCheckTimeoutRef.current = setTimeout(() => {
           controller.abort();
@@ -85,8 +86,6 @@ export const useAdminRole = () => {
         setHasChecked(true);
       } catch (error) {
         console.error('Error checking roles:', error);
-        // On error, check email as fallback
-        const isAdminEmail = user.email === 'admin_edufutura@gmail.com' || user.email === 'ntlemezal35@gmail.com';
         setIsAdmin(isAdminEmail);
         setIsEducator(false);
         setHasChecked(true);
