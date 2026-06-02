@@ -5,10 +5,11 @@ export const useScrollProgress = (onProgressChange?: (percentage: number) => voi
 
   useEffect(() => {
     let lastUpdate = 0;
+    let lastNotified = -1;
     
     const handleScroll = () => {
       const now = Date.now();
-      if (now - lastUpdate < 100) return; // Throttle to every 100ms
+      if (now - lastUpdate < 50) return; // Throttle to every 50ms
       
       lastUpdate = now;
       
@@ -23,9 +24,9 @@ export const useScrollProgress = (onProgressChange?: (percentage: number) => voi
       
       setScrollPercentage(percentage);
       
-      // Notify parent of progress changes at 10% increments
-      if (onProgressChange && percentage % 10 === 0) {
+      if (onProgressChange && percentage !== lastNotified) {
         onProgressChange(percentage);
+        lastNotified = percentage;
       }
     };
 

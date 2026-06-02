@@ -39,7 +39,7 @@ export default function ChapterContent() {
   const [showProgressSaved, setShowProgressSaved] = useState(false);
   const [showPrereqModal, setShowPrereqModal] = useState(false);
   const [readingTime, setReadingTime] = useState({ total: 0, remaining: 0 });
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [highestScrollProgress, setHighestScrollProgress] = useState(0);
   const [timeSpent, setTimeSpent] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
   
@@ -59,16 +59,19 @@ export default function ChapterContent() {
 
   // Scroll progress tracking
   const handleProgressUpdate = useCallback((percentage: number) => {
-    if (chapter?.id) {
-      updateReadingProgress(percentage);
-      
-      // Show "Progress Saved" indicator
-      setShowProgressSaved(true);
-      setTimeout(() => setShowProgressSaved(false), 2000);
-    }
-  }, [chapter?.id, updateReadingProgress]);
+    if (!chapter?.id) return;
 
-  const scrollPercentage = useScrollProgress(handleProgressUpdate);
+    const nextProgress = Math.max(percentage, highestScrollProgress);
+    if (nextProgress <= highestScrollProgress) return;
+
+    setHighestScrollProgress(nextProgress);
+    updateReadingProgress(nextProgress);
+
+    setShowProgressSaved(true);
+    setTimeout(() => setShowProgressSaved(false), 2000);
+  }, [chapter?.id, highestScrollProgress, updateReadingProgress]);
+
+  const scrollProgress = useScrollProgress(handleProgressUpdate);
 
   // Time tracking - update database every minute
   useTimeTracking(!!chapter, useCallback(() => {
@@ -130,16 +133,10 @@ export default function ChapterContent() {
   // Scroll tracking for progress and reading position
   useEffect(() => {
     const handleScroll = () => {
-      if (!contentRef.current) return;
+      if (!chapter?.id) return;
 
       const scrollTop = window.scrollY;
-      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = scrollHeight > 0 ? Math.min(100, Math.max(0, (scrollTop / scrollHeight) * 100)) : 0;
-      
-      setScrollProgress(progress);
-
-      // Save reading position
-      sessionStorage.setItem(`reading-position-${chapter?.id}`, String(scrollTop));
+      sessionStorage.setItem(`reading-position-${chapter.id}`, String(scrollTop));
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });

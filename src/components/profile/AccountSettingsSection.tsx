@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,13 @@ interface AccountSettingsSectionProps {
   userId: string;
 }
 
+const notificationTypeMap = {
+  comm_study_tips: 'study_tips',
+  comm_content_updates: 'content_updates',
+  comm_assessment_reminders: 'assessment_reminders',
+  comm_progress_reports: 'progress_reports',
+} as const;
+
 export const AccountSettingsSection = ({ userProfile, userId }: AccountSettingsSectionProps) => {
   const { refreshProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -26,16 +33,75 @@ export const AccountSettingsSection = ({ userProfile, userId }: AccountSettingsS
     comm_progress_reports: userProfile.comm_progress_reports ?? true,
   });
 
+  useEffect(() => {
+    const loadPreferences = async () => {
+      if (!userId) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('user_notification_preferences')
+          .select('notification_type, enabled')
+          .eq('user_id', userId)
+          .in('notification_type', [
+            'study_tips',
+            'content_updates',
+            'assessment_reminders',
+            'progress_reports',
+          ]);
+
+        if (error) {
+          console.error('Failed to load notification preferences:', error);
+          return;
+        }
+
+        if (data?.length) {
+          const loadedSettings = { ...settings };
+          data.forEach((pref: any) => {
+            const matchKey = Object.keys(notificationTypeMap).find(
+              (key) => notificationTypeMap[key as keyof typeof notificationTypeMap] === pref.notification_type
+            );
+            if (matchKey) {
+              loadedSettings[matchKey as keyof typeof settings] = pref.enabled ?? loadedSettings[matchKey as keyof typeof settings];
+            }
+          });
+          setSettings(loadedSettings);
+        }
+      } catch (error) {
+        console.error('Error loading notification preferences:', error);
+      }
+    };
+
+    loadPreferences();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   const handleSave = async () => {
     try {
       setIsLoading(true);
 
-      const { error } = await supabase
+      const { error: userError } = await supabase
         .from('users')
         .update(settings)
         .eq('id', userId);
 
-      if (error) throw error;
+      if (userError) throw userError;
+
+      const notificationPreferences = Object.entries(notificationTypeMap).map(
+        ([field, notification_type]) => ({
+          user_id: userId,
+          notification_type,
+          enabled: settings[field as keyof typeof notificationTypeMap],
+          updated_at: new Date().toISOString(),
+        })
+      );
+
+      const { error: prefsError } = await supabase
+        .from('user_notification_preferences')
+        .upsert(notificationPreferences, {
+          onConflict: 'user_id,notification_type',
+        });
+
+      if (prefsError) throw prefsError;
 
       toast.success('Account settings saved successfully!');
       await refreshProfile();

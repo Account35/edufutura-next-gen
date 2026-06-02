@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useCurriculumData, Subject, Chapter } from '@/hooks/useCurriculumData';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,15 +43,27 @@ export default function SubjectLanding() {
         const chaptersData = await fetchChapters(subjectData.id);
         setChapters(chaptersData);
 
-        // TODO: Fetch actual progress from user_progress table
-        setProgress(0);
+        if (user) {
+          const { data: progressData, error: progressError } = await supabase
+            .from('user_progress')
+            .select('progress_percentage')
+            .eq('user_id', user.id)
+            .eq('subject_name', subjectData.subject_name)
+            .maybeSingle();
+
+          if (!progressError && progressData) {
+            setProgress(Number(progressData.progress_percentage) || 0);
+          } else {
+            setProgress(0);
+          }
+        } else {
+          setProgress(0);
+        }
       }
-      
-      setLoading(false);
     };
 
     loadData();
-  }, [subjectName]);
+  }, [subjectName, user]);
 
   if (loading) {
     return (
