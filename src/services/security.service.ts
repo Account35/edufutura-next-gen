@@ -60,45 +60,21 @@ export const trackFailedLogin = async (
   failureReason: string
 ): Promise<{ isLocked: boolean; remainingAttempts: number }> => {
   try {
-    // Insert failed attempt
-    await supabase.from('failed_login_attempts').insert({
-      email,
-      failure_reason: failureReason,
-      user_agent: navigator.userAgent,
+    // Server-side RPC handles insert, counting, and lockout atomically.
+    // Anon/authenticated clients cannot read or write these tables directly anymore.
+    const { data, error } = await (supabase as any).rpc('record_failed_login', {
+      p_email: email,
+      p_failure_reason: failureReason,
+      p_user_agent: navigator.userAgent,
     });
-
-    // Check recent failures (last hour)
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { count } = await supabase
-      .from('failed_login_attempts')
-      .select('*', { count: 'exact', head: true })
-      .eq('email', email)
-      .gte('attempted_at', oneHourAgo);
-
-    const failureCount = count || 0;
-    const maxAttempts = 5;
-
-    // Lock account if exceeded
-    if (failureCount >= maxAttempts) {
-      const unlockAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour lockout
-      
-      await supabase.from('account_lockouts').upsert({
-        email,
-        locked_at: new Date().toISOString(),
-        unlock_at: unlockAt.toISOString(),
-        failure_count: failureCount,
-      }, { onConflict: 'email' });
-
-      await logSecurityEvent({
-        event_type: 'account_lockout',
-        event_details: { email, failure_count: failureCount },
-        severity: 'warning',
-      });
-
-      return { isLocked: true, remainingAttempts: 0 };
+    if (error) {
+      console.error('record_failed_login error:', error);
+      return { isLocked: false, remainingAttempts: 5 };
     }
-
-    return { isLocked: false, remainingAttempts: maxAttempts - failureCount };
+    return {
+      isLocked: !!data?.is_locked,
+      remainingAttempts: data?.remaining_attempts ?? 5,
+    };
   } catch (err) {
     console.error('Failed login tracking error:', err);
     return { isLocked: false, remainingAttempts: 5 };
@@ -113,28 +89,16 @@ export const checkAccountLockout = async (email: string): Promise<{
   unlockAt?: Date;
 }> => {
   try {
-    // Use .maybeSingle() instead of .single() to avoid 406 error when no rows exist
-    const { data, error } = await supabase
-      .from('account_lockouts')
-      .select('unlock_at')
-      .eq('email', email)
-      .maybeSingle();
-
-    // If there's a PGRST116 error (no rows), just return not locked
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error checking account lockout:', error);
+    const { data, error } = await (supabase as any).rpc('check_account_locked', {
+      p_email: email,
+    });
+    if (error) {
+      console.error('check_account_locked error:', error);
       return { isLocked: false };
     }
-
-    if (data) {
-      const unlockTime = new Date(data.unlock_at);
-      if (unlockTime > new Date()) {
-        return { isLocked: true, unlockAt: unlockTime };
-      }
-      // Lockout expired, remove it
-      await supabase.from('account_lockouts').delete().eq('email', email);
+    if (data?.is_locked && data?.unlock_at) {
+      return { isLocked: true, unlockAt: new Date(data.unlock_at) };
     }
-
     return { isLocked: false };
   } catch {
     return { isLocked: false };
@@ -146,8 +110,9 @@ export const checkAccountLockout = async (email: string): Promise<{
  */
 export const clearFailedAttempts = async (email: string): Promise<void> => {
   try {
-    await supabase.from('failed_login_attempts').delete().eq('email', email);
-    await supabase.from('account_lockouts').delete().eq('email', email);
+    // Only callable by an authenticated user; server-side verifies the email
+    // matches the caller's auth.email() to prevent abuse.
+    await (supabase as any).rpc('clear_my_failed_attempts');
   } catch (err) {
     console.error('Failed to clear login attempts:', err);
   }
