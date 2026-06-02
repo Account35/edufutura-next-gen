@@ -38,7 +38,7 @@ export const StudyPreferencesForm = ({ userId }: StudyPreferencesFormProps) => {
   const [preferences, setPreferences] = useState({
     learning_style: 'visual',
     study_pace: 'moderate',
-    preferred_study_time: ['afternoon'],
+    preferred_study_time: 'afternoon',
     daily_goal_minutes: 30,
     weekly_goal_hours: 5,
     study_reminders_enabled: true,
@@ -61,9 +61,9 @@ export const StudyPreferencesForm = ({ userId }: StudyPreferencesFormProps) => {
       if (data) {
         setPreferences({
           ...data,
-          preferred_study_time: Array.isArray(data.preferred_study_time) 
-            ? data.preferred_study_time 
-            : [data.preferred_study_time]
+          preferred_study_time: typeof data.preferred_study_time === 'string'
+            ? data.preferred_study_time
+            : 'afternoon'
         });
       }
     } catch (error) {
@@ -72,18 +72,10 @@ export const StudyPreferencesForm = ({ userId }: StudyPreferencesFormProps) => {
   };
 
   const handleStudyTimeToggle = (time: string) => {
-    const currentTimes = preferences.preferred_study_time;
-    if (currentTimes.includes(time)) {
-      setPreferences({
-        ...preferences,
-        preferred_study_time: currentTimes.filter(t => t !== time)
-      });
-    } else {
-      setPreferences({
-        ...preferences,
-        preferred_study_time: [...currentTimes, time]
-      });
-    }
+    setPreferences({
+      ...preferences,
+      preferred_study_time: time,
+    });
   };
 
   const handleSave = async () => {
@@ -96,7 +88,7 @@ export const StudyPreferencesForm = ({ userId }: StudyPreferencesFormProps) => {
           user_id: userId,
           learning_style: preferences.learning_style,
           study_pace: preferences.study_pace,
-          preferred_study_time: preferences.preferred_study_time[0] || 'afternoon',
+          preferred_study_time: preferences.preferred_study_time || 'afternoon',
           daily_goal_minutes: preferences.daily_goal_minutes,
           weekly_goal_hours: preferences.weekly_goal_hours,
           study_reminders_enabled: preferences.study_reminders_enabled,
@@ -187,11 +179,11 @@ export const StudyPreferencesForm = ({ userId }: StudyPreferencesFormProps) => {
 
         {/* Preferred Study Time */}
         <div className="space-y-3">
-          <Label className="text-primary font-medium">Preferred Study Time (select all that apply)</Label>
+          <Label className="text-primary font-medium">Preferred Study Time</Label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {studyTimes.map((time) => {
               const Icon = time.icon;
-              const isSelected = preferences.preferred_study_time.includes(time.value);
+              const isSelected = preferences.preferred_study_time === time.value;
               return (
                 <button
                   key={time.value}

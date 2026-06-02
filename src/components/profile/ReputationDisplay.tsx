@@ -13,9 +13,29 @@ interface ReputationData {
   helpful_posts: number;
   quality_resources: number;
   positive_ratings: number;
-  solutions_marked?: number;
+  solutions_marked: number;
   warnings_received: number;
 }
+
+const reputationLevelMap: Record<string, string> = {
+  newcomer: 'Newcomer',
+  contributor: 'Contributor',
+  trusted: 'Trusted',
+  leader: 'Leader',
+};
+
+const normalizeReputationLevel = (level: string | null | undefined) =>
+  reputationLevelMap[level?.toLowerCase() ?? ''] || 'Newcomer';
+
+const normalizeReputationData = (data: any): ReputationData => ({
+  reputation_score: data?.reputation_score ?? 0,
+  reputation_level: normalizeReputationLevel(data?.reputation_level),
+  helpful_posts: data?.helpful_posts ?? 0,
+  quality_resources: data?.quality_resources ?? 0,
+  positive_ratings: data?.positive_ratings ?? 0,
+  solutions_marked: data?.solutions_marked ?? 0,
+  warnings_received: data?.warnings_received ?? 0,
+});
 
 interface ReputationChange {
   change_type: string;
@@ -41,6 +61,7 @@ export function ReputationDisplay({ userId }: ReputationDisplayProps) {
   const [reputation, setReputation] = useState<ReputationData | null>(null);
   const [recentChanges, setRecentChanges] = useState<ReputationChange[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchReputation();
@@ -53,21 +74,27 @@ export function ReputationDisplay({ userId }: ReputationDisplayProps) {
         .from('user_reputation')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
-      if (repError && repError.code !== 'PGRST116') throw repError;
+      if (repError) throw repError;
 
-      // If no reputation record exists, create default one
-      if (!repData) {
-        const { data: newRep } = await supabase
+      let reputationRow = repData;
+      if (!reputationRow) {
+        const { data: newRep, error: insertError } = await supabase
           .from('user_reputation')
           .insert([{ user_id: userId }])
           .select()
-          .single();
-        setReputation(newRep || null);
-      } else {
-        setReputation(repData);
+          .maybeSingle();
+
+        if (insertError) throw insertError;
+        reputationRow = newRep;
       }
+
+      if (!reputationRow) {
+        throw new Error('Could not initialize reputation profile');
+      }
+
+      setReputation(normalizeReputationData(reputationRow));
 
       // Fetch recent changes
       const { data: changes, error: changesError } = await supabase
@@ -81,14 +108,24 @@ export function ReputationDisplay({ userId }: ReputationDisplayProps) {
       setRecentChanges(changes || []);
     } catch (error: any) {
       console.error('Error fetching reputation:', error);
+      setError(error?.message || 'Failed to load reputation data');
       toast.error('Failed to load reputation data');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading || !reputation) {
+  if (loading) {
     return <Card className="p-6">Loading reputation...</Card>;
+  }
+
+  if (error || !reputation) {
+    return (
+      <Card className="p-6">
+        <p className="text-sm text-destructive">Unable to load reputation right now.</p>
+        <p className="text-sm text-muted-foreground mt-2">Please refresh the page or try again later.</p>
+      </Card>
+    );
   }
 
   const currentLevel = reputation.reputation_level as keyof typeof levelThresholds;

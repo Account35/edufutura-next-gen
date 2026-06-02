@@ -9,6 +9,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { PlatformSettingsProvider } from "@/hooks/usePlatformSettings";
 import { AdminPermissionsProvider } from "@/hooks/useAdminPermissions";
 import { AuthEventsProvider } from "@/components/AuthEventsProvider";
+import { useStudyAlerts } from '@/hooks/useStudyAlerts';
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteErrorBoundary } from "@/components/error-boundaries/RouteErrorBoundary";
 import { NetworkStatusBanner } from "@/components/NetworkStatusBanner";
@@ -111,13 +112,17 @@ import MaintenancePage from "./pages/Maintenance";
  // Layout wrapper with route progress bar
 import AdminPreviewBanner from '@/components/admin/AdminPreviewBanner';
 
-  const AppLayout = () => (
-   <>
-     <RouteProgressBar />
-     <AdminPreviewBanner />
-     <Outlet />
-   </>
- );
+  const AppLayout = () => {
+    useStudyAlerts();
+
+    return (
+      <>
+        <RouteProgressBar />
+        <AdminPreviewBanner />
+        <Outlet />
+      </>
+    );
+  };
 
 const queryClient = createQueryClient();
 

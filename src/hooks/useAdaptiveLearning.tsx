@@ -363,14 +363,15 @@ export const useAdaptiveLearning = () => {
       const avgScore = progress?.average_quiz_score || 70;
       const pace = prefs?.study_pace || 'moderate';
 
+      const normalizedLearningStyle = learningStyle === 'reading-writing' ? 'reading_writing' : learningStyle;
       return {
-        show_diagrams: learningStyle === 'visual',
-        show_audio_option: learningStyle === 'auditory',
-        show_detailed_steps: learningStyle === 'reading-writing',
-        show_interactive_elements: learningStyle === 'kinesthetic',
+        show_diagrams: normalizedLearningStyle === 'visual',
+        show_audio_option: normalizedLearningStyle === 'auditory',
+        show_detailed_steps: normalizedLearningStyle === 'reading_writing',
+        show_interactive_elements: normalizedLearningStyle === 'kinesthetic',
         difficulty_level: avgScore >= 80 ? 'advanced' : avgScore >= 60 ? 'intermediate' : 'simplified',
         estimated_completion_minutes: pace === 'slow' ? 45 : pace === 'fast' ? 20 : 30,
-        personalized_tips: getPersonalizedTips(learningStyle, avgScore)
+        personalized_tips: getPersonalizedTips(normalizedLearningStyle, avgScore)
       };
     } catch (error) {
       console.error('Error getting adaptive content:', error);
@@ -515,12 +516,15 @@ export const useAdaptiveLearning = () => {
     return "Every expert was once a beginner. Keep going!";
   };
 
-  const getExplanationStyle = (style: string) => ({
-    use_diagrams: style === 'visual',
-    conversational: style === 'auditory',
-    detailed_text: style === 'reading-writing',
-    practical_examples: style === 'kinesthetic'
-  });
+  const getExplanationStyle = (style: string) => {
+    const normalizedStyle = style === 'reading-writing' ? 'reading_writing' : style;
+    return {
+      use_diagrams: normalizedStyle === 'visual',
+      conversational: normalizedStyle === 'auditory',
+      detailed_text: normalizedStyle === 'reading_writing',
+      practical_examples: normalizedStyle === 'kinesthetic'
+    };
+  };
 
   return {
     analysis,

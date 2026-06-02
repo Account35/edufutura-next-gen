@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Clock, Target, Bookmark, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAdaptiveLearning } from '@/hooks/useAdaptiveLearning';
 import { useReadingPreferences } from '@/hooks/useReadingPreferences';
 import { toast } from 'sonner';
 
@@ -41,8 +42,10 @@ export default function ChapterContent() {
   const [readingTime, setReadingTime] = useState({ total: 0, remaining: 0 });
   const [highestScrollProgress, setHighestScrollProgress] = useState(0);
   const [timeSpent, setTimeSpent] = useState(0);
+  const [adaptiveContent, setAdaptiveContent] = useState<any | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   
+  const { getAdaptiveContent } = useAdaptiveLearning();
   const { fontSize, isDarkMode, updateFontSize, toggleDarkMode, getFontSizeClass } = useReadingPreferences();
 
   const { 
@@ -103,6 +106,16 @@ export default function ChapterContent() {
 
     loadChapterData();
   }, [subjectName, chapterNumber]);
+
+  useEffect(() => {
+    const loadAdaptiveContent = async () => {
+      if (!subjectName) return;
+      const content = await getAdaptiveContent(subjectName);
+      setAdaptiveContent(content);
+    };
+
+    loadAdaptiveContent();
+  }, [subjectName, getAdaptiveContent]);
 
   // Show prerequisite modal if chapter is locked
   useEffect(() => {
@@ -252,6 +265,56 @@ export default function ChapterContent() {
         />
 
         <div className="container mx-auto px-4 py-8 pb-24 lg:pb-8">
+          {adaptiveContent && (
+            <div className="mb-6 rounded-2xl border border-border bg-muted/10 p-4 dark:bg-muted/20">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-primary">Adaptive learning features active</p>
+                  <p className="text-sm text-muted-foreground">
+                    Your chosen learning style is being applied to this chapter.
+                  </p>
+                </div>
+                <div className="text-sm text-secondary">
+                  {adaptiveContent.difficulty_level ? `${adaptiveContent.difficulty_level} mode` : 'Personalized content'}
+                </div>
+              </div>
+              <div className="grid gap-2 mt-4 sm:grid-cols-2">
+                {adaptiveContent.show_diagrams && (
+                  <div className="rounded-xl border border-border p-3 bg-background">
+                    <p className="text-sm font-medium">Visual support enabled</p>
+                    <p className="text-xs text-muted-foreground">Diagrams and visual cues are prioritized for this chapter.</p>
+                  </div>
+                )}
+                {adaptiveContent.show_audio_option && (
+                  <div className="rounded-xl border border-border p-3 bg-background">
+                    <p className="text-sm font-medium">Audio-ready explanations</p>
+                    <p className="text-xs text-muted-foreground">Audio and narration options are recommended for your learning style.</p>
+                  </div>
+                )}
+                {adaptiveContent.show_detailed_steps && (
+                  <div className="rounded-xl border border-border p-3 bg-background">
+                    <p className="text-sm font-medium">Step-by-step guidance</p>
+                    <p className="text-xs text-muted-foreground">Detailed explanations and text-based notes are highlighted.</p>
+                  </div>
+                )}
+                {adaptiveContent.show_interactive_elements && (
+                  <div className="rounded-xl border border-border p-3 bg-background">
+                    <p className="text-sm font-medium">Interactive practice</p>
+                    <p className="text-xs text-muted-foreground">Hands-on examples and practice prompts are emphasized.</p>
+                  </div>
+                )}
+              </div>
+              {adaptiveContent.personalized_tips?.length > 0 && (
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  {adaptiveContent.personalized_tips.map((tip: string, index: number) => (
+                    <div key={index} className="rounded-xl border border-border p-3 bg-background">
+                      <p className="text-sm text-muted-foreground">{tip}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {/* Reading Time Estimate */}
           {readingTime.total > 0 && (
             <div className="mb-4 text-sm text-muted-foreground">

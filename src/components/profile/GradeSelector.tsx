@@ -12,17 +12,40 @@ interface GradeSelectorProps {
   currentSchoolId?: string;
 }
 
+interface UnfinishedCourse {
+  subject_name: string;
+}
+
 export const GradeSelector = ({ userId, currentGrade, currentSchoolId }: GradeSelectorProps) => {
   const [selectedGrade, setSelectedGrade] = useState(currentGrade);
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [unfinishedCourses, setUnfinishedCourses] = useState<UnfinishedCourse[]>([]);
 
   const grades = [6, 7, 8, 9, 10, 11, 12];
 
-  const handleGradeClick = (grade: number) => {
+  const handleGradeClick = async (grade: number) => {
     if (grade === currentGrade) return;
+
     setSelectedGrade(grade);
-    setShowConfirmation(true);
+
+    try {
+      const { data: incompleteData, error: incompleteError } = await supabase
+        .from('user_progress')
+        .select('subject_name')
+        .eq('user_id', userId)
+        .eq('is_completed', false)
+        .limit(20);
+
+      if (incompleteError) throw incompleteError;
+
+      setUnfinishedCourses(incompleteData || []);
+    } catch (error) {
+      console.error('Error checking unfinished courses:', error);
+      setUnfinishedCourses([]);
+    } finally {
+      setShowConfirmation(true);
+    }
   };
 
   const handleConfirmGradeChange = async () => {
@@ -56,15 +79,16 @@ export const GradeSelector = ({ userId, currentGrade, currentSchoolId }: GradeSe
           .update({ subjects_studying: subjectsForGrade })
           .eq('id', userId);
 
-        // Remove progress for subjects no longer offered
+        // Remove unfinished progress for subjects no longer offered
         const { data: progressData } = await supabase
           .from('user_progress')
-          .select('subject_name')
+          .select('subject_name, is_completed')
           .eq('user_id', userId);
 
         if (progressData) {
-          const progressSubjects = progressData.map(p => p.subject_name);
-          const subjectsToRemove = progressSubjects.filter(s => !subjectsForGrade.includes(s));
+          const subjectsToRemove = progressData
+            .filter((progress: any) => !subjectsForGrade.includes(progress.subject_name) && !progress.is_completed)
+            .map((progress: any) => progress.subject_name);
 
           if (subjectsToRemove.length > 0) {
             await supabase
@@ -112,9 +136,18 @@ export const GradeSelector = ({ userId, currentGrade, currentSchoolId }: GradeSe
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Change Grade Level?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Changing your grade from {currentGrade} to {selectedGrade} will update your subject list to match the subjects offered for Grade {selectedGrade}. 
-              Any subjects not available in Grade {selectedGrade} will be removed from your profile. Are you sure you want to continue?
+            <AlertDialogDescription className="space-y-3">
+              Changing your grade from {currentGrade} to {selectedGrade} will update your subject list to match the subjects offered for Grade {selectedGrade}.
+              {unfinishedCourses.length > 0 ? (
+                <div className="rounded-md border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
+                  <p className="font-semibold">Important:</p>
+                  <p>
+                    You have unfinished course progress. Only completed subject progress, badges, and certificates will remain. Any unfinished courses will not be saved, and if you return later you will need to restart those courses from scratch.
+                  </p>
+                </div>
+              ) : null}
+              <p>Any subjects not available in Grade {selectedGrade} will be removed from your profile.</p>
+              <p>Do you want to continue?</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

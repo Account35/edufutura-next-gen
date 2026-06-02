@@ -44,19 +44,22 @@ serve(async (req) => {
             content: [
               {
                 type: 'text',
-                text: `Analyze this South African grade ${gradeLevel} year-end report for academic year ${academicYear}. Extract:
-1. Pass/Fail status
-2. Overall percentage (if available)
-3. Individual subject grades with percentages
-4. Any notable achievements or comments
+                text: `Analyze this South African grade ${gradeLevel} report for academic year ${academicYear}. Extract:
+1. Report type or term (for example Term 1, Term 2, Term 3, year-end, mid-year)
+2. Pass/Fail status
+3. Overall percentage (if available)
+4. Individual subject grades with percentages
+5. Any notable achievements or comments
 
 Return the data in this JSON format:
 {
-  "passStatus": "passed" or "failed",
+  "term": "Term 1" or "Term 2" or "year-end" or null,
+  "passStatus": "passed" or "failed" or null,
   "overallPercentage": number or null,
   "subjectGrades": {"SubjectName": "percentage%", ...},
   "achievements": ["achievement1", ...],
   "analysis": "brief summary"
+}`
 }`
               },
               {
@@ -88,6 +91,7 @@ Return the data in this JSON format:
         analysisResult = JSON.parse(jsonMatch[0]);
       } else {
         analysisResult = {
+          term: null,
           passStatus: null,
           overallPercentage: null,
           subjectGrades: {},
@@ -98,6 +102,7 @@ Return the data in this JSON format:
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
       analysisResult = {
+        term: null,
         passStatus: null,
         overallPercentage: null,
         subjectGrades: {},
