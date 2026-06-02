@@ -477,7 +477,28 @@ async function callLovableAI(rawText: string): Promise<unknown> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!apiKey) throw new Error('LOVABLE_API_KEY missing');
 
-  const truncated = buildModelExcerpt(rawText);
+  // Try once with smart excerpt; on failure fall back to chunked.
+  try {
+    return await callLovableAIOnce(apiKey, buildModelExcerpt(rawText));
+  } catch (err) {
+    const chunks = splitTextIntoChunks(rawText);
+    if (chunks.length <= 1) throw err;
+    const results: any[] = [];
+    const failures: string[] = [];
+    for (let i = 0; i < chunks.length; i += 1) {
+      try {
+        results.push(await callLovableAIOnce(apiKey, chunks[i]));
+      } catch (e) {
+        failures.push(`chunk ${i + 1}: ${getErrorMessage(e)}`);
+      }
+      if (i < chunks.length - 1) await sleep(400);
+    }
+    if (results.length === 0) throw new Error(`Lovable AI chunked failed. ${failures.join('; ')}`);
+    return mergeChunkResults(results);
+  }
+}
+
+async function callLovableAIOnce(apiKey: string, text: string): Promise<unknown> {
   const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -485,10 +506,10 @@ async function callLovableAI(rawText: string): Promise<unknown> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-pro',
+      model: 'google/gemini-2.5-flash',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `Source document:\n\n${truncated}` },
+        { role: 'user', content: `Source document section:\n\n${text}` },
       ],
       tools: [EXTRACTION_TOOL],
       tool_choice: { type: 'function', function: { name: 'extract_curriculum' } },
@@ -583,33 +604,41 @@ Deno.serve(async (req) => {
       return createJsonResponse({ error: 'No text could be extracted from the file' }, 422);
     }
 
-    // OpenRouter only (per user request — no Lovable AI fallback)
-    let result: unknown;
-    let providerUsed: 'openrouter' | 'local' = 'openrouter';
+    // Provider order: Lovable AI (reliable, no shared free-tier RPM cap)
+    // -> OpenRouter free models -> local fallback. The free OpenRouter
+    // models are aggressively rate-limited upstream, so we no longer use
+    // them as the primary path.
+    let result: unknown = null;
+    let providerUsed: 'openrouter' | 'lovable' | 'local' = 'lovable';
     let aiError: string | null = null;
+    const errors: string[] = [];
 
-    if (!Deno.env.get('OPENROUTER_API_KEY')) {
-      return createJsonResponse(
-        buildLocalExtraction(rawText, file_name, 'OPENROUTER_API_KEY is not configured')
-      );
+    if (Deno.env.get('LOVABLE_API_KEY')) {
+      try {
+        result = await callLovableAI(rawText);
+        providerUsed = 'lovable';
+      } catch (err) {
+        errors.push(`Lovable AI: ${getErrorMessage(err)}`);
+      }
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 150000);
-    try {
-      result = await callOpenRouter(rawText, controller.signal);
-      clearTimeout(timeoutId);
-    } catch (err) {
-      clearTimeout(timeoutId);
-      const message = getErrorMessage(err);
-      const status = getErrorStatus(err) ?? 500;
-      if (status === 402 || status === 429) {
-        aiError = `OpenRouter returned ${status}: ${message}`;
-        result = buildLocalExtraction(rawText, file_name, aiError);
-        providerUsed = 'local';
-      } else {
-        return createJsonResponse({ error: `OpenRouter extraction failed: ${message}` }, status);
+    if (!result && Deno.env.get('OPENROUTER_API_KEY')) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+      try {
+        result = await callOpenRouter(rawText, controller.signal);
+        providerUsed = 'openrouter';
+      } catch (err) {
+        errors.push(`OpenRouter: ${getErrorMessage(err)}`);
+      } finally {
+        clearTimeout(timeoutId);
       }
+    }
+
+    if (!result) {
+      aiError = errors.join(' | ') || 'No AI provider configured';
+      result = buildLocalExtraction(rawText, file_name, aiError);
+      providerUsed = 'local';
     }
 
     return createJsonResponse({
