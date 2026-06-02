@@ -36,29 +36,35 @@ export default function SubjectLanding() {
       if (!subjectName) return;
 
       setLoading(true);
-      const subjectData = await fetchSubject(subjectName);
-      
-      if (subjectData) {
-        setSubject(subjectData);
-        const chaptersData = await fetchChapters(subjectData.id);
-        setChapters(chaptersData);
+      try {
+        const subjectData = await fetchSubject(subjectName);
 
-        if (user) {
-          const { data: progressData, error: progressError } = await supabase
-            .from('user_progress')
-            .select('progress_percentage')
-            .eq('user_id', user.id)
-            .eq('subject_name', subjectData.subject_name)
-            .maybeSingle();
+        if (subjectData) {
+          setSubject(subjectData);
+          const chaptersData = await fetchChapters(subjectData.id);
+          setChapters(chaptersData);
 
-          if (!progressError && progressData) {
-            setProgress(Number(progressData.progress_percentage) || 0);
+          if (user) {
+            const { data: progressData, error: progressError } = await supabase
+              .from('user_progress')
+              .select('progress_percentage')
+              .eq('user_id', user.id)
+              .eq('subject_name', subjectData.subject_name)
+              .maybeSingle();
+
+            if (!progressError && progressData) {
+              setProgress(Number(progressData.progress_percentage) || 0);
+            } else {
+              setProgress(0);
+            }
           } else {
             setProgress(0);
           }
-        } else {
-          setProgress(0);
         }
+      } catch (err) {
+        console.error('[SubjectLanding] Failed to load subject data', err);
+      } finally {
+        setLoading(false);
       }
     };
 
