@@ -5589,9 +5589,11 @@ export type Database = {
         }[]
       }
       calculate_reputation_level: { Args: { score: number }; Returns: string }
+      check_account_locked: { Args: { p_email: string }; Returns: Json }
       check_subscription_status: { Args: never; Returns: undefined }
       cleanup_expired_cache: { Args: never; Returns: number }
       cleanup_expired_notifications: { Args: never; Returns: number }
+      clear_my_failed_attempts: { Args: never; Returns: undefined }
       compute_cosine_similarity: {
         Args: { vector_a: number[]; vector_b: number[] }
         Returns: number
@@ -5658,6 +5660,14 @@ export type Database = {
           _user_id: string
         }
         Returns: string
+      }
+      record_failed_login: {
+        Args: {
+          p_email: string
+          p_failure_reason?: string
+          p_user_agent?: string
+        }
+        Returns: Json
       }
       refresh_materialized_views: { Args: never; Returns: undefined }
       update_template_metrics: {
