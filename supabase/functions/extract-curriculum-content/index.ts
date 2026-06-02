@@ -477,7 +477,28 @@ async function callLovableAI(rawText: string): Promise<unknown> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!apiKey) throw new Error('LOVABLE_API_KEY missing');
 
-  const truncated = buildModelExcerpt(rawText);
+  // Try once with smart excerpt; on failure fall back to chunked.
+  try {
+    return await callLovableAIOnce(apiKey, buildModelExcerpt(rawText));
+  } catch (err) {
+    const chunks = splitTextIntoChunks(rawText);
+    if (chunks.length <= 1) throw err;
+    const results: any[] = [];
+    const failures: string[] = [];
+    for (let i = 0; i < chunks.length; i += 1) {
+      try {
+        results.push(await callLovableAIOnce(apiKey, chunks[i]));
+      } catch (e) {
+        failures.push(`chunk ${i + 1}: ${getErrorMessage(e)}`);
+      }
+      if (i < chunks.length - 1) await sleep(400);
+    }
+    if (results.length === 0) throw new Error(`Lovable AI chunked failed. ${failures.join('; ')}`);
+    return mergeChunkResults(results);
+  }
+}
+
+async function callLovableAIOnce(apiKey: string, text: string): Promise<unknown> {
   const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -485,10 +506,10 @@ async function callLovableAI(rawText: string): Promise<unknown> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-pro',
+      model: 'google/gemini-2.5-flash',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `Source document:\n\n${truncated}` },
+        { role: 'user', content: `Source document section:\n\n${text}` },
       ],
       tools: [EXTRACTION_TOOL],
       tool_choice: { type: 'function', function: { name: 'extract_curriculum' } },
