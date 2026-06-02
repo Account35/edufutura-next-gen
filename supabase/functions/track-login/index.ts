@@ -12,12 +12,29 @@ serve(async (req) => {
   }
 
   try {
+    // Require authenticated caller; derive user_id from JWT to prevent IDOR
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
-
-    const { user_id } = await req.json();
+    const { data: { user: authedUser } } = await supabaseClient.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+    if (!authedUser) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    try { await req.json(); } catch { /* body optional */ }
+    const user_id = authedUser.id;
 
     console.log(`[track-login] Processing login for user: ${user_id}`);
 
