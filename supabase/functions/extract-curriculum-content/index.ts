@@ -314,7 +314,8 @@ async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Pro
 const OPENROUTER_MODELS = [
   'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
   'deepseek/deepseek-chat-v3.1:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
+  'google/gemma-2-9b-it:free',
+  'mistralai/mistral-small-3.2-24b-instruct:free',
   'google/gemini-2.5-flash',
 ];
 
@@ -341,12 +342,18 @@ async function callOpenRouterOnce(text: string, signal: AbortSignal, maxTokens =
         }
       }
       modelErrors.push(`${model}: ${getErrorMessage(err)}`);
-      // Try next model on 4xx; rethrow on transient (let retry wrapper handle)
-      if (e.status && TRANSIENT_STATUSES.has(e.status)) throw err;
+      // Always try the next model — including on 429/5xx — so a single
+      // rate-limited model doesn't stop the whole fallback chain. The outer
+      // retry wrapper will still re-run the full chain if every model fails
+      // transiently.
+      continue;
     }
   }
   const combined = new Error(`OpenRouter: all models failed. ${modelErrors.join(' | ')}`) as Error & { status?: number };
-  combined.status = 502;
+  // If every attempt was a rate-limit/transient, mark as 429 so the outer
+  // retry wrapper backs off and retries the whole chain.
+  const allTransient = modelErrors.every((m) => /\b(429|408|425|500|502|503|504)\b/.test(m));
+  combined.status = allTransient ? 429 : 502;
   throw combined;
 }
 
