@@ -604,33 +604,41 @@ Deno.serve(async (req) => {
       return createJsonResponse({ error: 'No text could be extracted from the file' }, 422);
     }
 
-    // OpenRouter only (per user request — no Lovable AI fallback)
-    let result: unknown;
-    let providerUsed: 'openrouter' | 'local' = 'openrouter';
+    // Provider order: Lovable AI (reliable, no shared free-tier RPM cap)
+    // -> OpenRouter free models -> local fallback. The free OpenRouter
+    // models are aggressively rate-limited upstream, so we no longer use
+    // them as the primary path.
+    let result: unknown = null;
+    let providerUsed: 'openrouter' | 'lovable' | 'local' = 'lovable';
     let aiError: string | null = null;
+    const errors: string[] = [];
 
-    if (!Deno.env.get('OPENROUTER_API_KEY')) {
-      return createJsonResponse(
-        buildLocalExtraction(rawText, file_name, 'OPENROUTER_API_KEY is not configured')
-      );
+    if (Deno.env.get('LOVABLE_API_KEY')) {
+      try {
+        result = await callLovableAI(rawText);
+        providerUsed = 'lovable';
+      } catch (err) {
+        errors.push(`Lovable AI: ${getErrorMessage(err)}`);
+      }
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 150000);
-    try {
-      result = await callOpenRouter(rawText, controller.signal);
-      clearTimeout(timeoutId);
-    } catch (err) {
-      clearTimeout(timeoutId);
-      const message = getErrorMessage(err);
-      const status = getErrorStatus(err) ?? 500;
-      if (status === 402 || status === 429) {
-        aiError = `OpenRouter returned ${status}: ${message}`;
-        result = buildLocalExtraction(rawText, file_name, aiError);
-        providerUsed = 'local';
-      } else {
-        return createJsonResponse({ error: `OpenRouter extraction failed: ${message}` }, status);
+    if (!result && Deno.env.get('OPENROUTER_API_KEY')) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+      try {
+        result = await callOpenRouter(rawText, controller.signal);
+        providerUsed = 'openrouter';
+      } catch (err) {
+        errors.push(`OpenRouter: ${getErrorMessage(err)}`);
+      } finally {
+        clearTimeout(timeoutId);
       }
+    }
+
+    if (!result) {
+      aiError = errors.join(' | ') || 'No AI provider configured';
+      result = buildLocalExtraction(rawText, file_name, aiError);
+      providerUsed = 'local';
     }
 
     return createJsonResponse({
