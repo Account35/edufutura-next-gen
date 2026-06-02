@@ -14,6 +14,14 @@ import { FullPageLoader } from '@/components/ui/loading';
 import { OnboardingDashboardCard } from '@/components/onboarding';
 import { toast } from 'sonner';
 
+const normalizeSubjectName = (subjectName?: string | null) =>
+  (subjectName || '').trim().toLowerCase();
+
+const getPercent = (completed: number, total: number, fallback = 0) => {
+  if (total <= 0) return fallback;
+  return Math.min(100, Math.round((completed / total) * 100));
+};
+
 export default function Dashboard() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const { isPremium, isLoading: subLoading } = useSubscription();
@@ -50,32 +58,20 @@ export default function Dashboard() {
 
      // Auto-include any published subjects matching the student's grade
      // so newly published admin subjects appear immediately for existing users.
-     let mergedSubjects: any[] = (progressData || []).map((item: any) => ({
-       ...item,
-       thumbnail_url: null,
-     }));
+     let mergedSubjects: any[] = [];
      const studentGrade = (userProfile as any)?.grade_level;
      const progressSubjectNames = Array.from(
        new Set((progressData || []).map((p: any) => (p.subject_name || '').trim()).filter(Boolean))
      );
+     let curriculumSubjects: any[] = [];
 
      if (progressSubjectNames.length > 0) {
        const { data: progressSubjects } = await supabase
          .from('curriculum_subjects')
-         .select('subject_name, thumbnail_url')
+         .select('id, subject_name, total_chapters, grade_level, thumbnail_url')
          .in('subject_name', progressSubjectNames);
 
-       const thumbnailMap = (progressSubjects || []).reduce<Record<string, string | null>>((acc, subject) => {
-         if (subject.subject_name) {
-           acc[subject.subject_name.toLowerCase()] = subject.thumbnail_url || null;
-         }
-         return acc;
-       }, {});
-
-       mergedSubjects = mergedSubjects.map((item: any) => ({
-         ...item,
-         thumbnail_url: thumbnailMap[(item.subject_name || '').toLowerCase()] || null,
-       }));
+       curriculumSubjects = [...curriculumSubjects, ...(progressSubjects || [])];
      }
 
      if (studentGrade) {
@@ -85,29 +81,103 @@ export default function Dashboard() {
          .eq('is_published', true)
          .eq('grade_level', studentGrade);
 
-       const existingNames = new Set(
-         (mergedSubjects || []).map((p: any) => (p.subject_name || '').toLowerCase())
-       );
-       const extras = (publishedSubjects || [])
-         .filter((s: any) => !existingNames.has((s.subject_name || '').toLowerCase()))
-         .map((s: any) => ({
-           id: s.id,
-           subject_name: s.subject_name,
-           progress_percentage: 0,
-           chapters_completed: 0,
-           total_chapters: s.total_chapters || 0,
-           average_quiz_score: null,
-           last_accessed: new Date().toISOString(),
-           thumbnail_url: s.thumbnail_url,
-         }));
-       mergedSubjects = [...mergedSubjects, ...extras];
+       curriculumSubjects = [...curriculumSubjects, ...(publishedSubjects || [])];
      }
 
+     const subjectsByName = curriculumSubjects.reduce<Record<string, any>>((acc, subject) => {
+       const key = normalizeSubjectName(subject.subject_name);
+       if (key && !acc[key]) acc[key] = subject;
+       return acc;
+     }, {});
+
+     const progressByName = (progressData || []).reduce<Record<string, any>>((acc, progress) => {
+       const key = normalizeSubjectName(progress.subject_name);
+       if (key) acc[key] = progress;
+       return acc;
+     }, {});
+
+     const subjectIds = Object.values(subjectsByName)
+       .map((subject: any) => subject.id)
+       .filter(Boolean);
+
+     let chapterCountsBySubjectId: Record<string, number> = {};
+     let completedCountsBySubjectId: Record<string, number> = {};
+
+     if (subjectIds.length > 0) {
+       const { data: chaptersData } = await supabase
+         .from('curriculum_chapters')
+         .select('id, subject_id')
+         .in('subject_id', subjectIds)
+         .eq('is_published', true);
+
+       const chapters = chaptersData || [];
+       chapterCountsBySubjectId = chapters.reduce<Record<string, number>>((acc, chapter: any) => {
+         if (chapter.subject_id) {
+           acc[chapter.subject_id] = (acc[chapter.subject_id] || 0) + 1;
+         }
+         return acc;
+       }, {});
+
+       const chapterIds = chapters.map((chapter: any) => chapter.id).filter(Boolean);
+       if (chapterIds.length > 0) {
+         const { data: chapterProgressData } = await supabase
+           .from('user_chapter_progress')
+           .select('chapter_id, status')
+           .eq('user_id', user!.id)
+           .in('chapter_id', chapterIds);
+
+         const chapterSubjectMap = chapters.reduce<Record<string, string>>((acc, chapter: any) => {
+           if (chapter.id && chapter.subject_id) acc[chapter.id] = chapter.subject_id;
+           return acc;
+         }, {});
+
+         completedCountsBySubjectId = (chapterProgressData || []).reduce<Record<string, number>>((acc, progress: any) => {
+           const subjectId = chapterSubjectMap[progress.chapter_id];
+           if (subjectId && progress.status === 'completed') {
+             acc[subjectId] = (acc[subjectId] || 0) + 1;
+           }
+           return acc;
+         }, {});
+       }
+     }
+
+     const allSubjectNames = new Set([
+       ...Object.keys(subjectsByName),
+       ...Object.keys(progressByName),
+     ]);
+
+     mergedSubjects = Array.from(allSubjectNames).map((subjectKey) => {
+       const curriculumSubject = subjectsByName[subjectKey];
+       const progress = progressByName[subjectKey] || {};
+       const totalChapters = curriculumSubject?.id
+         ? chapterCountsBySubjectId[curriculumSubject.id] ?? curriculumSubject.total_chapters ?? progress.total_chapters ?? 0
+         : progress.total_chapters ?? 0;
+       const completedChapters = curriculumSubject?.id
+         ? completedCountsBySubjectId[curriculumSubject.id] ?? progress.chapters_completed ?? 0
+         : progress.chapters_completed ?? 0;
+
+       return {
+         ...progress,
+         id: progress.id || curriculumSubject?.id || subjectKey,
+         subject_name: progress.subject_name || curriculumSubject?.subject_name,
+         progress_percentage: getPercent(
+           Number(completedChapters) || 0,
+           Number(totalChapters) || 0,
+           Number(progress.progress_percentage) || 0
+         ),
+         chapters_completed: Number(completedChapters) || 0,
+         total_chapters: Number(totalChapters) || 0,
+         average_quiz_score: progress.average_quiz_score ?? null,
+         last_accessed: progress.last_accessed || new Date().toISOString(),
+         thumbnail_url: curriculumSubject?.thumbnail_url || null,
+       };
+     });
+
       // Calculate overall progress
-      if (progressData && progressData.length > 0) {
-        const avgProgress = progressData.reduce((sum, item) => 
+      if (mergedSubjects.length > 0) {
+        const avgProgress = mergedSubjects.reduce((sum, item) => 
           sum + (Number(item.progress_percentage) || 0), 0
-        ) / progressData.length;
+        ) / mergedSubjects.length;
         setOverallProgress(avgProgress);
       }
 
