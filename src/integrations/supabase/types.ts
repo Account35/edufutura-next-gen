@@ -5446,6 +5446,27 @@ export type Database = {
           },
         ]
       }
+      voice_usage_log: {
+        Row: {
+          character_count: number
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          character_count?: number
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          character_count?: number
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       year_end_reports: {
         Row: {
           academic_year: number
