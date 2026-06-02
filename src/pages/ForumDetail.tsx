@@ -55,18 +55,30 @@ export default function ForumDetail() {
         .from('forums')
         .select('*')
         .eq('subject_name', decodeURIComponent(subject!))
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      
+      if (!data) {
+        console.warn(`Forum not found for subject: ${subject}`);
+        toast.error('Forum not found. Please check if the forum has been created.');
+        setLoading(false);
+        return;
+      }
+      
       setForum(data);
     } catch (error) {
       console.error('Error loading forum:', error);
       toast.error('Failed to load forum');
+      setLoading(false);
     }
   };
 
   const loadPosts = async () => {
-    if (!forum?.id) return;
+    if (!forum?.id) {
+      setLoading(false);
+      return;
+    }
     
     try {
       const { data, error } = await supabase
