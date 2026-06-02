@@ -63,7 +63,12 @@ export const ReportUpload = ({ userId }: ReportUploadProps) => {
     const advice: string[] = [];
 
     Object.entries(subjectGrades).forEach(([subject, grade]) => {
-      const percent = grade && typeof grade === 'string' ? parseGradePercent(grade) : null;
+      const percent =
+        typeof grade === 'number'
+          ? grade
+          : typeof grade === 'string' && grade
+          ? parseGradePercent(grade)
+          : null;
       if (percent === null) return;
 
       const normalized = subject.toLowerCase();
