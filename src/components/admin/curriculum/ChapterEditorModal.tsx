@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import {
   Dialog,
   DialogContent,
@@ -503,7 +504,11 @@ export const ChapterEditorModal = ({
                   <div className="space-y-2">
                     <Label>Preview</Label>
                     <div className="border rounded-lg p-4 min-h-[400px] bg-background overflow-y-auto prose prose-sm max-w-none">
-                      <div dangerouslySetInnerHTML={{ __html: formData.content_markdown }} />
+                      <div
+                        dangerouslySetInnerHTML={{
+                          __html: DOMPurify.sanitize(formData.content_markdown || ''),
+                        }}
+                      />
                     </div>
                   </div>
                 )}

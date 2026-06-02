@@ -19,7 +19,7 @@ const buildNotification = async (
   priority: 'low' | 'normal' | 'high' | 'urgent' = 'normal'
 ) => {
   try {
-    await supabase.from('notifications').insert({
+    await (supabase as any).from('notifications').insert({
       user_id: userId,
       notification_type: type,
       title,

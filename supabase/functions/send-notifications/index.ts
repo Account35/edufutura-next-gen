@@ -28,10 +28,42 @@ serve(async (req) => {
   }
 
   try {
+    // Require authenticated caller. Only admins (or service-role internal callers) may
+    // fan out notifications to arbitrary user IDs.
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const token = authHeader.replace('Bearer ', '');
+    const isServiceRole = token === serviceRoleKey;
+    if (!isServiceRole) {
+      const { data: { user: authedUser } } = await supabaseClient.auth.getUser(token);
+      if (!authedUser) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const { data: roles } = await supabaseClient
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', authedUser.id);
+      const isAdmin = (roles || []).some((r: { role: string }) => r.role === 'admin');
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     const resend = resendApiKey ? new Resend(resendApiKey) : null;

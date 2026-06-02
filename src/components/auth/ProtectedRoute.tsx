@@ -8,9 +8,6 @@ import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 // Safety timeouts to prevent infinite loading
 const PROTECTED_ROUTE_TIMEOUT_MS = 8000; // 8 seconds max wait for all checks
 
-// Known admin emails for fallback
-const ADMIN_EMAILS = ['admin_edufutura@gmail.com', 'ntlemezal35@gmail.com'];
-
 interface ProtectedRouteProps {
   children: ReactNode;
   requireOnboarding?: boolean;
@@ -108,24 +105,21 @@ export const ProtectedRoute = ({
 
     // Check admin role
     if (requireAdmin) {
-      const hasAdminAccess = isAdmin || (timedOut && user?.email && ADMIN_EMAILS.includes(user.email));
-      if (!hasAdminAccess) {
+      if (!isAdmin) {
         navigate('/dashboard', { replace: true });
         return;
       }
     }
 
     // Block non-admin users from all protected routes during maintenance
-    const hasAdminAccess = isAdmin || (user?.email && ADMIN_EMAILS.includes(user.email));
-    if (maintenanceMode && !requireAdmin && !hasAdminAccess) {
+    if (maintenanceMode && !requireAdmin && !isAdmin) {
       navigate('/maintenance', { replace: true });
       return;
     }
 
     // Check educator role (admins have educator access too)
     if (requireEducator) {
-      const hasEducatorAccess = isAdmin || isEducator || (timedOut && user?.email && ADMIN_EMAILS.includes(user.email));
-      if (!hasEducatorAccess) {
+      if (!isAdmin && !isEducator) {
         navigate('/dashboard', { replace: true });
         return;
       }

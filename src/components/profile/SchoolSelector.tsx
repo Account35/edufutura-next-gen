@@ -190,7 +190,7 @@ export const SchoolSelector = ({ userId, currentSchoolId, currentGrade }: School
           .delete()
           .eq('user_id', userId)
           .in('subject_name', subjectsToRemove)
-          .eq('is_completed', false);
+          .lt('progress_percentage', 100);
       }
 
       toast.success(`School updated to ${school.school_name}. Your subjects have been updated.`);

@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { OPENROUTER_BASE_URL, getOpenRouterHeaders, mapModel } from "../_shared/openrouter.ts";
 
 const corsHeaders = {
@@ -13,8 +14,32 @@ serve(async (req) => {
   }
 
   try {
+    // Require authenticated caller to prevent API credit abuse
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    const { data: { user: authedUser } } = await supabaseClient.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+    if (!authedUser) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const requestBody = await req.json();
-    const { query, systemPrompt, userId, careerContext, messages, temperature, max_tokens } = requestBody;
+    const { query, systemPrompt, careerContext, messages, temperature, max_tokens } = requestBody;
+    // Always use verified JWT identity; ignore any client-supplied userId
+    const userId = authedUser.id;
 
     const isMessageFormat = Array.isArray(messages) && messages.length > 0;
     

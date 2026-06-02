@@ -34,7 +34,7 @@ export const GradeSelector = ({ userId, currentGrade, currentSchoolId }: GradeSe
         .from('user_progress')
         .select('subject_name')
         .eq('user_id', userId)
-        .eq('is_completed', false)
+        .lt('progress_percentage', 100)
         .limit(20);
 
       if (incompleteError) throw incompleteError;
