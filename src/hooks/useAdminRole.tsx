@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
-const ROLE_CHECK_TIMEOUT_MS = 10000; // 10 second timeout for role checks (increase to reduce spurious timeouts)
-const ADMIN_EMAILS = new Set(['admin_edufutura@gmail.com', 'ntlemezal35@gmail.com']);
+const ROLE_CHECK_TIMEOUT_MS = 10000; // 10 second timeout for role checks
 
 export const useAdminRole = () => {
   const { user, loading: authLoading } = useAuth();
@@ -52,7 +51,6 @@ export const useAdminRole = () => {
     setLoading(true);
 
     const checkRoles = async () => {
-      const isAdminEmail = !!user.email && ADMIN_EMAILS.has(user.email);
       try {
         roleCheckTimeoutRef.current = setTimeout(() => {
           controller.abort();
@@ -74,19 +72,19 @@ export const useAdminRole = () => {
 
         if (error) {
           console.error('Error fetching roles:', error);
-          setIsAdmin(isAdminEmail);
+          setIsAdmin(false);
           setIsEducator(false);
         } else {
           const roles = data?.map(r => r.role) || [];
           console.log('[AdminRole] Roles found:', roles, 'for user:', user.email);
-          setIsAdmin(roles.includes('admin') || isAdminEmail);
+          setIsAdmin(roles.includes('admin'));
           setIsEducator(roles.includes('educator'));
         }
         lastCheckedUserId.current = user.id;
         setHasChecked(true);
       } catch (error) {
         console.error('Error checking roles:', error);
-        setIsAdmin(isAdminEmail);
+        setIsAdmin(false);
         setIsEducator(false);
         setHasChecked(true);
         lastCheckedUserId.current = user.id;
