@@ -3,11 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useCurriculumData, Subject, Chapter } from '@/hooks/useCurriculumData';
 import { useAuth } from '@/hooks/useAuth';
+import { useQuiz, Quiz } from '@/hooks/useQuiz';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calculator, Atom, Dna, Globe, Book, ChevronRight, Clock, Target } from 'lucide-react';
+import { Calculator, Atom, Dna, Globe, Book, ChevronRight, Clock, Target, FileQuestion, Play } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { CAPSBadge } from '@/components/curriculum/CAPSBadge';
 import { ProgressRing } from '@/components/ui/progress-ring';
@@ -26,8 +28,10 @@ export default function SubjectLanding() {
   const navigate = useNavigate();
   const { user, userProfile } = useAuth();
   const { fetchSubject, fetchChapters } = useCurriculumData();
+  const { fetchQuizzesBySubject } = useQuiz();
   const [subject, setSubject] = useState<Subject | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
   const [resumeChapterNumber, setResumeChapterNumber] = useState<number | null>(null);
@@ -44,6 +48,8 @@ export default function SubjectLanding() {
           setSubject(subjectData);
           const chaptersData = await fetchChapters(subjectData.id);
           setChapters(chaptersData);
+          const quizzesData = await fetchQuizzesBySubject(subjectData.subject_name);
+          setQuizzes(quizzesData);
 
           if (user) {
             const { data: progressData, error: progressError } = await supabase
@@ -216,7 +222,52 @@ export default function SubjectLanding() {
           </Button>
         </div>
 
-        {/* Chapter List - Coming in next part */}
+        {/* Quizzes Section */}
+        {quizzes.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileQuestion className="h-5 w-5 text-primary" />
+                Available Quizzes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {quizzes.map((quiz) => (
+                <div
+                  key={quiz.id}
+                  className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground truncate">{quiz.quiz_title}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {quiz.difficulty_level && (
+                        <Badge variant="outline" className="text-xs">{quiz.difficulty_level}</Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <FileQuestion className="h-3 w-3" />
+                        {quiz.total_questions} questions
+                      </span>
+                      {quiz.time_limit_minutes && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {quiz.time_limit_minutes} min
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => navigate(`/quiz/${quiz.id}`)}
+                    className="ml-3 flex-shrink-0"
+                  >
+                    <Play className="h-3 w-3 mr-1" />
+                    Start
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );

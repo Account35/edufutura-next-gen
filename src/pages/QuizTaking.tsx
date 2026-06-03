@@ -24,6 +24,66 @@ import {
 } from 'lucide-react';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 
+const awardQuizBadges = async (
+  supabase: any,
+  userId: string,
+  quiz: Quiz,
+  score: number,
+  passed: boolean
+) => {
+  // Only award badges when the quiz is passed
+  if (!passed) return;
+
+  const badges: { badge_id: string; badge_name: string; badge_type: string; badge_description: string }[] = [];
+
+  // First pass badge
+  badges.push({
+    badge_id: `quiz_passed_${quiz.id}`,
+    badge_name: 'Quiz Completed',
+    badge_type: 'completion',
+    badge_description: `Passed "${quiz.quiz_title}"`,
+  });
+
+  // High score badges
+  if (score >= 90) {
+    badges.push({
+      badge_id: `quiz_expert_${quiz.id}`,
+      badge_name: 'Quiz Expert',
+      badge_type: 'expert',
+      badge_description: `Scored ${Math.round(score)}% on "${quiz.quiz_title}"`,
+    });
+  } else if (score >= 75) {
+    badges.push({
+      badge_id: `quiz_advanced_${quiz.id}`,
+      badge_name: 'High Achiever',
+      badge_type: 'advanced',
+      badge_description: `Scored ${Math.round(score)}% on "${quiz.quiz_title}"`,
+    });
+  }
+
+  for (const badge of badges) {
+    // Check if this specific badge was already awarded
+    const { data: existing } = await supabase
+      .from('achievements')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('badge_id', badge.badge_id)
+      .maybeSingle();
+
+    if (!existing) {
+      await supabase.from('achievements').insert({
+        user_id: userId,
+        badge_id: badge.badge_id,
+        badge_name: badge.badge_name,
+        badge_type: badge.badge_type,
+        badge_description: badge.badge_description,
+        subject_name: quiz.subject_name,
+        earned_at: new Date().toISOString(),
+      });
+    }
+  }
+};
+
 export const QuizTaking = () => {
   const { quizId } = useParams();
   const navigate = useNavigate();
@@ -189,20 +249,22 @@ export const QuizTaking = () => {
           variant: gradingResult.passed ? "default" : "destructive",
         });
 
-        // Update chapter progress if quiz linked to chapter
-        if (quiz.chapter_id && user) {
+        if (user) {
           const { supabase } = await import('@/integrations/supabase/client');
-          
-          await (supabase as any)
-            .from('user_chapter_progress')
-            .upsert({
-              user_id: user.id,
-              chapter_id: quiz.chapter_id,
-              quiz_passed: gradingResult.passed,
-              quiz_score: gradingResult.score_percentage,
-              last_quiz_attempt: new Date().toISOString(),
-              status: gradingResult.passed ? 'completed' : 'in_progress',
-            });
+
+          // Update chapter progress if quiz linked to chapter
+          if (quiz.chapter_id) {
+            await (supabase as any)
+              .from('user_chapter_progress')
+              .upsert({
+                user_id: user.id,
+                chapter_id: quiz.chapter_id,
+                quiz_passed: gradingResult.passed,
+                quiz_score: gradingResult.score_percentage,
+                last_quiz_attempt: new Date().toISOString(),
+                status: gradingResult.passed ? 'completed' : 'in_progress',
+              });
+          }
 
           // Log activity
           await (supabase as any)
@@ -218,6 +280,9 @@ export const QuizTaking = () => {
                 attempt_number: submitResult.attempt_number,
               },
             });
+
+          // Award badges
+          await awardQuizBadges(supabase, user.id, quiz, gradingResult.score_percentage, gradingResult.passed);
         }
 
         navigate(`/quiz/${quizId}/results/${attemptId}`);

@@ -53,6 +53,27 @@ export interface QuizAttempt {
 export const useQuiz = () => {
   const { toast } = useToast();
 
+  const fetchQuizzesBySubject = async (subjectName: string) => {
+    try {
+      const { data, error } = await (supabase as any)
+        .from('quizzes')
+        .select('*')
+        .eq('subject_name', subjectName)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as Quiz[];
+    } catch (error: any) {
+      toast({
+        title: "Error loading quizzes",
+        description: error.message,
+        variant: "destructive",
+      });
+      return [];
+    }
+  };
+
   const fetchQuizzesByChapter = async (chapterId: string) => {
     try {
       const { data, error } = await (supabase as any)
@@ -265,6 +286,7 @@ export const useQuiz = () => {
   };
 
   return {
+    fetchQuizzesBySubject,
     fetchQuizzesByChapter,
     fetchQuiz,
     fetchQuizQuestions,
