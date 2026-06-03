@@ -43,16 +43,16 @@ export const useBookmark = (chapterId: string | null) => {
           description: "Chapter removed from your bookmarks",
         });
       } else {
-        await supabase
+        const { error: insertError } = await supabase
           .from('bookmarks')
-          .upsert({
+          .insert({
             user_id: user.id,
             chapter_id: chapterId,
             notes: '',
-          }, {
-            onConflict: 'user_id,chapter_id'
           });
-        
+
+        if (insertError) throw insertError;
+
         setIsBookmarked(true);
         toast({
           title: "Chapter bookmarked!",

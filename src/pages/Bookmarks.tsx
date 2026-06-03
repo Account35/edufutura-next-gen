@@ -91,9 +91,20 @@ export default function Bookmarks() {
       const { data, error } = await supabase
         .from('bookmarks')
         .select(`
-          *,
+          id,
+          chapter_id,
+          notes,
+          created_at,
+          updated_at,
           chapters:chapter_id (
-            *,
+            id,
+            chapter_number,
+            chapter_title,
+            chapter_description,
+            difficulty_level,
+            estimated_duration_minutes,
+            thumbnail_url,
+            subject_id,
             subjects:subject_id (
               subject_name,
               icon_name,
@@ -120,7 +131,7 @@ export default function Bookmarks() {
     // Search filter
     if (searchQuery) {
       filtered = filtered.filter(bookmark =>
-        bookmark.chapters.chapter_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (bookmark.chapters?.chapter_title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         bookmark.notes?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
@@ -128,7 +139,7 @@ export default function Bookmarks() {
     // Subject filter
     if (selectedSubject !== 'all') {
       filtered = filtered.filter(bookmark =>
-        bookmark.chapters.subjects.subject_name === selectedSubject
+        bookmark.chapters?.subjects?.subject_name === selectedSubject
       );
     }
 
@@ -155,6 +166,7 @@ export default function Bookmarks() {
       }
     });
 
+    filtered = filtered.filter((bookmark) => !!bookmark.chapters && !!bookmark.chapters.subjects);
     setFilteredBookmarks(filtered);
   };
 
@@ -246,7 +258,13 @@ export default function Bookmarks() {
     return bookmarked.toLocaleDateString();
   };
 
-  const uniqueSubjects = Array.from(new Set(bookmarks.map(b => b.chapters.subjects.subject_name)));
+const uniqueSubjects = Array.from(
+      new Set(
+        bookmarks
+          .filter((b) => b.chapters && b.chapters.subjects)
+          .map((b) => b.chapters.subjects.subject_name)
+      )
+    );
 
   if (loading) {
     return (
