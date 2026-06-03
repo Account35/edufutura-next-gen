@@ -52,7 +52,7 @@ export const GetHelpCard = ({ subjectName, chapterId, chapterTitle, isStruggling
           <Button
             variant="outline"
             className="w-full justify-start"
-            onClick={() => navigate('/community/groups')}
+            onClick={() => navigate(`/community/groups?subject=${encodeURIComponent(subjectName)}`)}
           >
             <Users className="h-4 w-4 mr-2" />
             Join Study Group

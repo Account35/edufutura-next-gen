@@ -35,6 +35,7 @@ export default function ChapterContent() {
   const { fetchSubject, fetchChapter, fetchChapters } = useCurriculumData();
   
   const [chapter, setChapter] = useState<Chapter | null>(null);
+  const [subjectId, setSubjectId] = useState<string | null>(null);
   const [allChapters, setAllChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [showProgressSaved, setShowProgressSaved] = useState(false);
@@ -53,7 +54,7 @@ export default function ChapterContent() {
     updateTimeSpent, 
     syncSubjectProgress,
     markChapterComplete 
-  } = useProgressTracking(chapter?.id || null, subjectName || null, chapter?.chapter_number || null);
+  } = useProgressTracking(chapter?.id || null, subjectId, subjectName || null, chapter?.chapter_number || null);
 
   const { isBookmarked, toggleBookmark } = useBookmark(chapter?.id || null);
   
@@ -96,6 +97,7 @@ export default function ChapterContent() {
         return;
       }
 
+      setSubjectId(subjectData.id);
       const chapterData = await fetchChapter(subjectData.id, parseInt(chapterNumber));
       const chaptersData = await fetchChapters(subjectData.id);
       

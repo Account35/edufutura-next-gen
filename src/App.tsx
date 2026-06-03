@@ -86,6 +86,9 @@ import MaintenancePage from "./pages/Maintenance";
  const PostDetail = lazy(() => import(/* webpackChunkName: "community" */ "./pages/PostDetail"));
  const Resources = lazy(() => import(/* webpackChunkName: "community" */ "./pages/Resources"));
  const StudyBuddyFinder = lazy(() => import(/* webpackChunkName: "community" */ "./pages/StudyBuddyFinder"));
+ const CommunityGroups = lazy(() => import(/* webpackChunkName: "community" */ "./pages/CommunityGroups"));
+ const CommunityGroupDetail = lazy(() => import(/* webpackChunkName: "community" */ "./pages/CommunityGroupDetail"));
+ const CommunityGroupQuizSession = lazy(() => import(/* webpackChunkName: "community" */ "./pages/CommunityGroupQuizSession"));
  const CommunityGuidelines = lazy(() => import(/* webpackChunkName: "community" */ "./pages/CommunityGuidelines"));
  const Leaderboard = lazy(() => import(/* webpackChunkName: "community" */ "./pages/Leaderboard"));
 
@@ -238,6 +241,9 @@ const router = createBrowserRouter(
        <Route path="/community/forums/:subject/post/:postId" element={<ProtectedCommunity Component={PostDetail} />} />
        <Route path="/community/resources" element={<ProtectedCommunity Component={Resources} />} />
        <Route path="/community/study-buddies" element={<ProtectedCommunity Component={StudyBuddyFinder} />} />
+       <Route path="/community/groups" element={<ProtectedCommunity Component={CommunityGroups} />} />
+       <Route path="/community/groups/:groupId" element={<ProtectedCommunity Component={CommunityGroupDetail} />} />
+       <Route path="/community/groups/:groupId/quiz/:sessionId" element={<ProtectedCommunity Component={CommunityGroupQuizSession} />} />
        <Route path="/community/guidelines" element={<Suspense fallback={<GenericPageSkeleton />}><CommunityGuidelines /></Suspense>} />
        <Route path="/community/leaderboard" element={<ProtectedCommunity Component={Leaderboard} />} />
       

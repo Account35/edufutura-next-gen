@@ -102,6 +102,7 @@ export default function Dashboard() {
 
      let chapterCountsBySubjectId: Record<string, number> = {};
      let completedCountsBySubjectId: Record<string, number> = {};
+     let chapterProgressTotalsBySubjectId: Record<string, number> = {};
 
      if (subjectIds.length > 0) {
        const { data: chaptersData } = await supabase
@@ -122,7 +123,7 @@ export default function Dashboard() {
        if (chapterIds.length > 0) {
          const { data: chapterProgressData } = await supabase
            .from('user_chapter_progress')
-           .select('chapter_id, status')
+           .select('chapter_id, status, progress_percentage')
            .eq('user_id', user!.id)
            .in('chapter_id', chapterIds);
 
@@ -133,9 +134,18 @@ export default function Dashboard() {
 
          completedCountsBySubjectId = (chapterProgressData || []).reduce<Record<string, number>>((acc, progress: any) => {
            const subjectId = chapterSubjectMap[progress.chapter_id];
-           if (subjectId && progress.status === 'completed') {
+           if (subjectId && (progress.status === 'completed' || Number(progress.progress_percentage) >= 100)) {
              acc[subjectId] = (acc[subjectId] || 0) + 1;
            }
+           return acc;
+         }, {});
+
+         chapterProgressTotalsBySubjectId = (chapterProgressData || []).reduce<Record<string, number>>((acc, progress: any) => {
+           const subjectId = chapterSubjectMap[progress.chapter_id];
+           if (!subjectId) return acc;
+
+           const progressValue = Number(progress.progress_percentage) || 0;
+           acc[subjectId] = (acc[subjectId] || 0) + progressValue;
            return acc;
          }, {});
        }
@@ -155,16 +165,19 @@ export default function Dashboard() {
        const completedChapters = curriculumSubject?.id
          ? completedCountsBySubjectId[curriculumSubject.id] ?? progress.chapters_completed ?? 0
          : progress.chapters_completed ?? 0;
+       const progressTotal = curriculumSubject?.id
+         ? chapterProgressTotalsBySubjectId[curriculumSubject.id] ?? 0
+         : Number(progress.progress_percentage) || 0;
+
+       const normalizedProgressPercentage = curriculumSubject?.id
+         ? getPercent(progressTotal, Number(totalChapters) || 0, Number(progress.progress_percentage) || 0)
+         : Number(progress.progress_percentage) || 0;
 
        return {
          ...progress,
          id: progress.id || curriculumSubject?.id || subjectKey,
          subject_name: progress.subject_name || curriculumSubject?.subject_name,
-         progress_percentage: getPercent(
-           Number(completedChapters) || 0,
-           Number(totalChapters) || 0,
-           Number(progress.progress_percentage) || 0
-         ),
+         progress_percentage: normalizedProgressPercentage,
          chapters_completed: Number(completedChapters) || 0,
          total_chapters: Number(totalChapters) || 0,
          average_quiz_score: progress.average_quiz_score ?? null,
@@ -173,17 +186,16 @@ export default function Dashboard() {
        };
      });
 
-      // Calculate overall progress
-      if (mergedSubjects.length > 0) {
-        const avgProgress = mergedSubjects.reduce((sum, item) => 
-          sum + (Number(item.progress_percentage) || 0), 0
-        ) / mergedSubjects.length;
-        setOverallProgress(avgProgress);
-      }
+     if (mergedSubjects.length > 0) {
+       const avgProgress = mergedSubjects.reduce((sum, item) =>
+         sum + (Number(item.progress_percentage) || 0), 0
+       ) / mergedSubjects.length;
+       setOverallProgress(avgProgress);
+     }
 
-      // Load recent activities
-      const { data: activityData, error: activityError } = await supabase
-        .from('activity_log')
+     // Load recent activities
+     const { data: activityData, error: activityError } = await supabase
+       .from('activity_log')
         .select('*')
         .eq('user_id', user!.id)
         .order('timestamp', { ascending: false })

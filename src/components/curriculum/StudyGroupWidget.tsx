@@ -65,7 +65,7 @@ export const StudyGroupWidget = ({ subjectName, chapterId }: StudyGroupWidgetPro
             <p className="text-sm text-muted-foreground mb-4">
               Be the first to start a study group for this chapter
             </p>
-            <Button onClick={() => navigate('/community/groups')}>
+            <Button onClick={() => navigate(`/community/groups?subject=${encodeURIComponent(subjectName)}`)}>
               <Plus className="h-4 w-4 mr-2" />
               Create Group
             </Button>

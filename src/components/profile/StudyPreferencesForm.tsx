@@ -84,15 +84,18 @@ export const StudyPreferencesForm = ({ userId }: StudyPreferencesFormProps) => {
 
       const { error } = await supabase
         .from('study_preferences')
-        .upsert([{
-          user_id: userId,
-          learning_style: preferences.learning_style,
-          study_pace: preferences.study_pace,
-          preferred_study_time: preferences.preferred_study_time || 'afternoon',
-          daily_goal_minutes: preferences.daily_goal_minutes,
-          weekly_goal_hours: preferences.weekly_goal_hours,
-          study_reminders_enabled: preferences.study_reminders_enabled,
-        }]);
+        .upsert(
+          {
+            user_id: userId,
+            learning_style: preferences.learning_style,
+            study_pace: preferences.study_pace,
+            preferred_study_time: preferences.preferred_study_time || 'afternoon',
+            daily_goal_minutes: preferences.daily_goal_minutes,
+            weekly_goal_hours: preferences.weekly_goal_hours,
+            study_reminders_enabled: preferences.study_reminders_enabled,
+          },
+          { onConflict: 'user_id' }
+        );
 
       if (error) throw error;
 

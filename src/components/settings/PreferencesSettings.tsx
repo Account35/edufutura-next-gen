@@ -52,10 +52,13 @@ export const PreferencesSettings = ({ userId }: PreferencesSettingsProps) => {
 
       const { error } = await supabase
         .from('study_preferences')
-        .upsert({
-          user_id: userId,
-          ...preferences,
-        });
+        .upsert(
+          {
+            user_id: userId,
+            ...preferences,
+          },
+          { onConflict: 'user_id' }
+        );
 
       if (error) throw error;
 

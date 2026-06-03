@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export const useProgressTracking = (
   chapterId: string | null,
+  subjectId: string | null,
   subjectName: string | null,
   chapterNumber: number | null
 ) => {
@@ -120,6 +121,7 @@ export const useProgressTracking = (
           user_id: user.id,
           chapter_id: chapterId,
           progress_percentage: percentage,
+          status: 'in_progress',
           last_accessed: new Date().toISOString(),
         }, { 
           onConflict: 'user_id,chapter_id',
@@ -182,14 +184,14 @@ export const useProgressTracking = (
   }, [user, chapterId, subjectName]);
 
   const syncSubjectProgress = useCallback(async () => {
-    if (!user || !subjectName) return;
+    if (!user || !subjectId || !subjectName) return;
 
     try {
       // Get all chapters for this subject
       const { data: allChapters } = await supabase
         .from('curriculum_chapters')
         .select('id, chapter_number')
-        .eq('subject_id', subjectName)
+        .eq('subject_id', subjectId)
         .order('chapter_number');
 
       if (!allChapters) return;
@@ -206,7 +208,10 @@ export const useProgressTracking = (
 
       const completedCount = progressData.filter(p => p.status === 'completed').length;
       const totalChapters = allChapters.length;
-      const progressPercentage = (completedCount / totalChapters) * 100;
+      const completedProgressTotal = progressData.reduce((sum, p) => sum + (p.progress_percentage || 0), 0);
+      const progressPercentage = totalChapters > 0
+        ? Math.round(completedProgressTotal / totalChapters)
+        : 0;
 
       // Find most recently accessed chapter
       const sortedProgress = progressData
@@ -225,7 +230,7 @@ export const useProgressTracking = (
           chapters_completed: completedCount,
           total_chapters: totalChapters,
           progress_percentage: progressPercentage,
-          current_chapter_number: currentChapter?.chapter_number,
+          current_chapter_number: currentChapter?.chapter_number || chapterNumber || 1,
           last_accessed: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }, { 
@@ -235,7 +240,7 @@ export const useProgressTracking = (
     } catch (error) {
       console.error('Error syncing subject progress:', error);
     }
-  }, [user, subjectName]);
+  }, [user, subjectId, subjectName, chapterNumber]);
 
   return { 
     markChapterComplete, 
