@@ -9,7 +9,8 @@ import {
   Shield, 
   MessageSquare,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  CheckCircle
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -74,6 +75,7 @@ interface AdminStatsGridProps {
     totalChapters: number;
     pendingReviews: number;
     totalForumPosts: number;
+    quizzesCompleted: number;
   };
   loading: boolean;
 }
@@ -129,6 +131,13 @@ export const AdminStatsGrid = ({ stats, loading }: AdminStatsGridProps) => {
         icon={Shield}
         loading={loading}
         colorClass="text-destructive"
+      />
+      <StatCard
+        title="Quizzes Completed"
+        value={stats.quizzesCompleted.toLocaleString()}
+        icon={CheckCircle}
+        loading={loading}
+        colorClass="text-green-600"
       />
       <StatCard
         title="Forum Posts"

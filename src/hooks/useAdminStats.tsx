@@ -10,6 +10,7 @@ interface PlatformStats {
   totalChapters: number;
   pendingReviews: number;
   totalForumPosts: number;
+  quizzesCompleted: number;
 }
 
 interface EngagementMetrics {
@@ -52,12 +53,12 @@ const fetchAdminStats = async (): Promise<AdminStatsData> => {
     supabase.from('activity_log').select('user_id', { count: 'exact', head: true }).gte('created_at', todayStart),
     supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo),
     supabase.from('users').select('id', { count: 'exact', head: true }).eq('account_type', 'premium').eq('subscription_status', 'active'),
-    supabase.from('quizzes').select('id', { count: 'exact', head: true }).eq('is_published', true),
+    (supabase as any).from('quizzes').select('id', { count: 'exact', head: true }).eq('is_published', true),
     supabase.from('curriculum_chapters').select('id', { count: 'exact', head: true }).eq('is_published', true),
     supabase.from('content_moderation_log').select('id', { count: 'exact', head: true }).eq('reviewed', false),
     supabase.from('forum_posts').select('id', { count: 'exact', head: true }),
-    supabase.from('quiz_attempts').select('id', { count: 'exact', head: true }),
-    supabase.from('quiz_attempts').select('id', { count: 'exact', head: true }).eq('is_completed', true),
+    (supabase as any).from('quiz_attempts').select('id', { count: 'exact', head: true }),
+    (supabase as any).from('quiz_attempts').select('id', { count: 'exact', head: true }).eq('is_completed', true),
   ]);
 
   const stats: PlatformStats = {
@@ -69,6 +70,7 @@ const fetchAdminStats = async (): Promise<AdminStatsData> => {
     totalChapters: chaptersResult.count || 0,
     pendingReviews: moderationResult.count || 0,
     totalForumPosts: forumResult.count || 0,
+    quizzesCompleted: completedAttemptsResult.count || 0,
   };
 
   const completionRate = totalAttemptsResult.count && totalAttemptsResult.count > 0
@@ -126,7 +128,8 @@ const defaultStats: PlatformStats = {
   activeQuizzes: 0,
   totalChapters: 0,
   pendingReviews: 0,
-  totalForumPosts: 0
+  totalForumPosts: 0,
+  quizzesCompleted: 0,
 };
 
 const defaultEngagement: EngagementMetrics = {

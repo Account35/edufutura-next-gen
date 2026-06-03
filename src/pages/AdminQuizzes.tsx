@@ -48,7 +48,7 @@ interface QuizStatsDisplay {
 
 export default function AdminQuizzes() {
   const navigate = useNavigate();
-  const { quizzes, loading: quizzesLoading, deleteQuiz, duplicateQuiz, bulkPublish, bulkUnpublish, getQuizStats } = useAdminQuizzes();
+  const { quizzes, loading: quizzesLoading, deleteQuiz, duplicateQuiz, bulkPublish, bulkUnpublish, getQuizStats, attemptCounts } = useAdminQuizzes();
 
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -284,6 +284,7 @@ export default function AdminQuizzes() {
                 <TableHead>Difficulty</TableHead>
                 <TableHead className="text-center">Questions</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-center">Completions</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -291,7 +292,7 @@ export default function AdminQuizzes() {
             <TableBody>
               {filteredQuizzes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                     {searchTerm || difficultyFilter !== 'all' || publishedFilter !== 'all' || subjectFilter !== 'all'
                       ? 'No quizzes match your filters'
                       : 'No quizzes yet. Create your first quiz to get started.'}
@@ -331,6 +332,9 @@ export default function AdminQuizzes() {
                       ) : (
                         <Badge variant="outline">Draft</Badge>
                       )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="font-medium">{attemptCounts[quiz.id] || 0}</span>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(quiz.created_at).toLocaleDateString()}

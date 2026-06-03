@@ -42,6 +42,7 @@ export const useAdminQuizzes = () => {
   const { toast } = useToast();
   const [quizzes, setQuizzes] = useState<AdminQuiz[]>([]);
   const [loading, setLoading] = useState(true);
+  const [attemptCounts, setAttemptCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     loadQuizzes();
@@ -56,7 +57,27 @@ export const useAdminQuizzes = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setQuizzes(data || []);
+      const quizList = data || [];
+      setQuizzes(quizList);
+
+      // Load attempt counts for all quizzes in one query
+      if (quizList.length > 0) {
+        const ids = quizList.map((q: AdminQuiz) => q.id);
+        const { data: attempts } = await (supabase as any)
+          .from('quiz_attempts')
+          .select('quiz_id')
+          .in('quiz_id', ids)
+          .eq('is_completed', true);
+
+        if (attempts) {
+          const counts: Record<string, number> = {};
+          (attempts as { quiz_id: string }[]).forEach(a => {
+            counts[a.quiz_id] = (counts[a.quiz_id] || 0) + 1;
+          });
+          setAttemptCounts(counts);
+        }
+      }
+
       setLoading(false);
     } catch (error: any) {
       console.error('Error loading quizzes:', error);
@@ -389,6 +410,7 @@ export const useAdminQuizzes = () => {
   return {
     quizzes,
     loading,
+    attemptCounts,
     createQuiz,
     updateQuiz,
     deleteQuiz,
