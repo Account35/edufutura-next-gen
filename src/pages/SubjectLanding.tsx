@@ -30,6 +30,7 @@ export default function SubjectLanding() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [resumeChapterNumber, setResumeChapterNumber] = useState<number | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -47,18 +48,21 @@ export default function SubjectLanding() {
           if (user) {
             const { data: progressData, error: progressError } = await supabase
               .from('user_progress')
-              .select('progress_percentage')
+              .select('progress_percentage, current_chapter_number')
               .eq('user_id', user.id)
               .eq('subject_name', subjectData.subject_name)
               .maybeSingle();
 
             if (!progressError && progressData) {
               setProgress(Number(progressData.progress_percentage) || 0);
+              setResumeChapterNumber(progressData.current_chapter_number || null);
             } else {
               setProgress(0);
+              setResumeChapterNumber(null);
             }
           } else {
             setProgress(0);
+            setResumeChapterNumber(null);
           }
         }
       } catch (err) {
@@ -196,7 +200,15 @@ export default function SubjectLanding() {
           <Button
             size="lg"
             className="bg-secondary hover:bg-secondary/90 text-white px-8 py-6 text-lg"
-            onClick={() => firstChapter && navigate(`/curriculum/${subjectName}/${firstChapter.chapter_number}`)}
+            onClick={() => {
+              const targetChapterNumber = resumeChapterNumber && chapters.some((chapter) => chapter.chapter_number === resumeChapterNumber)
+                ? resumeChapterNumber
+                : firstChapter?.chapter_number;
+
+              if (targetChapterNumber) {
+                navigate(`/curriculum/${subjectName}/${targetChapterNumber}`);
+              }
+            }}
             disabled={!firstChapter}
           >
             {progress > 0 ? 'Continue Learning' : 'Start Learning'}

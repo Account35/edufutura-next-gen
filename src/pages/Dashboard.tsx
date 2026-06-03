@@ -170,7 +170,7 @@ export default function Dashboard() {
          : Number(progress.progress_percentage) || 0;
 
        const normalizedProgressPercentage = curriculumSubject?.id
-         ? getPercent(progressTotal, Number(totalChapters) || 0, Number(progress.progress_percentage) || 0)
+         ? (Number(totalChapters) > 0 ? getPercent(progressTotal, Number(totalChapters), Number(progress.progress_percentage) || 0) : 0)
          : Number(progress.progress_percentage) || 0;
 
        return {

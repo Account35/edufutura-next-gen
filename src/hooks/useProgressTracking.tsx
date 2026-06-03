@@ -79,11 +79,28 @@ export const useProgressTracking = (
       const totalChapters = current?.total_chapters || 1;
       const progress = (newCompleted / totalChapters) * 100;
 
+      let nextChapterNumber = chapterNumber || 1;
+      if (subjectId) {
+        const { data: nextChapter } = await supabase
+          .from('curriculum_chapters')
+          .select('chapter_number')
+          .eq('subject_id', subjectId)
+          .gt('chapter_number', chapterNumber || 0)
+          .order('chapter_number', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (nextChapter?.chapter_number) {
+          nextChapterNumber = nextChapter.chapter_number;
+        }
+      }
+
       await supabase
         .from('user_progress')
         .update({
           chapters_completed: newCompleted,
           progress_percentage: progress,
+          current_chapter_number: nextChapterNumber,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', user.id)
@@ -213,13 +230,31 @@ export const useProgressTracking = (
         ? Math.round(completedProgressTotal / totalChapters)
         : 0;
 
-      // Find most recently accessed chapter
-      const sortedProgress = progressData
-        .filter(p => p.last_accessed)
-        .sort((a, b) => new Date(b.last_accessed!).getTime() - new Date(a.last_accessed!).getTime());
+      const incompleteProgress = progressData.filter(p => p.status !== 'completed');
+      let currentChapterNumber = chapterNumber || 1;
 
-      const mostRecentChapterId = sortedProgress[0]?.chapter_id;
-      const currentChapter = allChapters.find(c => c.id === mostRecentChapterId);
+      if (incompleteProgress.length > 0) {
+        const sortedIncomplete = incompleteProgress
+          .filter(p => p.last_accessed)
+          .sort((a, b) => new Date(b.last_accessed!).getTime() - new Date(a.last_accessed!).getTime());
+
+        const resumeChapterId = sortedIncomplete[0]?.chapter_id;
+        const resumeChapter = allChapters.find(c => c.id === resumeChapterId);
+
+        if (resumeChapter?.chapter_number) {
+          currentChapterNumber = resumeChapter.chapter_number;
+        } else {
+          const nextUnfinishedChapter = allChapters.find((chapter) =>
+            incompleteProgress.some((progressItem) => progressItem.chapter_id === chapter.id)
+          );
+
+          if (nextUnfinishedChapter?.chapter_number) {
+            currentChapterNumber = nextUnfinishedChapter.chapter_number;
+          }
+        }
+      } else if (allChapters.length > 0) {
+        currentChapterNumber = allChapters[allChapters.length - 1].chapter_number;
+      }
 
       // Update user_progress table
       await supabase
@@ -230,7 +265,7 @@ export const useProgressTracking = (
           chapters_completed: completedCount,
           total_chapters: totalChapters,
           progress_percentage: progressPercentage,
-          current_chapter_number: currentChapter?.chapter_number || chapterNumber || 1,
+          current_chapter_number: currentChapterNumber,
           last_accessed: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }, { 
