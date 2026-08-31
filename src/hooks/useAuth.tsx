@@ -350,6 +350,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      // A brand new sign-in must never inherit a stale "view as candidate" flag
+      if (event === 'SIGNED_IN') {
+        clearViewModeFlag();
+      }
+
       const newUser = newSession?.user ?? null;
       activeUserIdRef.current = newUser?.id ?? null;
 
