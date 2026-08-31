@@ -33,6 +33,8 @@ const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const MAX_PDF_IMPORT_BYTES = 50 * 1024 * 1024;
 const PDF_CHUNK_BYTE_TARGET = 6 * 1024 * 1024;
 const PDF_CHUNK_PAGE_TARGET = 40;
+const MAX_PAGES_PER_REQUEST = 60;
+
 const SINGLE_PDF_THRESHOLD_BYTES = 7 * 1024 * 1024;
 const ACCEPTED_EXTS = ['pdf', 'csv', 'xlsx', 'xls', 'md', 'txt'];
 
@@ -190,20 +192,35 @@ export function useCurriculumImport() {
 
     let chunks: File[] = [file];
 
-    if (ext === 'pdf' && file.size > SINGLE_PDF_THRESHOLD_BYTES) {
-      setIsUploading(true);
-      setProgress({ current: 0, total: 1, label: 'Splitting large PDF...' });
+    if (ext === 'pdf') {
+      let pageCount = 0;
       try {
-        chunks = await splitPdfIntoChunks(file);
-        toast.message(`Large PDF detected. Split into ${chunks.length} parts for AI extraction.`);
-      } catch (err: unknown) {
-        toast.error(`Could not split PDF: ${getErrorMessage(err)}`);
-        setIsUploading(false);
-        setProgress(null);
-        return null;
+        const buf = await file.arrayBuffer();
+        const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
+        pageCount = doc.getPageCount();
+      } catch {
+        pageCount = 0;
       }
-      setIsUploading(false);
+
+      const needsSplit =
+        file.size > SINGLE_PDF_THRESHOLD_BYTES || pageCount > MAX_PAGES_PER_REQUEST;
+
+      if (needsSplit) {
+        setIsUploading(true);
+        setProgress({ current: 0, total: 1, label: 'Splitting large PDF...' });
+        try {
+          chunks = await splitPdfIntoChunks(file);
+          toast.message(`Large PDF detected. Split into ${chunks.length} parts for AI extraction.`);
+        } catch (err: unknown) {
+          toast.error(`Could not split PDF: ${getErrorMessage(err)}`);
+          setIsUploading(false);
+          setProgress(null);
+          return null;
+        }
+        setIsUploading(false);
+      }
     }
+
 
     setIsExtracting(true);
     const partResults: ExtractionResult[] = [];
