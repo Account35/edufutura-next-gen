@@ -33,6 +33,8 @@ const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const MAX_PDF_IMPORT_BYTES = 50 * 1024 * 1024;
 const PDF_CHUNK_BYTE_TARGET = 6 * 1024 * 1024;
 const PDF_CHUNK_PAGE_TARGET = 40;
+const MAX_PAGES_PER_REQUEST = 60;
+
 const SINGLE_PDF_THRESHOLD_BYTES = 7 * 1024 * 1024;
 const ACCEPTED_EXTS = ['pdf', 'csv', 'xlsx', 'xls', 'md', 'txt'];
 
