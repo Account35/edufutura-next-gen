@@ -326,11 +326,14 @@ Deno.serve(async (req) => {
     }
 
     if (!questions) {
+      const last = modelErrors[modelErrors.length - 1] ?? "no models attempted";
       return jsonResponse({
         success: false,
-        error: `All models failed. ${modelErrors.join(" | ")}`,
+        error: `Quiz generation failed after trying ${modelErrors.length} model(s). Last reason — ${last}`,
+        model_errors: modelErrors,
       });
     }
+
 
     const responseTime = Date.now() - startTime;
 
