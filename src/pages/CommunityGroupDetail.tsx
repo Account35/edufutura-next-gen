@@ -21,7 +21,7 @@ interface StudyGroupDetail {
 export default function CommunityGroupDetail() {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
-  const toast = useToast();
+  const { toast } = useToast();
   const [group, setGroup] = useState<StudyGroupDetail | null>(null);
   const [loading, setLoading] = useState(true);
 

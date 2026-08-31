@@ -227,8 +227,8 @@ export default function CommunityGroups() {
               />
             </div>
 
-            <Button onClick={handleCreateGroup} loading={isCreating} className="w-full">
-              Create Study Group
+            <Button onClick={handleCreateGroup} disabled={isCreating} className="w-full">
+              {isCreating ? 'Creating…' : 'Create Study Group'}
             </Button>
           </CardContent>
         </Card>
