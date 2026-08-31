@@ -2,6 +2,7 @@
  import { useNavigate } from 'react-router-dom';
  import { useAuth } from '@/hooks/useAuth';
  import { useAdminRole } from '@/hooks/useAdminRole';
+ import { useViewMode } from '@/hooks/useViewMode';
  import { FullPageLoader } from '@/components/ui/loading';
  
  /**
@@ -10,7 +11,10 @@
  export default function Onboarding() {
    const navigate = useNavigate();
    const { user, userProfile, loading } = useAuth();
-   const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
+   const { isAdmin: isRealAdmin, isEducator: isRealEducator, loading: roleLoading } = useAdminRole();
+   const { viewingAsCandidate } = useViewMode();
+   const isAdmin = isRealAdmin && !viewingAsCandidate;
+   const isEducator = isRealEducator && !viewingAsCandidate;
  
    // Determine target route based on onboarding state
    const targetRoute = useMemo(() => {

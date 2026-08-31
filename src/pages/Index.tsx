@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { Loader2 } from "lucide-react";
 import { prefetchRoutes } from "@/hooks/usePrefetch";
+import { useViewMode } from "@/hooks/useViewMode";
 
 const INDEX_LOADING_TIMEOUT_MS = 4000; // 4 second timeout for index page loading
 
@@ -16,7 +17,11 @@ const Index = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   const { user, userProfile, loading } = useAuth();
-  const { isAdmin, isEducator, loading: roleLoading } = useAdminRole();
+  const { isAdmin: isRealAdmin, isEducator: isRealEducator, loading: roleLoading } = useAdminRole();
+  const { viewingAsCandidate } = useViewMode();
+  // While simulating the candidate experience, route like a student.
+  const isAdmin = isRealAdmin && !viewingAsCandidate;
+  const isEducator = isRealEducator && !viewingAsCandidate;
   const navigate = useNavigate();
   const hasRedirectedRef = useRef(false);
 

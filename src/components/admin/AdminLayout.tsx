@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import { setViewModeFlag } from '@/lib/view-mode';
 import { FullPageLoader } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import {
@@ -98,20 +99,12 @@ const SidebarContent = ({ currentPath, onNavigate, onSignOut }: SidebarContentPr
           variant="ghost"
           className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 min-h-[48px]"
           onClick={() => {
-            try {
-              sessionStorage.setItem('admin_preview', '1');
-              sessionStorage.setItem('admin_preview_from', currentPath || '/admin');
-              try {
-                window.dispatchEvent(new CustomEvent('adminPreviewChanged', { detail: { admin_preview: '1', from: currentPath || '/admin' } }));
-              } catch (e) {}
-            } catch (e) {
-              // ignore storage errors
-            }
+            setViewModeFlag(currentPath || '/admin');
             onNavigate('/dashboard');
           }}
         >
           <Users className="w-5 h-5 mr-3" />
-          Student View
+          View as Candidate
         </Button>
         <Button
           variant="ghost"
@@ -131,7 +124,7 @@ const ADMIN_LAYOUT_TIMEOUT_MS = 8000; // 8 second timeout for admin layout
 export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, userProfile, loading: authLoading, signOut } = useAuth();
   const { isAdmin, isEducator, loading: roleLoading, hasChecked } = useAdminRole();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasCheckedAccess, setHasCheckedAccess] = useState(false);
@@ -166,6 +159,12 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
       return;
     }
 
+    // Admins must complete onboarding like everyone else
+    if (userProfile && userProfile.onboarding_completed === false) {
+      navigate('/onboarding', { replace: true });
+      return;
+    }
+
     // Role check completed or timed out - now check access
     if (hasChecked || timedOut) {
       if (isAdmin || isEducator) {
@@ -186,7 +185,7 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
         navigate('/dashboard', { replace: true });
       }
     }
-  }, [user, isAdmin, isEducator, authLoading, roleLoading, hasChecked, navigate, timedOut]);
+  }, [user, userProfile, isAdmin, isEducator, authLoading, roleLoading, hasChecked, navigate, timedOut]);
 
   // Close sidebar on route change
   useEffect(() => {
@@ -281,13 +280,7 @@ export const AdminLayout = ({ children, title, subtitle }: AdminLayoutProps) => 
                 size="icon"
                 className="text-primary-foreground h-10 w-10"
                 onClick={() => {
-                  try {
-                    sessionStorage.setItem('admin_preview', '1');
-                    sessionStorage.setItem('admin_preview_from', location.pathname || '/admin');
-                    try {
-                      window.dispatchEvent(new CustomEvent('adminPreviewChanged', { detail: { admin_preview: '1', from: location.pathname || '/admin' } }));
-                    } catch (e) {}
-                  } catch (e) {}
+                  setViewModeFlag(location.pathname || '/admin');
                   navigate('/dashboard');
                 }}
               >
