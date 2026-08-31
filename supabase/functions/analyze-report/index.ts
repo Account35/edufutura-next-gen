@@ -60,7 +60,7 @@ Return the data in this JSON format:
   "achievements": ["achievement1", ...],
   "analysis": "brief summary"
 }`
-}`
+
               },
               {
                 type: 'image_url',
