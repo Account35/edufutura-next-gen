@@ -274,9 +274,10 @@ Deno.serve(async (req) => {
 
     const systemPrompt =
       `You are an expert South African CAPS curriculum educator for Grade ${grade} ${subject}. ` +
-      `Return ONLY a valid JSON array. No markdown, no code fences, no explanation outside the array. ` +
-      `Each element: {"question_number":number,"question_text":"string","question_type":"multiple_choice|true_false|short_answer","options":["string","string","string","string"],"correct_answer":"string","explanation":"string","difficulty_level":"${difficultyDb}","points":1}. ` +
-      `For true_false: options=[] and correct_answer="true" or "false". For short_answer: options=[].`;
+      `Return ONLY a valid JSON object of the form {"questions":[ ... ]}. No markdown, no code fences, no explanation outside the JSON. ` +
+      `Each element of "questions": {"question_number":number,"question_text":"string","question_type":"multiple_choice|true_false|short_answer","options":["string","string","string","string"],"correct_answer":"string","explanation":"string","difficulty_level":"${difficultyDb}","points":1}. ` +
+      `For true_false: options=[] and correct_answer="true" or "false". For short_answer: options=[]. ` +
+      `Keep explanations to one short sentence so the JSON stays complete.`;
 
     const userPrompt =
       `Generate exactly ${question_count} questions about "${chapter.chapter_title}" for Grade ${grade} ${subject}.\n` +
@@ -285,9 +286,11 @@ Deno.serve(async (req) => {
       `Key concepts: ${concepts}\n` +
       `Content: ${contentSnippet}\n` +
       `Learning outcomes: ${outcomes}\n\n` +
-      `Return ONLY the JSON array.`;
+      `Return ONLY the JSON object {"questions":[...]}.`;
 
-    // 6. Try free models in order
+    const maxTokens = tokensForQuestions(question_count);
+
+    // 6. Try models in order
     let usedModel = "";
     let questions: any[] | null = null;
     let tokensUsed = 0;
@@ -296,8 +299,9 @@ Deno.serve(async (req) => {
 
     for (const model of FREE_MODELS) {
       try {
-        console.log(`Trying model: ${model}`);
-        const aiData = await tryModelWithCreditRetry(apiKey, model, systemPrompt, userPrompt);
+        console.log(`Trying model: ${model} (max_tokens=${maxTokens})`);
+        const aiData = await tryModelWithCreditRetry(apiKey, model, systemPrompt, userPrompt, maxTokens);
+
         const rawContent = getMessageContent(aiData);
         const parsed = parseQuestions(rawContent);
 
