@@ -9,17 +9,20 @@ const corsHeaders = {
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-// Models tried in order until one succeeds. Free models first, paid as fallback.
+// Models tried in order until one succeeds. Reliable instruction-followers first.
 const FREE_MODELS = [
-  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "deepseek/deepseek-chat-v3.1:free",
   "meta-llama/llama-3.3-70b-instruct:free",
-  "google/gemma-2-9b-it:free",
   "google/gemini-2.5-flash",
+  "google/gemma-2-9b-it:free",
 ];
 
-const DEFAULT_MAX_TOKENS = 2000;
+// Roughly sized per question (options + explanation), with a floor/ceiling.
+function tokensForQuestions(count: number): number {
+  return Math.min(8000, Math.max(2500, (Number(count) || 10) * 320 + 800));
+}
 const MIN_MAX_TOKENS = 600;
+
 
 type ParsedQuestionsResult =
   | { questions: any[]; error?: never }
