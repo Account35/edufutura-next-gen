@@ -8,6 +8,13 @@ import {
   ReactNode,
 } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  VIEW_MODE_EVENT,
+  clearViewModeFlag,
+  readViewModeFlag,
+  readViewModeReturnPath,
+  setViewModeFlag,
+} from '@/lib/view-mode';
 
 /**
  * Session-only "view as candidate" mode for admins/educators.
@@ -17,31 +24,6 @@ import { useAuth } from '@/hooks/useAuth';
  * whenever the authenticated user changes, so a fresh login always starts
  * in the admin's true role.
  */
-
-export const VIEW_MODE_STORAGE_KEY = 'admin_preview';
-export const VIEW_MODE_RETURN_KEY = 'admin_preview_from';
-export const VIEW_MODE_EVENT = 'adminPreviewChanged';
-
-export const readViewModeFlag = (): boolean => {
-  try {
-    return sessionStorage.getItem(VIEW_MODE_STORAGE_KEY) === '1';
-  } catch {
-    return false;
-  }
-};
-
-/** Clears the candidate-view flags. Safe to call from anywhere (e.g. signOut). */
-export const clearViewModeFlag = () => {
-  try {
-    sessionStorage.removeItem(VIEW_MODE_STORAGE_KEY);
-    sessionStorage.removeItem(VIEW_MODE_RETURN_KEY);
-    window.dispatchEvent(
-      new CustomEvent(VIEW_MODE_EVENT, { detail: { admin_preview: '0' } })
-    );
-  } catch {
-    // ignore storage errors
-  }
-};
 
 interface ViewModeContextType {
   /** True while an admin is simulating the candidate experience. */
@@ -57,23 +39,13 @@ const ViewModeContext = createContext<ViewModeContextType | undefined>(undefined
 export const ViewModeProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [viewingAsCandidate, setViewingAsCandidate] = useState<boolean>(() => readViewModeFlag());
-  const [returnPath, setReturnPath] = useState<string>(() => {
-    try {
-      return sessionStorage.getItem(VIEW_MODE_RETURN_KEY) || '/admin';
-    } catch {
-      return '/admin';
-    }
-  });
+  const [returnPath, setReturnPath] = useState<string>(() => readViewModeReturnPath());
 
   // Keep in sync with flag changes triggered elsewhere in the app.
   useEffect(() => {
     const sync = () => {
       setViewingAsCandidate(readViewModeFlag());
-      try {
-        setReturnPath(sessionStorage.getItem(VIEW_MODE_RETURN_KEY) || '/admin');
-      } catch {
-        setReturnPath('/admin');
-      }
+      setReturnPath(readViewModeReturnPath());
     };
     window.addEventListener(VIEW_MODE_EVENT, sync as EventListener);
     return () => window.removeEventListener(VIEW_MODE_EVENT, sync as EventListener);
@@ -84,32 +56,18 @@ export const ViewModeProvider = ({ children }: { children: ReactNode }) => {
     if (!user) {
       if (readViewModeFlag()) clearViewModeFlag();
       setViewingAsCandidate(false);
+      setReturnPath('/admin');
     }
   }, [user?.id]);
 
   const enterCandidateView = useCallback((fromPath?: string) => {
-    try {
-      sessionStorage.setItem(VIEW_MODE_STORAGE_KEY, '1');
-      sessionStorage.setItem(VIEW_MODE_RETURN_KEY, fromPath || '/admin');
-      window.dispatchEvent(
-        new CustomEvent(VIEW_MODE_EVENT, {
-          detail: { admin_preview: '1', from: fromPath || '/admin' },
-        })
-      );
-    } catch {
-      // ignore storage errors
-    }
+    setViewModeFlag(fromPath || '/admin');
     setReturnPath(fromPath || '/admin');
     setViewingAsCandidate(true);
   }, []);
 
   const exitCandidateView = useCallback(() => {
-    let to = '/admin';
-    try {
-      to = sessionStorage.getItem(VIEW_MODE_RETURN_KEY) || '/admin';
-    } catch {
-      to = '/admin';
-    }
+    const to = readViewModeReturnPath();
     clearViewModeFlag();
     setViewingAsCandidate(false);
     setReturnPath('/admin');
