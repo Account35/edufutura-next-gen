@@ -313,7 +313,7 @@ Deno.serve(async (req) => {
         }
 
 
-        questions = parsed.questions;
+        questions = parsed.questions ?? null;
         tokensUsed = aiData?.usage?.total_tokens ?? 0;
         usedModel = model;
         console.log(`Success with model: ${model}`);
