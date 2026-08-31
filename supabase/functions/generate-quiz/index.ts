@@ -49,7 +49,7 @@ async function tryModel(
   model: string,
   systemPrompt: string,
   userPrompt: string,
-  maxTokens = DEFAULT_MAX_TOKENS,
+  maxTokens: number,
 ): Promise<any> {
   const res = await fetch(OPENROUTER_BASE_URL, {
     method: "POST",
@@ -67,6 +67,8 @@ async function tryModel(
       ],
       temperature: 0.7,
       max_tokens: maxTokens,
+      // Ask for machine-readable JSON. Models that don't support this field ignore it.
+      response_format: { type: "json_object" },
     }),
   });
 
@@ -91,9 +93,10 @@ async function tryModelWithCreditRetry(
   model: string,
   systemPrompt: string,
   userPrompt: string,
+  maxTokens: number,
 ): Promise<any> {
   try {
-    return await tryModel(apiKey, model, systemPrompt, userPrompt, DEFAULT_MAX_TOKENS);
+    return await tryModel(apiKey, model, systemPrompt, userPrompt, maxTokens);
   } catch (err) {
     const e = err as Error & { status?: number; body?: string };
     if (e.status !== 402) throw err;
@@ -104,9 +107,7 @@ async function tryModelWithCreditRetry(
   }
 }
 
-function getMessageContent(aiData: any): string {
-  const content = aiData?.choices?.[0]?.message?.content;
-
+function stringifyContent(content: any): string {
   if (typeof content === "string") return content.trim();
   if (Array.isArray(content)) {
     return content
@@ -119,8 +120,19 @@ function getMessageContent(aiData: any): string {
       .join("")
       .trim();
   }
-
   return "";
+}
+
+function getMessageContent(aiData: any): string {
+  const message = aiData?.choices?.[0]?.message;
+  // Reasoning models often leave `content` empty and put the answer in
+  // `reasoning` / `reasoning_content`, so fall back to those.
+  return (
+    stringifyContent(message?.content) ||
+    stringifyContent(message?.reasoning_content) ||
+    stringifyContent(message?.reasoning) ||
+    ""
+  );
 }
 
 function extractJsonCandidate(rawContent: string): string {
@@ -133,37 +145,71 @@ function extractJsonCandidate(rawContent: string): string {
   if (arrayStart !== -1 && (objectStart === -1 || arrayStart < objectStart)) {
     const arrayEnd = content.lastIndexOf("]");
     if (arrayEnd > arrayStart) return content.slice(arrayStart, arrayEnd + 1);
+    return content.slice(arrayStart);
   }
 
   if (objectStart !== -1) {
     const objectEnd = content.lastIndexOf("}");
     if (objectEnd > objectStart) return content.slice(objectStart, objectEnd + 1);
+    return content.slice(objectStart);
   }
 
   return content;
 }
 
+// Repair a JSON array that was cut off mid-object by a token limit:
+// keep everything up to the last complete `}` and close the array.
+function repairTruncatedArray(candidate: string): string | null {
+  const start = candidate.indexOf("[");
+  if (start === -1) return null;
+  const lastClose = candidate.lastIndexOf("}");
+  if (lastClose <= start) return null;
+  return `${candidate.slice(start, lastClose + 1)}]`;
+}
+
+function pickQuestions(parsed: any): any[] | null {
+  if (Array.isArray(parsed)) return parsed;
+  if (Array.isArray(parsed?.questions)) return parsed.questions;
+  if (parsed && typeof parsed === "object") {
+    const firstArray = Object.values(parsed).find((v) => Array.isArray(v));
+    if (Array.isArray(firstArray)) return firstArray as any[];
+  }
+  return null;
+}
+
 function parseQuestions(rawContent: string): ParsedQuestionsResult {
   if (!rawContent.trim()) return { error: "Response content was empty" };
 
+  const candidate = extractJsonCandidate(rawContent);
+  let parsed: any;
+  let parseMessage = "";
+
   try {
-    const parsed = JSON.parse(extractJsonCandidate(rawContent));
-    const questions = Array.isArray(parsed) ? parsed : parsed?.questions;
-
-    if (!Array.isArray(questions)) {
-      return { error: "JSON did not contain a questions array" };
-    }
-
-    if (questions.length === 0) {
-      return { error: "Questions array was empty" };
-    }
-
-    return { questions };
+    parsed = JSON.parse(candidate);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { error: `Could not parse JSON: ${message}` };
+    parseMessage = err instanceof Error ? err.message : String(err);
+    const repaired = repairTruncatedArray(candidate);
+    if (repaired) {
+      try {
+        parsed = JSON.parse(repaired);
+        parseMessage = "";
+      } catch {
+        // fall through to the error below
+      }
+    }
   }
+
+  if (parsed === undefined) {
+    return { error: `Could not parse JSON (response may have been truncated): ${parseMessage}` };
+  }
+
+  const questions = pickQuestions(parsed);
+  if (!questions) return { error: "JSON did not contain a questions array" };
+  if (questions.length === 0) return { error: "Questions array was empty" };
+
+  return { questions };
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
