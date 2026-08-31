@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { clearViewModeFlag } from '@/lib/view-mode';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from '@/hooks/use-toast';
 import { withTimeout } from '@/lib/async';
@@ -192,6 +193,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
+      clearViewModeFlag();
       setUser(null);
       setSession(null);
       setUserProfile(null);

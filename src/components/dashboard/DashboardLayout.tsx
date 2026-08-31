@@ -7,6 +7,7 @@ import { MobileMoreSheet } from "./MobileMoreSheet";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { OnboardingReminderBanner } from "@/components/onboarding";
 import { BackButton } from "@/components/ui/BackButton";
+import { CandidateViewBanner } from "@/components/admin/CandidateViewBanner";
 import { useLocation } from "react-router-dom";
 
 interface DashboardLayoutProps {
@@ -23,6 +24,9 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Admin viewing as candidate */}
+      <CandidateViewBanner />
+
       {/* Onboarding Reminder Banner */}
       <OnboardingReminderBanner />
 

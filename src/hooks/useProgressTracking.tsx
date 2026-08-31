@@ -217,7 +217,7 @@ export const useProgressTracking = (
       const chapterIds = allChapters.map(c => c.id);
       const { data: progressData } = await supabase
         .from('user_chapter_progress')
-        .select('chapter_id, status, time_spent_minutes, last_accessed')
+        .select('chapter_id, status, time_spent_minutes, last_accessed, progress_percentage')
         .eq('user_id', user.id)
         .in('chapter_id', chapterIds);
 

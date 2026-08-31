@@ -6,6 +6,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
  import { createBrowserRouter, RouterProvider, createRoutesFromElements, Route, Outlet, Navigate } from "react-router-dom";
 import createQueryClient from '@/lib/query-client';
 import { AuthProvider } from "@/hooks/useAuth";
+import { ViewModeProvider } from "@/hooks/useViewMode";
 import { PlatformSettingsProvider } from "@/hooks/usePlatformSettings";
 import { AdminPermissionsProvider } from "@/hooks/useAdminPermissions";
 import { AuthEventsProvider } from "@/components/AuthEventsProvider";
@@ -278,6 +279,7 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <PlatformSettingsProvider>
       <AuthProvider>
+        <ViewModeProvider>
         <AuthEventsProvider>
           <TooltipProvider>
             <PWAUpdatePrompt />
@@ -289,6 +291,7 @@ const App = () => (
             <DebugAuthOverlay />
           </TooltipProvider>
         </AuthEventsProvider>
+        </ViewModeProvider>
       </AuthProvider>
       </PlatformSettingsProvider>
     </QueryClientProvider>

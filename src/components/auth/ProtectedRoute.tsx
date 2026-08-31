@@ -178,14 +178,14 @@ export const ProtectedRoute = ({
 
 // Wrapper specifically for admin routes
 export const AdminRoute = ({ children }: { children: ReactNode }) => (
-  <ProtectedRoute requireAdmin requireOnboarding={false}>
+  <ProtectedRoute requireAdmin requireOnboarding>
     {children}
   </ProtectedRoute>
 );
 
 // Wrapper for educator routes (admins also have access)
 export const EducatorRoute = ({ children }: { children: ReactNode }) => (
-  <ProtectedRoute requireEducator requireOnboarding={false}>
+  <ProtectedRoute requireEducator requireOnboarding>
     {children}
   </ProtectedRoute>
 );
