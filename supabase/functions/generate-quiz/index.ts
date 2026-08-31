@@ -306,9 +306,12 @@ Deno.serve(async (req) => {
         const parsed = parseQuestions(rawContent);
 
         if (parsed.error) {
+          const finish = aiData?.choices?.[0]?.finish_reason ?? "unknown";
           const preview = rawContent.slice(0, 200) || "[empty response]";
-          throw new Error(`AI returned unexpected format: ${parsed.error}. Preview: ${preview}`);
+          // Retryable: move on to the next model instead of failing the request.
+          throw new Error(`unusable response (${parsed.error}; finish_reason=${finish}). Preview: ${preview}`);
         }
+
 
         questions = parsed.questions;
         tokensUsed = aiData?.usage?.total_tokens ?? 0;
