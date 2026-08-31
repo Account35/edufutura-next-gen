@@ -1,51 +1,32 @@
+# Admin Onboarding + View-as-Candidate Mode
 
-## Problem
+## What exists today (verified)
 
-The `generate-quiz` edge function fails because:
-1. `google/gemini-2.5-flash` (paid) returns **402** — only 2625 tokens affordable, but we request 4000.
-2. All `:free` fallback models return **404** — they've been deprecated/renamed on OpenRouter.
+- `Index.tsx` already routes any signed-in user with `onboarding_completed = false` to `/onboarding`, including admins — but `AdminRoute` in `ProtectedRoute.tsx` is declared with `requireOnboarding={false}`, and `AdminLayout` performs its own access check with no onboarding gate. So an admin who navigates straight to `/admin` bypasses onboarding entirely.
+- There is no "view as candidate" feature anywhere in the app (no matches for view-as / candidate mode outside unrelated audit-log text).
+- `useAdminRole` reads roles fresh from `user_roles` on every auth change; `signOut` in `useAuth` clears user/session/profile state.
 
-The user-supplied model `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` is currently available and free.
+## What will be built
 
-## Fix
+### 1. Admin onboarding is required
+- Flip `AdminRoute` and `EducatorRoute` to require onboarding, so `/admin/*` redirects to `/onboarding` when the profile is not complete.
+- Add the same guard inside `AdminLayout` (redirect to `/onboarding` when profile exists and onboarding is incomplete) so direct URL entry cannot bypass it.
+- Onboarding steps themselves are unchanged; admins complete the identical wizard, then land on `/admin`.
 
-### 1. Update model list in `supabase/functions/generate-quiz/index.ts`
+### 2. View-as-candidate mode (session only)
+- New `ViewModeProvider` context storing a single boolean in `sessionStorage` (`sessionStorage` is cleared per browser session and will be explicitly wiped on logout). No database writes, no role changes.
+- Admin dashboard sidebar/header gets a "View as Candidate" button. Activating it sets the flag and navigates to `/dashboard`.
+- While active, a persistent top banner renders on all candidate-facing pages: "Viewing as Candidate — you are an admin" with an "Exit Candidate View" button that clears the flag and returns to `/admin`.
+- While the flag is on, `useAdminRole` consumers used purely for *routing* treat the user as a student, so `Index`, `Dashboard`, and the student navigation behave exactly as they do for a candidate. The raw `isAdmin` value stays available for anything that must know the true role.
 
-Replace `FREE_MODELS` with currently-working free models (verified on OpenRouter):
+### 3. Session isolation and logout reset
+- `signOut` in `useAuth` clears the view-mode flag (plus its sessionStorage key) before/alongside clearing auth state.
+- The provider also clears the flag whenever the authenticated user id changes or becomes null, so a fresh login never inherits it.
+- On login, role resolution continues to come from the `user_roles` table (already the case) and the view flag starts false, so admins always land on `/admin`.
 
-```ts
-const FREE_MODELS = [
-  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-  "deepseek/deepseek-chat-v3.1:free",
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "google/gemma-2-9b-it:free",
-  "google/gemini-2.5-flash", // paid fallback last
-];
-```
+## Technical notes
 
-### 2. Lower `max_tokens` to stay within credit budget
-
-Change `max_tokens: 4000` → `max_tokens: 2000` so paid Gemini doesn't 402. Free models aren't credit-limited.
-
-### 3. Auto-retry on 402 with reduced max_tokens
-
-When a model returns **402** with the "can only afford X" message, parse the affordable token count from the error and retry that same model once with `max_tokens = affordable - 100`. This is the "loop again when limit reached" behavior the user asked for, applied to the credit case.
-
-### 4. Apply same fix to `extract-curriculum-content`
-
-Mirror the same model list + 402-retry logic to the extraction function (same root cause — the user reported this on the extract flow too).
-
-### 5. Keep all error responses as JSON with `success: false`
-
-Already done — preserves the precise error toast in the UI.
-
-## Files to change
-
-- `supabase/functions/generate-quiz/index.ts` — new `FREE_MODELS`, lower `max_tokens`, add 402-retry helper
-- `supabase/functions/extract-curriculum-content/index.ts` — same model list + 402-retry
-
-## Out of scope
-
-- No DB/schema changes
-- No frontend changes (the modal already surfaces precise errors)
-- No new secrets needed
+- Files touched (added-to, not removed): `src/hooks/useAuth.tsx` (clear flag on sign out), `src/components/auth/ProtectedRoute.tsx` (`requireOnboarding` on admin/educator wrappers), `src/components/admin/AdminLayout.tsx` (onboarding guard + toggle button), `src/pages/Index.tsx` and `src/pages/Onboarding.tsx` (respect view mode when choosing `/admin` vs `/dashboard`), `src/components/dashboard/DashboardLayout.tsx` (banner slot), `src/App.tsx` (mount provider).
+- New files: `src/hooks/useViewMode.tsx`, `src/components/admin/CandidateViewBanner.tsx`.
+- No schema changes, no RLS changes, no deletions of existing logic — all guards are additive conditions.
+- Note: admins in candidate view still hold the admin role at the database level, so RLS-protected admin data remains reachable; the mode is a UI/navigation simulation, not a permissions downgrade. Call this out in the banner copy.
