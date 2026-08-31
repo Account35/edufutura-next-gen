@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { clearViewModeFlag } from '@/hooks/useViewMode';
+import { clearViewModeFlag } from '@/lib/view-mode';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from '@/hooks/use-toast';
 import { withTimeout } from '@/lib/async';
