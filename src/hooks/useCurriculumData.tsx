@@ -32,6 +32,7 @@ export interface Chapter {
   learning_outcomes: string[] | null;
   content_type?: string | null;
   content_url?: string | null;
+  video_url?: string | null;
 
 }
 
