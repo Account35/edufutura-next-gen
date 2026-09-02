@@ -12,6 +12,8 @@ import { ChapterHeader } from '@/components/curriculum/ChapterHeader';
 import { ChapterSidebar } from '@/components/curriculum/ChapterSidebar';
 import { ChapterContentRenderer } from '@/components/curriculum/ChapterContentRenderer';
 import { ChapterVisualContent } from '@/components/curriculum/ChapterVisualContent';
+import { ChapterAudioNarration } from '@/components/curriculum/ChapterAudioNarration';
+import { ChapterInteractivePractice } from '@/components/curriculum/ChapterInteractivePractice';
 
 import { MobileReadingToolbar } from '@/components/curriculum/MobileReadingToolbar';
 import { ChapterNavigation } from '@/components/curriculum/ChapterNavigation';
