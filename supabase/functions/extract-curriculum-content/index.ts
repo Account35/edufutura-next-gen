@@ -641,12 +641,20 @@ Deno.serve(async (req) => {
       providerUsed = 'local';
     }
 
+    // Structuring step: organize the extracted text into clearly headed,
+    // sectioned topic modules that map onto the existing chapter schema.
+    const extracted = (result || {}) as Record<string, unknown>;
+    const structuredChapters = structureChapters(extracted.chapters);
+
     return createJsonResponse({
-      ...result,
+      ...extracted,
+      chapters: structuredChapters,
       provider_used: providerUsed,
+      structured: true,
       openrouter_error: aiError,
       ai_error: aiError,
     });
+
   } catch (err) {
     console.error('extract-curriculum-content error:', err);
     const message = getErrorMessage(err);
