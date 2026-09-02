@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, ChevronDown, ChevronRight, Circle, CircleDashed, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Chapter } from '@/hooks/useCurriculumData';
 import type { ChapterProgressState } from '@/hooks/useSubjectChapterProgress';
 
@@ -24,17 +23,12 @@ interface CourseSidebarProps {
   className?: string;
 }
 
-const parseTopics = (content: string | null): CourseTopic[] => {
-  if (!content) return [];
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = content;
-  const headings = tempDiv.querySelectorAll('h2, h3, h4');
-  return Array.from(headings).map((heading, index) => ({
-    id: `heading-${index}`,
+const readRenderedTopics = (): CourseTopic[] =>
+  Array.from(document.querySelectorAll('[id^="heading-"]')).map((heading) => ({
+    id: heading.id,
     text: heading.textContent || '',
-    level: parseInt(heading.tagName.substring(1), 10),
+    level: parseInt(heading.tagName.substring(1), 10) || 2,
   }));
-};
 
 const StatusIcon = ({ status }: { status: ChapterProgressState['status'] }) => {
   if (status === 'completed') {
@@ -59,7 +53,25 @@ export const CourseSidebar = ({
   const [collapsed, setCollapsed] = useState(false);
   const [activeTopicId, setActiveTopicId] = useState<string>('');
 
-  const topics = useMemo(() => parseTopics(currentChapterContent), [currentChapterContent]);
+  const [topics, setTopics] = useState<CourseTopic[]>([]);
+
+  // Topics are the headings already rendered by ChapterContentRenderer
+  useEffect(() => {
+    setTopics([]);
+    if (!currentChapterContent) return;
+
+    let attempts = 0;
+    const timer = window.setInterval(() => {
+      const found = readRenderedTopics();
+      attempts += 1;
+      if (found.length > 0 || attempts > 20) {
+        setTopics(found);
+        window.clearInterval(timer);
+      }
+    }, 250);
+
+    return () => window.clearInterval(timer);
+  }, [currentChapterContent, currentChapterNumber]);
 
   useEffect(() => {
     if (topics.length === 0) return;
@@ -122,7 +134,7 @@ export const CourseSidebar = ({
           </p>
         </div>
 
-        <ScrollArea className="max-h-[60vh]">
+        <div className="max-h-[60vh] overflow-y-auto overflow-x-hidden">
           <nav className="p-2">
             <ul className="space-y-1">
               {chapters.map((ch) => {
@@ -136,7 +148,7 @@ export const CourseSidebar = ({
                       }
                       aria-current={isActive ? 'page' : undefined}
                       className={cn(
-                        'w-full flex items-start gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                        'w-full min-w-0 flex items-start gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors',
                         isActive
                           ? 'bg-muted font-medium text-primary'
                           : 'text-foreground hover:bg-muted/50'
@@ -179,7 +191,7 @@ export const CourseSidebar = ({
               })}
             </ul>
           </nav>
-        </ScrollArea>
+        </div>
       </div>
     </aside>
   );
