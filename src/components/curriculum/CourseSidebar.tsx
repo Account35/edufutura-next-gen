@@ -23,12 +23,20 @@ interface CourseSidebarProps {
   className?: string;
 }
 
-const readRenderedTopics = (): CourseTopic[] =>
-  Array.from(document.querySelectorAll('[id^="heading-"]')).map((heading) => ({
-    id: heading.id,
-    text: heading.textContent || '',
-    level: parseInt(heading.tagName.substring(1), 10) || 2,
-  }));
+const readRenderedTopics = (): CourseTopic[] => {
+  const article = document.querySelector('article');
+  const headings = Array.from(article?.querySelectorAll('h2, h3, h4') ?? []);
+  return headings.map((heading, index) => {
+    // Keep the existing `heading-N` id scheme used by the content renderer/TOC
+    if (!heading.id) heading.id = `heading-${index}`;
+    return {
+      id: heading.id,
+      text: heading.textContent || '',
+      level: parseInt(heading.tagName.substring(1), 10) || 2,
+    };
+  });
+};
+
 
 const StatusIcon = ({ status }: { status: ChapterProgressState['status'] }) => {
   if (status === 'completed') {
