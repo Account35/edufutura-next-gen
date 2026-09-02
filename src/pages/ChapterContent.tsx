@@ -13,6 +13,7 @@ import { ChapterSidebar } from '@/components/curriculum/ChapterSidebar';
 import { ChapterContentRenderer } from '@/components/curriculum/ChapterContentRenderer';
 import { ChapterVisualContent } from '@/components/curriculum/ChapterVisualContent';
 import { ChapterVideoEmbed } from '@/components/curriculum/ChapterVideoEmbed';
+import { ChapterHighlighter } from '@/components/curriculum/ChapterHighlighter';
 import { ChapterAudioNarration } from '@/components/curriculum/ChapterAudioNarration';
 import { ChapterInteractivePractice } from '@/components/curriculum/ChapterInteractivePractice';
 
@@ -481,11 +482,12 @@ export default function ChapterContent() {
                 )}
 
                 {chapter.content_markdown ? (
-                  <ChapterContentRenderer 
-                    content={chapter.content_markdown} 
-                    isMarkdown={true}
-                  />
-
+                  <ChapterHighlighter chapterId={chapter.id}>
+                    <ChapterContentRenderer 
+                      content={chapter.content_markdown} 
+                      isMarkdown={true}
+                    />
+                  </ChapterHighlighter>
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
                     <p>Chapter content coming soon...</p>
