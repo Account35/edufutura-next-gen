@@ -12,6 +12,8 @@ import { ChapterHeader } from '@/components/curriculum/ChapterHeader';
 import { ChapterSidebar } from '@/components/curriculum/ChapterSidebar';
 import { ChapterContentRenderer } from '@/components/curriculum/ChapterContentRenderer';
 import { ChapterVisualContent } from '@/components/curriculum/ChapterVisualContent';
+import { ChapterAudioNarration } from '@/components/curriculum/ChapterAudioNarration';
+import { ChapterInteractivePractice } from '@/components/curriculum/ChapterInteractivePractice';
 
 import { MobileReadingToolbar } from '@/components/curriculum/MobileReadingToolbar';
 import { ChapterNavigation } from '@/components/curriculum/ChapterNavigation';
@@ -459,6 +461,18 @@ export default function ChapterContent() {
                     chapterTitle={chapter.chapter_title}
                   />
                 )}
+                {/* Auditory learners: narrate the same existing text content */}
+                {adaptiveContent?.show_audio_option && (
+                  <ChapterAudioNarration
+                    content={chapter.content_markdown}
+                    chapterTitle={chapter.chapter_title}
+                  />
+                )}
+                {/* Kinesthetic learners: existing interactive practice content */}
+                {adaptiveContent?.show_interactive_elements && (
+                  <ChapterInteractivePractice chapterId={chapter.id} subjectName={subjectName} />
+                )}
+
                 {chapter.content_markdown ? (
                   <ChapterContentRenderer 
                     content={chapter.content_markdown} 
