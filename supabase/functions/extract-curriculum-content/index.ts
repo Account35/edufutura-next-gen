@@ -3,6 +3,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import * as XLSX from 'https://esm.sh/xlsx@0.18.5';
 import { extractText, getDocumentProxy } from 'https://esm.sh/unpdf@0.12.1';
+import { structureChapters } from './structuring.ts';
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -641,12 +643,20 @@ Deno.serve(async (req) => {
       providerUsed = 'local';
     }
 
+    // Structuring step: organize the extracted text into clearly headed,
+    // sectioned topic modules that map onto the existing chapter schema.
+    const extracted = (result || {}) as Record<string, unknown>;
+    const structuredChapters = structureChapters(extracted.chapters);
+
     return createJsonResponse({
-      ...result,
+      ...extracted,
+      chapters: structuredChapters,
       provider_used: providerUsed,
+      structured: true,
       openrouter_error: aiError,
       ai_error: aiError,
     });
+
   } catch (err) {
     console.error('extract-curriculum-content error:', err);
     const message = getErrorMessage(err);
