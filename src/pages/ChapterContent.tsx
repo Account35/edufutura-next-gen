@@ -12,6 +12,7 @@ import { ChapterHeader } from '@/components/curriculum/ChapterHeader';
 import { ChapterSidebar } from '@/components/curriculum/ChapterSidebar';
 import { ChapterContentRenderer } from '@/components/curriculum/ChapterContentRenderer';
 import { ChapterVisualContent } from '@/components/curriculum/ChapterVisualContent';
+import { ChapterVideoEmbed } from '@/components/curriculum/ChapterVideoEmbed';
 import { ChapterAudioNarration } from '@/components/curriculum/ChapterAudioNarration';
 import { ChapterInteractivePractice } from '@/components/curriculum/ChapterInteractivePractice';
 
@@ -452,6 +453,12 @@ export default function ChapterContent() {
                 style={{ lineHeight: '1.8' }}
               >
                 {/* Visual learners: show the chapter's existing media first */}
+                {adaptiveContent?.show_diagrams && (
+                  <ChapterVideoEmbed
+                    videoUrl={(chapter as any).video_url}
+                    chapterTitle={chapter.chapter_title}
+                  />
+                )}
                 {adaptiveContent?.show_diagrams && (
                   <ChapterVisualContent
                     contentType={chapter.content_type}
