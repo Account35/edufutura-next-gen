@@ -11,6 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { ChapterHeader } from '@/components/curriculum/ChapterHeader';
 import { ChapterSidebar } from '@/components/curriculum/ChapterSidebar';
 import { ChapterContentRenderer } from '@/components/curriculum/ChapterContentRenderer';
+import { ChapterVisualContent } from '@/components/curriculum/ChapterVisualContent';
+
 import { MobileReadingToolbar } from '@/components/curriculum/MobileReadingToolbar';
 import { ChapterNavigation } from '@/components/curriculum/ChapterNavigation';
 import { ChapterDiscussionSection } from '@/components/curriculum/ChapterDiscussionSection';
@@ -447,11 +449,22 @@ export default function ChapterContent() {
                 )}
                 style={{ lineHeight: '1.8' }}
               >
+                {/* Visual learners: show the chapter's existing media first */}
+                {adaptiveContent?.show_diagrams && (
+                  <ChapterVisualContent
+                    contentType={chapter.content_type}
+                    contentUrl={chapter.content_url}
+                    thumbnailUrl={chapter.thumbnail_url}
+                    contentMarkdown={chapter.content_markdown}
+                    chapterTitle={chapter.chapter_title}
+                  />
+                )}
                 {chapter.content_markdown ? (
                   <ChapterContentRenderer 
                     content={chapter.content_markdown} 
                     isMarkdown={true}
                   />
+
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
                     <p>Chapter content coming soon...</p>
