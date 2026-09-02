@@ -447,11 +447,22 @@ export default function ChapterContent() {
                 )}
                 style={{ lineHeight: '1.8' }}
               >
+                {/* Visual learners: show the chapter's existing media first */}
+                {adaptiveContent?.show_diagrams && (
+                  <ChapterVisualContent
+                    contentType={(chapter as any).content_type}
+                    contentUrl={(chapter as any).content_url}
+                    thumbnailUrl={chapter.thumbnail_url}
+                    contentMarkdown={chapter.content_markdown}
+                    chapterTitle={chapter.chapter_title}
+                  />
+                )}
                 {chapter.content_markdown ? (
                   <ChapterContentRenderer 
                     content={chapter.content_markdown} 
                     isMarkdown={true}
                   />
+
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
                     <p>Chapter content coming soon...</p>
