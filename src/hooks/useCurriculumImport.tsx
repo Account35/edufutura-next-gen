@@ -12,6 +12,7 @@ export interface ExtractedChapter {
   estimated_duration_minutes?: number;
   caps_code?: string;
   key_concepts?: string[];
+  video_url?: string | null;
 }
 
 export interface ExtractionResult {
