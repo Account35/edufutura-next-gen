@@ -425,7 +425,10 @@ export default function ChapterContent() {
               <ChapterSidebar content={chapter.content_markdown} />
             )}
           </div>
+          </div>
+          </div>
         </div>
+
 
         {/* Mobile Reading Toolbar */}
         <MobileReadingToolbar
