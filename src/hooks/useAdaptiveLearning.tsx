@@ -363,7 +363,13 @@ export const useAdaptiveLearning = () => {
       const avgScore = progress?.average_quiz_score || 70;
       const pace = prefs?.study_pace || 'moderate';
 
-      const normalizedLearningStyle = learningStyle === 'reading-writing' ? 'reading_writing' : learningStyle;
+      // Different selectors store the same style under slightly different values
+      const normalizedLearningStyle = ['reading', 'reading-writing', 'reading_writing', 'readingWriting'].includes(
+        learningStyle
+      )
+        ? 'reading_writing'
+        : learningStyle;
+
       return {
         show_diagrams: normalizedLearningStyle === 'visual',
         show_audio_option: normalizedLearningStyle === 'auditory',
