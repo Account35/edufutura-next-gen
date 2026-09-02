@@ -452,8 +452,8 @@ export default function ChapterContent() {
                 {/* Visual learners: show the chapter's existing media first */}
                 {adaptiveContent?.show_diagrams && (
                   <ChapterVisualContent
-                    contentType={(chapter as any).content_type}
-                    contentUrl={(chapter as any).content_url}
+                    contentType={chapter.content_type}
+                    contentUrl={chapter.content_url}
                     thumbnailUrl={chapter.thumbnail_url}
                     contentMarkdown={chapter.content_markdown}
                     chapterTitle={chapter.chapter_title}
