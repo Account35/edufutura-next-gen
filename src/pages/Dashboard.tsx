@@ -12,6 +12,7 @@ import { UpgradeBanner } from '@/components/subscription/UpgradeBanner';
 import { SubscriptionModal } from '@/components/subscription/SubscriptionModal';
 import { FullPageLoader } from '@/components/ui/loading';
 import { OnboardingDashboardCard } from '@/components/onboarding';
+import { StudyNotesPanel } from '@/components/dashboard/StudyNotesPanel';
 import { toast } from 'sonner';
 
 const normalizeSubjectName = (subjectName?: string | null) =>
@@ -320,6 +321,9 @@ export default function Dashboard() {
 
             {/* Recent Activity */}
             <ActivityFeed activities={dashboardData.activities} />
+
+            {/* Saved highlights and study notes */}
+            <StudyNotesPanel />
           </div>
         </div>
       </div>

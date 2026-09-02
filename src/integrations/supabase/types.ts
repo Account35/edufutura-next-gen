@@ -4448,6 +4448,47 @@ export type Database = {
         }
         Relationships: []
       }
+      study_highlights: {
+        Row: {
+          chapter_id: string
+          color: string
+          created_at: string
+          highlighted_text: string
+          id: string
+          note: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chapter_id: string
+          color?: string
+          created_at?: string
+          highlighted_text: string
+          id?: string
+          note?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string
+          color?: string
+          created_at?: string
+          highlighted_text?: string
+          id?: string
+          note?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_highlights_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       study_preferences: {
         Row: {
           created_at: string | null
