@@ -160,7 +160,10 @@ function buildMarkdown(chapterTitle: string, topics: Topic[]): string {
   const parts: string[] = [`# ${chapterTitle}`];
   for (const topic of topics) {
     const heading = topic.heading || 'Overview';
-    parts.push(`## ${heading}`);
+    const duplicatesTitle =
+      topics.length === 1 && heading.toLowerCase() === chapterTitle.toLowerCase();
+    if (!duplicatesTitle) parts.push(`## ${heading}`);
+
     if (topic.body.trim()) parts.push(topic.body.trim());
   }
   return parts.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
