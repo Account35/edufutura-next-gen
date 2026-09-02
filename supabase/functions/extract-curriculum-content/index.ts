@@ -648,11 +648,24 @@ Deno.serve(async (req) => {
     const extracted = (result || {}) as Record<string, unknown>;
     const structuredChapters = structureChapters(extracted.chapters);
 
+    // Phase 7: attach one matching video per chapter into the existing
+    // video_url reference field (Phase 4). Never fails the import.
+    let videosMatched = 0;
+    try {
+      const grade = Number(extracted.detected_grade) || 0;
+      const subject = typeof extracted.detected_subject === 'string' ? extracted.detected_subject : '';
+      const res = await attachVideosToChapters(structuredChapters as any[], subject, grade);
+      videosMatched = res.matched;
+    } catch (err) {
+      console.warn('video matching skipped:', getErrorMessage(err));
+    }
+
     return createJsonResponse({
       ...extracted,
       chapters: structuredChapters,
       provider_used: providerUsed,
       structured: true,
+      videos_matched: videosMatched,
       openrouter_error: aiError,
       ai_error: aiError,
     });
