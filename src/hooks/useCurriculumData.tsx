@@ -30,6 +30,9 @@ export interface Chapter {
   caps_code: string | null;
   caps_description: string | null;
   learning_outcomes: string[] | null;
+  content_type?: string | null;
+  content_url?: string | null;
+
 }
 
 export interface ChapterProgress {
