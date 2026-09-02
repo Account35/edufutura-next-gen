@@ -184,6 +184,44 @@ export default function ChapterContent() {
     }
   }, [isDarkMode]);
 
+  // Course navigation data (read-only, existing tables)
+  const chapterIds = useMemo(() => allChapters.map((ch) => ch.id), [allChapters]);
+  const { progressMap } = useSubjectChapterProgress(chapterIds);
+
+  const overallProgress = useMemo(() => {
+    if (allChapters.length === 0) return 0;
+    const completed = allChapters.filter((ch) => progressMap[ch.id]?.status === 'completed').length;
+    return Math.round((completed / allChapters.length) * 100);
+  }, [allChapters, progressMap]);
+
+  // Active section (for the breadcrumb)
+  const [activeSectionTitle, setActiveSectionTitle] = useState<string | null>(null);
+  useEffect(() => {
+    setActiveSectionTitle(null);
+    if (!chapter?.content_markdown) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSectionTitle(entry.target.textContent || null);
+          }
+        });
+      },
+      { rootMargin: '-20% 0px -70% 0px' }
+    );
+
+    const timer = window.setTimeout(() => {
+      document.querySelectorAll('[id^="heading-"]').forEach((el) => observer.observe(el));
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [chapter?.id, chapter?.content_markdown]);
+
+
   const currentIndex = allChapters.findIndex(ch => ch.chapter_number === chapter?.chapter_number);
   const previousChapter = currentIndex > 0 ? {
     number: allChapters[currentIndex - 1].chapter_number,
