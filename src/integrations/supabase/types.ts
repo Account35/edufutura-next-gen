@@ -1579,6 +1579,7 @@ export type Database = {
           thumbnail_url: string | null
           updated_at: string | null
           updated_by: string | null
+          video_url: string | null
         }
         Insert: {
           caps_code?: string | null
@@ -1602,6 +1603,7 @@ export type Database = {
           thumbnail_url?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          video_url?: string | null
         }
         Update: {
           caps_code?: string | null
@@ -1625,6 +1627,7 @@ export type Database = {
           thumbnail_url?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          video_url?: string | null
         }
         Relationships: [
           {
