@@ -461,6 +461,18 @@ export default function ChapterContent() {
                     chapterTitle={chapter.chapter_title}
                   />
                 )}
+                {/* Auditory learners: narrate the same existing text content */}
+                {adaptiveContent?.show_audio_option && (
+                  <ChapterAudioNarration
+                    content={chapter.content_markdown}
+                    chapterTitle={chapter.chapter_title}
+                  />
+                )}
+                {/* Kinesthetic learners: existing interactive practice content */}
+                {adaptiveContent?.show_interactive_elements && (
+                  <ChapterInteractivePractice chapterId={chapter.id} subjectName={subjectName} />
+                )}
+
                 {chapter.content_markdown ? (
                   <ChapterContentRenderer 
                     content={chapter.content_markdown} 
