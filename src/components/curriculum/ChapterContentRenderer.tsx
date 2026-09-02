@@ -14,14 +14,27 @@ export const ChapterContentRenderer = ({
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!contentRef.current) return;
+    // Add IDs to headings for TOC linking (retried until content is rendered)
+    const applyIds = () => {
+      if (!contentRef.current) return 0;
+      const headings = contentRef.current.querySelectorAll('h2, h3, h4');
+      headings.forEach((heading, index) => {
+        heading.id = `heading-${index}`;
+      });
+      return headings.length;
+    };
 
-    // Add IDs to headings for TOC linking
-    const headings = contentRef.current.querySelectorAll('h2, h3, h4');
-    headings.forEach((heading, index) => {
-      heading.id = `heading-${index}`;
-    });
+    if (applyIds() > 0) return;
+
+    let attempts = 0;
+    const timer = window.setInterval(() => {
+      attempts += 1;
+      if (applyIds() > 0 || attempts > 20) window.clearInterval(timer);
+    }, 200);
+
+    return () => window.clearInterval(timer);
   }, [content]);
+
 
   if (isMarkdown) {
     return (

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useCurriculumData, Chapter } from '@/hooks/useCurriculumData';
@@ -19,6 +19,9 @@ import { PrerequisiteModal } from '@/components/curriculum/PrerequisiteModal';
 import { DifficultyBadge } from '@/components/curriculum/DifficultyBadge';
 import { CAPSBadge } from '@/components/curriculum/CAPSBadge';
 import { ProgressSavedIndicator } from '@/components/curriculum/ProgressSavedIndicator';
+import { CourseSidebar } from '@/components/curriculum/CourseSidebar';
+import { CourseBreadcrumb } from '@/components/curriculum/CourseBreadcrumb';
+import { useSubjectChapterProgress } from '@/hooks/useSubjectChapterProgress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -181,6 +184,44 @@ export default function ChapterContent() {
     }
   }, [isDarkMode]);
 
+  // Course navigation data (read-only, existing tables)
+  const chapterIds = useMemo(() => allChapters.map((ch) => ch.id), [allChapters]);
+  const { progressMap } = useSubjectChapterProgress(chapterIds);
+
+  const overallProgress = useMemo(() => {
+    if (allChapters.length === 0) return 0;
+    const completed = allChapters.filter((ch) => progressMap[ch.id]?.status === 'completed').length;
+    return Math.round((completed / allChapters.length) * 100);
+  }, [allChapters, progressMap]);
+
+  // Active section (for the breadcrumb)
+  const [activeSectionTitle, setActiveSectionTitle] = useState<string | null>(null);
+  useEffect(() => {
+    setActiveSectionTitle(null);
+    if (!chapter?.content_markdown) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSectionTitle(entry.target.textContent || null);
+          }
+        });
+      },
+      { rootMargin: '-20% 0px -70% 0px' }
+    );
+
+    const timer = window.setTimeout(() => {
+      document.querySelectorAll('[id^="heading-"]').forEach((el) => observer.observe(el));
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [chapter?.id, chapter?.content_markdown]);
+
+
   const currentIndex = allChapters.findIndex(ch => ch.chapter_number === chapter?.chapter_number);
   const previousChapter = currentIndex > 0 ? {
     number: allChapters[currentIndex - 1].chapter_number,
@@ -267,6 +308,23 @@ export default function ChapterContent() {
         />
 
         <div className="container mx-auto px-4 py-8 pb-24 lg:pb-8">
+          <div className="flex flex-col lg:flex-row gap-6">
+            <CourseSidebar
+              subjectName={subjectName}
+              chapters={allChapters}
+              currentChapterNumber={chapter.chapter_number}
+              currentChapterContent={chapter.content_markdown}
+              progressMap={progressMap}
+              overallProgress={overallProgress}
+            />
+            <div className="flex-1 min-w-0">
+          <CourseBreadcrumb
+            subjectName={subjectName}
+            chapterNumber={chapter.chapter_number}
+            chapterTitle={chapter.chapter_title}
+            sectionTitle={activeSectionTitle}
+          />
+
           {adaptiveContent && (
             <div className="mb-6 rounded-2xl border border-border bg-muted/10 p-4 dark:bg-muted/20">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -425,7 +483,10 @@ export default function ChapterContent() {
               <ChapterSidebar content={chapter.content_markdown} />
             )}
           </div>
+          </div>
+          </div>
         </div>
+
 
         {/* Mobile Reading Toolbar */}
         <MobileReadingToolbar
