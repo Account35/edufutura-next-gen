@@ -351,6 +351,7 @@ export function useCurriculumImport() {
         estimated_duration_minutes: c.estimated_duration_minutes || 30,
         caps_code: c.caps_code || '',
         key_concepts: c.key_concepts || [],
+        video_url: c.video_url || null,
         created_by: user.id,
         updated_by: user.id,
         is_published: inheritPublished,
