@@ -267,6 +267,23 @@ export default function ChapterContent() {
         />
 
         <div className="container mx-auto px-4 py-8 pb-24 lg:pb-8">
+          <div className="flex flex-col lg:flex-row gap-6">
+            <CourseSidebar
+              subjectName={subjectName}
+              chapters={allChapters}
+              currentChapterNumber={chapter.chapter_number}
+              currentChapterContent={chapter.content_markdown}
+              progressMap={progressMap}
+              overallProgress={overallProgress}
+            />
+            <div className="flex-1 min-w-0">
+          <CourseBreadcrumb
+            subjectName={subjectName}
+            chapterNumber={chapter.chapter_number}
+            chapterTitle={chapter.chapter_title}
+            sectionTitle={activeSectionTitle}
+          />
+
           {adaptiveContent && (
             <div className="mb-6 rounded-2xl border border-border bg-muted/10 p-4 dark:bg-muted/20">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
