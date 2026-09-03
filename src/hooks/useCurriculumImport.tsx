@@ -395,7 +395,14 @@ export function useCurriculumImport() {
       }
 
       toast.success(`${rows.length} chapter(s) saved as drafts.`);
+
+      // Phase 8: automatically generate one quiz per newly ingested chapter,
+      // reusing the existing generate-quiz function and assessment schema.
+      // Non-fatal: import already succeeded at this point.
+      void autoGenerateQuizzes(insertedRows || []);
+
       return true;
+
     } catch (err: unknown) {
       toast.error(`Save failed: ${getErrorMessage(err)}`);
       return false;
