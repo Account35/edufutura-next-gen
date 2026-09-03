@@ -39,6 +39,76 @@ const MAX_PAGES_PER_REQUEST = 60;
 const SINGLE_PDF_THRESHOLD_BYTES = 7 * 1024 * 1024;
 const ACCEPTED_EXTS = ['pdf', 'csv', 'xlsx', 'xls', 'md', 'txt'];
 
+// ---- Phase 8: automated quiz generation after ingestion ----
+const AUTO_QUIZ_MAX_CHAPTERS = 12;
+const AUTO_QUIZ_MIN_CONTENT_CHARS = 400;
+const AUTO_QUIZ_QUESTION_COUNT = 10;
+
+interface IngestedChapter {
+  id: string;
+  chapter_title: string;
+  content_markdown: string | null;
+  difficulty_level: string | null;
+}
+
+/**
+ * Generates one quiz per freshly ingested chapter by calling the existing
+ * `generate-quiz` edge function (which loads only that chapter's own content).
+ * Bounded, sequential, idempotent, and never fails the import.
+ */
+async function autoGenerateQuizzes(chapters: IngestedChapter[]): Promise<void> {
+  const eligible = chapters
+    .filter((c) => (c.content_markdown || '').trim().length >= AUTO_QUIZ_MIN_CONTENT_CHARS)
+    .slice(0, AUTO_QUIZ_MAX_CHAPTERS);
+
+  if (eligible.length === 0) return;
+
+  let created = 0;
+  for (const chapter of eligible) {
+    try {
+      // Idempotency: skip chapters that already have a quiz.
+      const { count } = await supabase
+        .from('quizzes')
+        .select('id', { count: 'exact', head: true })
+        .eq('chapter_id', chapter.id);
+      if ((count ?? 0) > 0) continue;
+
+      const { data, error } = await supabase.functions.invoke('generate-quiz', {
+        body: {
+          chapter_id: chapter.id,
+          question_count: AUTO_QUIZ_QUESTION_COUNT,
+          difficulty_level: (chapter.difficulty_level || 'Intermediate').toLowerCase(),
+          question_type_distribution: {
+            multiple_choice: 7,
+            true_false: 2,
+            short_answer: 1,
+          },
+        },
+      });
+
+      if (error) throw error;
+      if (data?.success) {
+        created += 1;
+      } else {
+        const message = String(data?.error || '');
+        // Circuit breaker: stop the batch on credit / policy / rate-limit walls.
+        if (/402|403|429|credit|rate limit/i.test(message)) {
+          toast.warning(`Auto quiz generation paused: ${message}`);
+          break;
+        }
+        console.warn(`Auto quiz skipped for ${chapter.chapter_title}: ${message}`);
+      }
+    } catch (err) {
+      console.warn(`Auto quiz failed for ${chapter.chapter_title}:`, err);
+    }
+  }
+
+  if (created > 0) {
+    toast.success(`${created} draft quiz(zes) generated from the imported chapters.`);
+  }
+}
+
+
 const getErrorMessage = (error: unknown, fallback = 'unknown error') => {
   if (error instanceof Error && error.message) return error.message;
   if (typeof error === 'object' && error !== null && 'message' in error) {
@@ -357,8 +427,12 @@ export function useCurriculumImport() {
         is_published: inheritPublished,
       }));
 
-      const { error } = await supabase.from('curriculum_chapters').insert(rows);
+      const { data: insertedRows, error } = await supabase
+        .from('curriculum_chapters')
+        .insert(rows)
+        .select('id, chapter_title, content_markdown, difficulty_level');
       if (error) throw error;
+
 
       // Recompute parent subject counters
       try {
@@ -391,7 +465,14 @@ export function useCurriculumImport() {
       }
 
       toast.success(`${rows.length} chapter(s) saved as drafts.`);
+
+      // Phase 8: automatically generate one quiz per newly ingested chapter,
+      // reusing the existing generate-quiz function and assessment schema.
+      // Non-fatal: import already succeeded at this point.
+      void autoGenerateQuizzes(insertedRows || []);
+
       return true;
+
     } catch (err: unknown) {
       toast.error(`Save failed: ${getErrorMessage(err)}`);
       return false;
