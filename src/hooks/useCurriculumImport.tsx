@@ -357,8 +357,12 @@ export function useCurriculumImport() {
         is_published: inheritPublished,
       }));
 
-      const { error } = await supabase.from('curriculum_chapters').insert(rows);
+      const { data: insertedRows, error } = await supabase
+        .from('curriculum_chapters')
+        .insert(rows)
+        .select('id, chapter_title, content_markdown, difficulty_level');
       if (error) throw error;
+
 
       // Recompute parent subject counters
       try {
