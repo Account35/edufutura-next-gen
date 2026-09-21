@@ -27,8 +27,16 @@ const MAX_PDF_PAGES = 80;
 const PAGES_PER_BATCH = 4;
 const PAGE_CHUNK_CHARS = 12000;
 const MAX_PAGE_BATCHES = 24;
-const BATCH_TIMEOUT_MS = 90000;
-const BATCH_SPACING_MS = 400;
+// Per-AI-call ceiling. Must stay well under the platform's 150s idle limit.
+const BATCH_TIMEOUT_MS = 40000;
+const BATCH_SPACING_MS = 250;
+// Batches run in small parallel waves so a long document still finishes.
+const BATCH_CONCURRENCY = 3;
+// Hard wall-clock budget for the AI phase; whatever is not done by then is
+// reported as skipped instead of letting the request idle out (504).
+const AI_PHASE_BUDGET_MS = 95000;
+// Remaining budget required before the optional video-matching phase runs.
+const VIDEO_PHASE_BUDGET_MS = 20000;
 
 function createJsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
