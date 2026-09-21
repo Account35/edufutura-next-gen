@@ -738,11 +738,15 @@ Deno.serve(async (req) => {
 
     for (const group of resolvedGroups) {
       const structured = structureChapters(group.chapters) as any[];
-      try {
-        const res = await attachVideosToChapters(structured, group.subject, group.grade_level);
-        videosMatched += res.matched;
-      } catch (err) {
-        console.warn('video matching skipped:', getErrorMessage(err));
+      // Video matching is optional; only run it while there is time left.
+      const timeLeft = requestStartedAt + AI_PHASE_BUDGET_MS + VIDEO_PHASE_BUDGET_MS - Date.now();
+      if (timeLeft > 8000) {
+        try {
+          const res = await attachVideosToChapters(structured, group.subject, group.grade_level);
+          videosMatched += res.matched;
+        } catch (err) {
+          console.warn('video matching skipped:', getErrorMessage(err));
+        }
       }
       responseGroups.push({
         grade_level: group.grade_level,
