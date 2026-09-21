@@ -273,14 +273,19 @@ Rules:
 - Return everything via the extract_curriculum tool. Do not respond with prose.
 - If the section contains no curriculum content (cover page, index, blank), return an empty items array.`;
 
-async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Promise<string> {
+/**
+ * Read the source file as an ordered list of pages (PDF) or small text
+ * sections (everything else). Page boundaries are preserved so multi-grade
+ * documents are never trimmed down to a single "excerpt".
+ */
+async function extractPagesFromFile(fileBytes: Uint8Array, fileName: string): Promise<string[]> {
   const lower = fileName.toLowerCase();
 
   if (lower.endsWith('.txt') || lower.endsWith('.md')) {
     if (fileBytes.byteLength > MAX_TEXT_FILE_BYTES) {
       throw new Error('Text or Markdown files must be 2MB or smaller for AI extraction. Split the document and try again.');
     }
-    return new TextDecoder().decode(fileBytes);
+    return splitTextIntoChunks(new TextDecoder().decode(fileBytes), PAGE_CHUNK_CHARS, MAX_PAGE_BATCHES);
   }
 
   if (lower.endsWith('.csv') || lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
@@ -290,11 +295,12 @@ async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Pro
     const wb = XLSX.read(fileBytes, { type: 'array' });
     const out: string[] = [];
     for (const sheetName of wb.SheetNames) {
-      out.push(`### Sheet: ${sheetName}`);
       const csv = XLSX.utils.sheet_to_csv(wb.Sheets[sheetName]);
-      out.push(csv);
+      for (const part of splitTextIntoChunks(csv, PAGE_CHUNK_CHARS, MAX_PAGE_BATCHES)) {
+        out.push(`### Sheet: ${sheetName}\n\n${part}`);
+      }
     }
-    return out.join('\n\n');
+    return out.filter((part) => part.trim());
   }
 
   if (lower.endsWith('.pdf')) {
@@ -307,8 +313,9 @@ async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Pro
       if (typeof pdf.numPages === 'number' && pdf.numPages > MAX_PDF_PAGES) {
         throw new Error(`PDF has ${pdf.numPages} pages. The extractor supports up to ${MAX_PDF_PAGES} pages per import. Split the PDF and try again.`);
       }
-      const { text } = await extractText(pdf, { mergePages: true });
-      return typeof text === 'string' ? text : (text as string[]).join('\n\n');
+      const { text } = await extractText(pdf, { mergePages: false });
+      const pages = Array.isArray(text) ? (text as string[]) : [String(text ?? '')];
+      return pages.map((page, index) => `[Page ${index + 1}]\n${normalizeExtractedText(page || '')}`);
     } catch (err) {
       console.error('PDF extraction failed:', err);
       throw new Error(`Could not parse PDF: ${err instanceof Error ? err.message : 'unknown error'}`);
@@ -316,6 +323,32 @@ async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Pro
   }
 
   throw new Error(`Unsupported file type: ${fileName}`);
+}
+
+/** Group pages into small batches so each AI request stays granular but bounded. */
+function buildPageBatches(pages: string[]): string[] {
+  const usable = pages.filter((page) => page.replace(/\[Page \d+\]/g, '').trim().length > 40);
+  const source = usable.length > 0 ? usable : pages.filter((p) => p.trim());
+  const batches: string[] = [];
+
+  let current: string[] = [];
+  let currentChars = 0;
+
+  for (const page of source) {
+    if (
+      current.length > 0 &&
+      (current.length >= PAGES_PER_BATCH || currentChars + page.length > PAGE_CHUNK_CHARS)
+    ) {
+      batches.push(current.join('\n\n'));
+      current = [];
+      currentChars = 0;
+    }
+    current.push(page);
+    currentChars += page.length;
+  }
+  if (current.length > 0) batches.push(current.join('\n\n'));
+
+  return batches.slice(0, MAX_PAGE_BATCHES);
 }
 
 const OPENROUTER_MODELS = [
