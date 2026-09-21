@@ -231,43 +231,47 @@ const EXTRACTION_TOOL = {
   type: 'function',
   function: {
     name: 'extract_curriculum',
-    description: 'Extract structured curriculum chapter data from source content.',
+    description: 'Extract every curriculum topic found in this section, one entry per grade level.',
     parameters: {
       type: 'object',
       properties: {
-        detected_grade: { type: 'integer', description: 'Detected grade level (4-12) or 0 if unknown' },
-        detected_subject: { type: 'string', description: 'Detected subject name (e.g., Mathematics, Physical Sciences)' },
-        confidence: { type: 'number', description: '0-1 confidence in the detection' },
-        chapters: {
+        items: {
           type: 'array',
+          description: 'One object per topic per grade level found in this section.',
           items: {
             type: 'object',
             properties: {
-              chapter_number: { type: 'integer' },
-              chapter_title: { type: 'string' },
-              chapter_description: { type: 'string' },
-              content_markdown: { type: 'string', description: 'Full chapter content in Markdown' },
-              difficulty_level: { type: 'string', enum: ['Beginner', 'Intermediate', 'Advanced'] },
-              estimated_duration_minutes: { type: 'integer' },
-              caps_code: { type: 'string' },
+              grade_level: { type: 'integer', description: 'The grade this topic belongs to (1-12)' },
+              subject: { type: 'string', description: 'Subject name, e.g. Mathematics, Natural Sciences' },
+              chapter_title: { type: 'string', description: 'The module / chapter / unit this topic sits under' },
+              topic_title: { type: 'string', description: 'The topic name' },
               key_concepts: { type: 'array', items: { type: 'string' } },
+              content_markdown: { type: 'string', description: "The topic's content in Markdown, taken from this section" },
             },
-            required: ['chapter_number', 'chapter_title', 'chapter_description', 'content_markdown'],
+            required: ['grade_level', 'subject', 'chapter_title', 'topic_title', 'content_markdown'],
           },
         },
       },
-      required: ['detected_grade', 'detected_subject', 'confidence', 'chapters'],
+      required: ['items'],
     },
   },
 };
 
 const SYSTEM_PROMPT = `You are an expert South African CAPS curriculum analyst.
-You receive raw text extracted from a teacher's source document (PDF, spreadsheet, or notes).
-Your job is to:
-1. Detect the school grade level (4-12) and the subject (e.g., Mathematics, Physical Sciences, Life Sciences, English).
-2. Split the material into well-formed chapters.
-3. For each chapter, write a clean title, a 1-2 sentence description, full Markdown content, a difficulty level, an estimated duration in minutes, an optional CAPS code, and 3-8 key concepts.
-4. Return everything via the extract_curriculum tool. Do not respond with prose.`;
+You receive the raw text of a small section (a few pages) of a teacher's source document.
+
+Extract EVERY grade level, subject, chapter title, and topic individually.
+If the section mentions multiple grade levels (e.g. Grade 4 and Grade 6), do NOT summarize or
+collapse them into a single entry. Return separate objects for each grade.
+
+Rules:
+- One object per topic per grade. Never merge two grades into one object.
+- Never invent grades, subjects, topics or content that is not in this section.
+- If a grade is not stated for a topic, use the nearest grade stated earlier in this section.
+- chapter_title is the module/unit/term the topic belongs to; topic_title is the topic itself.
+- content_markdown must contain that topic's real content from this section, in Markdown.
+- Return everything via the extract_curriculum tool. Do not respond with prose.
+- If the section contains no curriculum content (cover page, index, blank), return an empty items array.`;
 
 async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Promise<string> {
   const lower = fileName.toLowerCase();
