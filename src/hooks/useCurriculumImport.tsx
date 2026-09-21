@@ -442,9 +442,18 @@ export function useCurriculumImport() {
         ? (existing[0].chapter_number || 0)
         : 0) + 1;
 
-      // Deduplicate by title within the incoming batch and renumber
-      // sequentially starting after the highest existing chapter.
-      const seen = new Set<string>();
+      // Deduplicate by title within the incoming batch AND against chapters
+      // that already exist on this subject, then renumber sequentially.
+      const { data: existingTitles } = await supabase
+        .from('curriculum_chapters')
+        .select('chapter_title')
+        .eq('subject_id', subjectId);
+
+      const seen = new Set<string>(
+        (existingTitles || []).map((r: { chapter_title: string | null }) =>
+          (r.chapter_title || '').trim().toLowerCase()
+        )
+      );
       const deduped = chapters.filter((c) => {
         const key = (c.chapter_title || '').trim().toLowerCase();
         if (!key) return true;
@@ -470,11 +479,61 @@ export function useCurriculumImport() {
         is_published: inheritPublished,
       }));
 
-      const { data: insertedRows, error } = await supabase
-        .from('curriculum_chapters')
-        .insert(rows)
-        .select('id, chapter_title, content_markdown, difficulty_level');
-      if (error) throw error;
+      if (rows.length === 0) {
+        if (!options?.silent) {
+          toast.info('These chapters already exist on this subject.');
+        }
+        return true;
+      }
+
+      // Insert in small batches with a per-row retry, so one problem chapter
+      // can no longer stop every other chapter from being saved.
+      type InsertedRow = {
+        id: string;
+        chapter_title: string;
+        content_markdown: string | null;
+        difficulty_level: string | null;
+      };
+      const insertedRows: InsertedRow[] = [];
+      const failedTitles: string[] = [];
+      const BATCH = 20;
+
+      for (let i = 0; i < rows.length; i += BATCH) {
+        const batch = rows.slice(i, i + BATCH);
+        const { data: batchRows, error: batchError } = await supabase
+          .from('curriculum_chapters')
+          .insert(batch)
+          .select('id, chapter_title, content_markdown, difficulty_level');
+
+        if (!batchError) {
+          insertedRows.push(...((batchRows || []) as InsertedRow[]));
+          continue;
+        }
+
+        // Fall back to one-by-one so the healthy rows still land.
+        for (const row of batch) {
+          const { data: single, error: singleError } = await supabase
+            .from('curriculum_chapters')
+            .insert(row)
+            .select('id, chapter_title, content_markdown, difficulty_level')
+            .maybeSingle();
+
+          if (singleError || !single) {
+            failedTitles.push(row.chapter_title);
+          } else {
+            insertedRows.push(single as InsertedRow);
+          }
+        }
+      }
+
+      if (insertedRows.length === 0) {
+        throw new Error(
+          failedTitles.length
+            ? `None of the ${failedTitles.length} chapter(s) could be saved.`
+            : 'No chapters could be saved.'
+        );
+      }
+
 
 
       // Recompute parent subject counters
@@ -507,8 +566,16 @@ export function useCurriculumImport() {
         // Non-fatal: counters will resync on next manual edit
       }
 
+      if (failedTitles.length > 0) {
+        toast.warning(
+          `${failedTitles.length} chapter(s) could not be saved: ${failedTitles
+            .slice(0, 3)
+            .join(', ')}${failedTitles.length > 3 ? '…' : ''}`
+        );
+      }
+
       if (!options?.silent) {
-        toast.success(`${rows.length} chapter(s) saved as drafts.`);
+        toast.success(`${insertedRows.length} chapter(s) saved as drafts.`);
       }
 
       // Phase 8: automatically generate one quiz per newly ingested chapter,

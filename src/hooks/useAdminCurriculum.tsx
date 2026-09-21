@@ -161,11 +161,22 @@ export const useAdminCurriculum = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('curriculum_subjects')
-        .select(SUBJECT_SELECT)
+        .select(`${SUBJECT_SELECT}, curriculum_chapters(count)`)
         .order('subject_name');
-      
+
       if (error) throw error;
-      return data as Subject[];
+
+      // Always show the live chapter count so the card can never drift
+      // away from what the chapter list shows.
+      type Row = Subject & { curriculum_chapters?: { count: number }[] };
+      return ((data || []) as Row[]).map((row) => {
+        const { curriculum_chapters, ...subject } = row;
+        const liveCount = curriculum_chapters?.[0]?.count;
+        return {
+          ...subject,
+          total_chapters: typeof liveCount === 'number' ? liveCount : subject.total_chapters,
+        } as Subject;
+      });
     },
     retry: false,
   });
