@@ -479,11 +479,61 @@ export function useCurriculumImport() {
         is_published: inheritPublished,
       }));
 
-      const { data: insertedRows, error } = await supabase
-        .from('curriculum_chapters')
-        .insert(rows)
-        .select('id, chapter_title, content_markdown, difficulty_level');
-      if (error) throw error;
+      if (rows.length === 0) {
+        if (!options?.silent) {
+          toast.info('These chapters already exist on this subject.');
+        }
+        return true;
+      }
+
+      // Insert in small batches with a per-row retry, so one problem chapter
+      // can no longer stop every other chapter from being saved.
+      type InsertedRow = {
+        id: string;
+        chapter_title: string;
+        content_markdown: string | null;
+        difficulty_level: string | null;
+      };
+      const insertedRows: InsertedRow[] = [];
+      const failedTitles: string[] = [];
+      const BATCH = 20;
+
+      for (let i = 0; i < rows.length; i += BATCH) {
+        const batch = rows.slice(i, i + BATCH);
+        const { data: batchRows, error: batchError } = await supabase
+          .from('curriculum_chapters')
+          .insert(batch)
+          .select('id, chapter_title, content_markdown, difficulty_level');
+
+        if (!batchError) {
+          insertedRows.push(...((batchRows || []) as InsertedRow[]));
+          continue;
+        }
+
+        // Fall back to one-by-one so the healthy rows still land.
+        for (const row of batch) {
+          const { data: single, error: singleError } = await supabase
+            .from('curriculum_chapters')
+            .insert(row)
+            .select('id, chapter_title, content_markdown, difficulty_level')
+            .maybeSingle();
+
+          if (singleError || !single) {
+            failedTitles.push(row.chapter_title);
+          } else {
+            insertedRows.push(single as InsertedRow);
+          }
+        }
+      }
+
+      if (insertedRows.length === 0) {
+        throw new Error(
+          failedTitles.length
+            ? `None of the ${failedTitles.length} chapter(s) could be saved.`
+            : 'No chapters could be saved.'
+        );
+      }
+
 
 
       // Recompute parent subject counters
