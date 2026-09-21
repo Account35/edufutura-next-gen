@@ -190,27 +190,58 @@ function mergeResults(parts: ExtractionResult[]): ExtractionResult {
     (Object.entries(providerCounts).sort((a, b) => b[1] - a[1])[0]?.[0] as 'openrouter' | 'lovable' | 'local') ||
     bestResult.provider_used;
 
+  // Merge grade/subject groups across the client-side PDF parts so a
+  // multi-grade document keeps one group per grade, not one per part.
+  const groupMap = new Map<string, ExtractionGroup>();
   const seenTitles = new Set<string>();
-  const chapters: ExtractedChapter[] = [];
 
   for (const part of parts) {
-    for (const chapter of part.chapters || []) {
-      const key = (chapter.chapter_title || '').trim().toLowerCase();
-      if (key && seenTitles.has(key)) continue;
-      if (key) seenTitles.add(key);
-      chapters.push({ ...chapter });
+    const partGroups: ExtractionGroup[] = part.groups?.length
+      ? part.groups
+      : [{
+          grade_level: part.detected_grade,
+          subject: part.detected_subject,
+          chapters: part.chapters || [],
+        }];
+
+    for (const group of partGroups) {
+      const key = `${group.grade_level}|${(group.subject || '').trim().toLowerCase()}`;
+      let target = groupMap.get(key);
+      if (!target) {
+        target = { grade_level: group.grade_level, subject: group.subject, chapters: [] };
+        groupMap.set(key, target);
+      }
+      for (const chapter of group.chapters || []) {
+        const titleKey = `${key}::${(chapter.chapter_title || '').trim().toLowerCase()}`;
+        if (titleKey && seenTitles.has(titleKey)) continue;
+        seenTitles.add(titleKey);
+        target.chapters.push({
+          ...chapter,
+          grade_level: group.grade_level,
+          subject: group.subject,
+        });
+      }
     }
   }
 
-  chapters.forEach((chapter, index) => {
-    chapter.chapter_number = index + 1;
+  const groups = [...groupMap.values()]
+    .filter((group) => group.chapters.length > 0)
+    .sort((a, b) => a.grade_level - b.grade_level || a.subject.localeCompare(b.subject));
+
+  groups.forEach((group) => {
+    group.chapters.forEach((chapter, index) => {
+      chapter.chapter_number = index + 1;
+    });
   });
+
+  const chapters = groups.flatMap((group) => group.chapters);
 
   return {
     detected_grade: bestResult.detected_grade,
     detected_subject: bestResult.detected_subject,
     confidence: bestResult.confidence,
     provider_used,
+    groups,
     chapters,
   };
 }
