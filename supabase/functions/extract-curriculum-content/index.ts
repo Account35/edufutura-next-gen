@@ -27,8 +27,16 @@ const MAX_PDF_PAGES = 80;
 const PAGES_PER_BATCH = 4;
 const PAGE_CHUNK_CHARS = 12000;
 const MAX_PAGE_BATCHES = 24;
-const BATCH_TIMEOUT_MS = 90000;
-const BATCH_SPACING_MS = 400;
+// Per-AI-call ceiling. Must stay well under the platform's 150s idle limit.
+const BATCH_TIMEOUT_MS = 40000;
+const BATCH_SPACING_MS = 250;
+// Batches run in small parallel waves so a long document still finishes.
+const BATCH_CONCURRENCY = 3;
+// Hard wall-clock budget for the AI phase; whatever is not done by then is
+// reported as skipped instead of letting the request idle out (504).
+const AI_PHASE_BUDGET_MS = 95000;
+// Remaining budget required before the optional video-matching phase runs.
+const VIDEO_PHASE_BUDGET_MS = 20000;
 
 function createJsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
@@ -475,13 +483,27 @@ async function extractBatch(
   text: string,
   fallbackGrade: number,
   fallbackSubject: string,
+  budgetMs: number,
 ): Promise<{ items: ExtractedItem[]; provider: 'lovable' | 'openrouter'; error?: string }> {
   const errors: string[] = [];
   const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+  const perCallMs = Math.max(8000, Math.min(BATCH_TIMEOUT_MS, budgetMs));
+
+  const withTimeout = async <T>(run: (signal: AbortSignal) => Promise<T>): Promise<T> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), perCallMs);
+    try {
+      return await run(controller.signal);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
 
   if (lovableKey) {
     try {
-      const raw = await callLovableAIOnce(lovableKey, text) as Record<string, unknown>;
+      const raw = await withTimeout((signal) =>
+        callLovableAIOnce(lovableKey, text, signal)
+      ) as Record<string, unknown>;
       return {
         items: normalizeItems(raw?.items, fallbackGrade, fallbackSubject),
         provider: 'lovable',
@@ -492,18 +514,16 @@ async function extractBatch(
   }
 
   if (Deno.env.get('OPENROUTER_API_KEY')) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), BATCH_TIMEOUT_MS);
     try {
-      const raw = await callOpenRouterWithRetry(text, controller.signal) as Record<string, unknown>;
+      const raw = await withTimeout((signal) =>
+        callOpenRouterWithRetry(text, signal)
+      ) as Record<string, unknown>;
       return {
         items: normalizeItems(raw?.items, fallbackGrade, fallbackSubject),
         provider: 'openrouter',
       };
     } catch (err) {
       errors.push(`OpenRouter: ${getErrorMessage(err)}`);
-    } finally {
-      clearTimeout(timeoutId);
     }
   }
 
@@ -514,33 +534,58 @@ async function extractBatch(
   };
 }
 
-/** Run extraction across every page batch and aggregate into grade groups. */
+/**
+ * Run extraction across the page batches in small parallel waves, bounded by a
+ * wall-clock budget so the request always answers before the platform's idle
+ * timeout. Batches that do not fit the budget are reported as skipped.
+ */
 async function extractAllBatches(
   batches: string[],
   fallbackGrade: number,
   fallbackSubject: string,
-): Promise<{ groups: GradeGroup[]; provider: 'lovable' | 'openrouter'; failures: string[] }> {
+  deadline: number,
+): Promise<{
+  groups: GradeGroup[];
+  provider: 'lovable' | 'openrouter';
+  failures: string[];
+  skipped: number;
+}> {
   const items: ExtractedItem[] = [];
   const failures: string[] = [];
   let provider: 'lovable' | 'openrouter' = 'lovable';
+  let skipped = 0;
 
-  for (let i = 0; i < batches.length; i += 1) {
-    const result = await extractBatch(batches[i], fallbackGrade, fallbackSubject);
-    if (result.error) {
-      failures.push(`section ${i + 1}: ${result.error}`);
-    } else {
-      provider = result.provider;
-      items.push(...result.items);
+  for (let start = 0; start < batches.length; start += BATCH_CONCURRENCY) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 5000) {
+      skipped += batches.length - start;
+      break;
     }
-    if (i < batches.length - 1) await sleep(BATCH_SPACING_MS);
+
+    const wave = batches.slice(start, start + BATCH_CONCURRENCY);
+    const results = await Promise.all(
+      wave.map((text) => extractBatch(text, fallbackGrade, fallbackSubject, remaining)),
+    );
+
+    results.forEach((result, offset) => {
+      if (result.error) {
+        failures.push(`section ${start + offset + 1}: ${result.error}`);
+      } else {
+        provider = result.provider;
+        items.push(...result.items);
+      }
+    });
+
+    if (start + BATCH_CONCURRENCY < batches.length) await sleep(BATCH_SPACING_MS);
   }
 
-  return { groups: aggregateItems(items), provider, failures };
+  return { groups: aggregateItems(items), provider, failures, skipped };
 }
 
-async function callLovableAIOnce(apiKey: string, text: string): Promise<unknown> {
+async function callLovableAIOnce(apiKey: string, text: string, signal?: AbortSignal): Promise<unknown> {
   const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
+    signal,
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
@@ -582,6 +627,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const requestStartedAt = Date.now();
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return createJsonResponse({ error: 'Missing authorization header' }, 401);
@@ -651,8 +697,15 @@ Deno.serve(async (req) => {
     // Page-level extraction: small batches of pages, each sent to the model on
     // its own so multi-grade documents keep every grade instead of collapsing
     // into one. Lovable AI first, OpenRouter second, local text fallback last.
+    // Bounded by a wall-clock budget so the request never idles out (504).
+    const deadline = requestStartedAt + AI_PHASE_BUDGET_MS;
     const batches = buildPageBatches(pages);
-    const { groups, provider, failures } = await extractAllBatches(batches, fallbackGrade, fallbackSubject);
+    const { groups, provider, failures, skipped } = await extractAllBatches(
+      batches,
+      fallbackGrade,
+      fallbackSubject,
+      deadline,
+    );
 
     let providerUsed: 'openrouter' | 'lovable' | 'local' = provider;
     let aiError: string | null = failures.length > 0 ? failures.join(' | ') : null;
@@ -672,6 +725,11 @@ Deno.serve(async (req) => {
       aiError = `${failures.length} section(s) could not be read by the AI and were skipped. ${aiError}`;
     }
 
+    if (skipped > 0) {
+      const note = `${skipped} section(s) were not processed because the import reached its time limit. Split the file into smaller parts to capture the rest.`;
+      aiError = aiError ? `${note} ${aiError}` : note;
+    }
+
     // Structuring step: organize each group's chapters into clearly headed,
     // sectioned topic modules that map onto the existing chapter schema.
     // Phase 7 video matching then runs per group with that group's own grade.
@@ -680,11 +738,15 @@ Deno.serve(async (req) => {
 
     for (const group of resolvedGroups) {
       const structured = structureChapters(group.chapters) as any[];
-      try {
-        const res = await attachVideosToChapters(structured, group.subject, group.grade_level);
-        videosMatched += res.matched;
-      } catch (err) {
-        console.warn('video matching skipped:', getErrorMessage(err));
+      // Video matching is optional; only run it while there is time left.
+      const timeLeft = requestStartedAt + AI_PHASE_BUDGET_MS + VIDEO_PHASE_BUDGET_MS - Date.now();
+      if (timeLeft > 8000) {
+        try {
+          const res = await attachVideosToChapters(structured, group.subject, group.grade_level);
+          videosMatched += res.matched;
+        } catch (err) {
+          console.warn('video matching skipped:', getErrorMessage(err));
+        }
       }
       responseGroups.push({
         grade_level: group.grade_level,
