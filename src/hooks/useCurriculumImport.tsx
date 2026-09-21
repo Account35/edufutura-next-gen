@@ -566,8 +566,16 @@ export function useCurriculumImport() {
         // Non-fatal: counters will resync on next manual edit
       }
 
+      if (failedTitles.length > 0) {
+        toast.warning(
+          `${failedTitles.length} chapter(s) could not be saved: ${failedTitles
+            .slice(0, 3)
+            .join(', ')}${failedTitles.length > 3 ? '…' : ''}`
+        );
+      }
+
       if (!options?.silent) {
-        toast.success(`${rows.length} chapter(s) saved as drafts.`);
+        toast.success(`${insertedRows.length} chapter(s) saved as drafts.`);
       }
 
       // Phase 8: automatically generate one quiz per newly ingested chapter,
