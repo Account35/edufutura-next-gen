@@ -411,7 +411,8 @@ export function useCurriculumImport() {
 
   async function saveChapters(
     subjectId: string,
-    chapters: ExtractedChapter[]
+    chapters: ExtractedChapter[],
+    options?: { silent?: boolean }
   ): Promise<boolean> {
     setIsSaving(true);
     try {
