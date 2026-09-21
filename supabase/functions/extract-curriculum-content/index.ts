@@ -483,13 +483,27 @@ async function extractBatch(
   text: string,
   fallbackGrade: number,
   fallbackSubject: string,
+  budgetMs: number,
 ): Promise<{ items: ExtractedItem[]; provider: 'lovable' | 'openrouter'; error?: string }> {
   const errors: string[] = [];
   const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+  const perCallMs = Math.max(8000, Math.min(BATCH_TIMEOUT_MS, budgetMs));
+
+  const withTimeout = async <T>(run: (signal: AbortSignal) => Promise<T>): Promise<T> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), perCallMs);
+    try {
+      return await run(controller.signal);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
 
   if (lovableKey) {
     try {
-      const raw = await callLovableAIOnce(lovableKey, text) as Record<string, unknown>;
+      const raw = await withTimeout((signal) =>
+        callLovableAIOnce(lovableKey, text, signal)
+      ) as Record<string, unknown>;
       return {
         items: normalizeItems(raw?.items, fallbackGrade, fallbackSubject),
         provider: 'lovable',
@@ -500,18 +514,16 @@ async function extractBatch(
   }
 
   if (Deno.env.get('OPENROUTER_API_KEY')) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), BATCH_TIMEOUT_MS);
     try {
-      const raw = await callOpenRouterWithRetry(text, controller.signal) as Record<string, unknown>;
+      const raw = await withTimeout((signal) =>
+        callOpenRouterWithRetry(text, signal)
+      ) as Record<string, unknown>;
       return {
         items: normalizeItems(raw?.items, fallbackGrade, fallbackSubject),
         provider: 'openrouter',
       };
     } catch (err) {
       errors.push(`OpenRouter: ${getErrorMessage(err)}`);
-    } finally {
-      clearTimeout(timeoutId);
     }
   }
 
@@ -522,28 +534,52 @@ async function extractBatch(
   };
 }
 
-/** Run extraction across every page batch and aggregate into grade groups. */
+/**
+ * Run extraction across the page batches in small parallel waves, bounded by a
+ * wall-clock budget so the request always answers before the platform's idle
+ * timeout. Batches that do not fit the budget are reported as skipped.
+ */
 async function extractAllBatches(
   batches: string[],
   fallbackGrade: number,
   fallbackSubject: string,
-): Promise<{ groups: GradeGroup[]; provider: 'lovable' | 'openrouter'; failures: string[] }> {
+  deadline: number,
+): Promise<{
+  groups: GradeGroup[];
+  provider: 'lovable' | 'openrouter';
+  failures: string[];
+  skipped: number;
+}> {
   const items: ExtractedItem[] = [];
   const failures: string[] = [];
   let provider: 'lovable' | 'openrouter' = 'lovable';
+  let skipped = 0;
 
-  for (let i = 0; i < batches.length; i += 1) {
-    const result = await extractBatch(batches[i], fallbackGrade, fallbackSubject);
-    if (result.error) {
-      failures.push(`section ${i + 1}: ${result.error}`);
-    } else {
-      provider = result.provider;
-      items.push(...result.items);
+  for (let start = 0; start < batches.length; start += BATCH_CONCURRENCY) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 5000) {
+      skipped += batches.length - start;
+      break;
     }
-    if (i < batches.length - 1) await sleep(BATCH_SPACING_MS);
+
+    const wave = batches.slice(start, start + BATCH_CONCURRENCY);
+    const results = await Promise.all(
+      wave.map((text) => extractBatch(text, fallbackGrade, fallbackSubject, remaining)),
+    );
+
+    results.forEach((result, offset) => {
+      if (result.error) {
+        failures.push(`section ${start + offset + 1}: ${result.error}`);
+      } else {
+        provider = result.provider;
+        items.push(...result.items);
+      }
+    });
+
+    if (start + BATCH_CONCURRENCY < batches.length) await sleep(BATCH_SPACING_MS);
   }
 
-  return { groups: aggregateItems(items), provider, failures };
+  return { groups: aggregateItems(items), provider, failures, skipped };
 }
 
 async function callLovableAIOnce(apiKey: string, text: string, signal?: AbortSignal): Promise<unknown> {
