@@ -5,6 +5,7 @@ import * as XLSX from 'https://esm.sh/xlsx@0.18.5';
 import { extractText, getDocumentProxy } from 'https://esm.sh/unpdf@0.12.1';
 import { structureChapters } from './structuring.ts';
 import { attachVideosToChapters } from './videoMatching.ts';
+import { aggregateItems, normalizeItems, type ExtractedItem, type GradeGroup } from './multiGrade.ts';
 
 
 const corsHeaders = {
