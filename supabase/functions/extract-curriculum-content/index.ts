@@ -466,84 +466,76 @@ async function callOpenRouterWithRetry(text: string, signal: AbortSignal, attemp
   throw lastErr;
 }
 
-function mergeChunkResults(parts: any[]): any {
-  const best = parts.reduce((b, c) => ((c?.confidence ?? 0) > (b?.confidence ?? 0) ? c : b), parts[0]);
-  const seen = new Set<string>();
-  const chapters: any[] = [];
-  for (const part of parts) {
-    for (const ch of (part?.chapters || [])) {
-      const key = (ch.chapter_title || '').trim().toLowerCase();
-      if (key && seen.has(key)) continue;
-      if (key) seen.add(key);
-      chapters.push(ch);
+/**
+ * Extract one page batch. Lovable AI first, OpenRouter second — the same
+ * provider order as before, now applied per batch so a failure on one batch
+ * never loses the rest of the document.
+ */
+async function extractBatch(
+  text: string,
+  fallbackGrade: number,
+  fallbackSubject: string,
+): Promise<{ items: ExtractedItem[]; provider: 'lovable' | 'openrouter'; error?: string }> {
+  const errors: string[] = [];
+  const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+
+  if (lovableKey) {
+    try {
+      const raw = await callLovableAIOnce(lovableKey, text) as Record<string, unknown>;
+      return {
+        items: normalizeItems(raw?.items, fallbackGrade, fallbackSubject),
+        provider: 'lovable',
+      };
+    } catch (err) {
+      errors.push(`Lovable AI: ${getErrorMessage(err)}`);
     }
   }
-  chapters.forEach((ch, i) => { ch.chapter_number = i + 1; });
+
+  if (Deno.env.get('OPENROUTER_API_KEY')) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), BATCH_TIMEOUT_MS);
+    try {
+      const raw = await callOpenRouterWithRetry(text, controller.signal) as Record<string, unknown>;
+      return {
+        items: normalizeItems(raw?.items, fallbackGrade, fallbackSubject),
+        provider: 'openrouter',
+      };
+    } catch (err) {
+      errors.push(`OpenRouter: ${getErrorMessage(err)}`);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
   return {
-    detected_grade: best?.detected_grade ?? 0,
-    detected_subject: best?.detected_subject ?? '',
-    confidence: best?.confidence ?? 0,
-    chapters,
+    items: [],
+    provider: 'lovable',
+    error: errors.join(' | ') || 'No AI provider configured',
   };
 }
 
-async function callOpenRouter(rawText: string, signal: AbortSignal): Promise<unknown> {
-  // Try a single call first using the smart excerpt.
-  const excerpt = buildModelExcerpt(rawText);
-  try {
-    return await callOpenRouterWithRetry(excerpt, signal);
-  } catch (err) {
-    const status = getErrorStatus(err);
-    // If it's a token-limit/transient error, fall back to chunked extraction.
-    const shouldChunk = status === null || TRANSIENT_STATUSES.has(status) || status === 400 || status === 413;
-    if (!shouldChunk) throw err;
+/** Run extraction across every page batch and aggregate into grade groups. */
+async function extractAllBatches(
+  batches: string[],
+  fallbackGrade: number,
+  fallbackSubject: string,
+): Promise<{ groups: GradeGroup[]; provider: 'lovable' | 'openrouter'; failures: string[] }> {
+  const items: ExtractedItem[] = [];
+  const failures: string[] = [];
+  let provider: 'lovable' | 'openrouter' = 'lovable';
 
-    const chunks = splitTextIntoChunks(rawText);
-    if (chunks.length <= 1) throw err;
-
-    const results: any[] = [];
-    const failures: string[] = [];
-    for (let i = 0; i < chunks.length; i += 1) {
-      try {
-        const part = await callOpenRouterWithRetry(chunks[i], signal);
-        results.push(part);
-      } catch (chunkErr) {
-        failures.push(`chunk ${i + 1}: ${getErrorMessage(chunkErr)}`);
-      }
-      // Small spacing between chunks to avoid rate limits.
-      if (i < chunks.length - 1) await sleep(500);
+  for (let i = 0; i < batches.length; i += 1) {
+    const result = await extractBatch(batches[i], fallbackGrade, fallbackSubject);
+    if (result.error) {
+      failures.push(`section ${i + 1}: ${result.error}`);
+    } else {
+      provider = result.provider;
+      items.push(...result.items);
     }
-
-    if (results.length === 0) {
-      throw new Error(`OpenRouter chunked extraction failed. ${failures.join('; ')}`);
-    }
-    return mergeChunkResults(results);
+    if (i < batches.length - 1) await sleep(BATCH_SPACING_MS);
   }
-}
 
-async function callLovableAI(rawText: string): Promise<unknown> {
-  const apiKey = Deno.env.get('LOVABLE_API_KEY');
-  if (!apiKey) throw new Error('LOVABLE_API_KEY missing');
-
-  // Try once with smart excerpt; on failure fall back to chunked.
-  try {
-    return await callLovableAIOnce(apiKey, buildModelExcerpt(rawText));
-  } catch (err) {
-    const chunks = splitTextIntoChunks(rawText);
-    if (chunks.length <= 1) throw err;
-    const results: any[] = [];
-    const failures: string[] = [];
-    for (let i = 0; i < chunks.length; i += 1) {
-      try {
-        results.push(await callLovableAIOnce(apiKey, chunks[i]));
-      } catch (e) {
-        failures.push(`chunk ${i + 1}: ${getErrorMessage(e)}`);
-      }
-      if (i < chunks.length - 1) await sleep(400);
-    }
-    if (results.length === 0) throw new Error(`Lovable AI chunked failed. ${failures.join('; ')}`);
-    return mergeChunkResults(results);
-  }
+  return { groups: aggregateItems(items), provider, failures };
 }
 
 async function callLovableAIOnce(apiKey: string, text: string): Promise<unknown> {
