@@ -638,75 +638,86 @@ Deno.serve(async (req) => {
     }
 
     const bytes = new Uint8Array(await fileBlob.arrayBuffer());
-    const rawText = await extractTextFromFile(bytes, file_name);
+    const pages = await extractPagesFromFile(bytes, file_name);
+    const rawText = pages.join('\n\n');
 
     if (!rawText.trim()) {
       return createJsonResponse({ error: 'No text could be extracted from the file' }, 422);
     }
 
-    // Provider order: Lovable AI (reliable, no shared free-tier RPM cap)
-    // -> OpenRouter free models -> local fallback. The free OpenRouter
-    // models are aggressively rate-limited upstream, so we no longer use
-    // them as the primary path.
-    let result: unknown = null;
-    let providerUsed: 'openrouter' | 'lovable' | 'local' = 'lovable';
-    let aiError: string | null = null;
-    const errors: string[] = [];
+    const fallbackGrade = detectGrade(rawText, file_name);
+    const fallbackSubject = detectSubject(rawText, file_name);
 
-    if (Deno.env.get('LOVABLE_API_KEY')) {
-      try {
-        result = await callLovableAI(rawText);
-        providerUsed = 'lovable';
-      } catch (err) {
-        errors.push(`Lovable AI: ${getErrorMessage(err)}`);
-      }
-    }
+    // Page-level extraction: small batches of pages, each sent to the model on
+    // its own so multi-grade documents keep every grade instead of collapsing
+    // into one. Lovable AI first, OpenRouter second, local text fallback last.
+    const batches = buildPageBatches(pages);
+    const { groups, provider, failures } = await extractAllBatches(batches, fallbackGrade, fallbackSubject);
 
-    if (!result && Deno.env.get('OPENROUTER_API_KEY')) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000);
-      try {
-        result = await callOpenRouter(rawText, controller.signal);
-        providerUsed = 'openrouter';
-      } catch (err) {
-        errors.push(`OpenRouter: ${getErrorMessage(err)}`);
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    }
+    let providerUsed: 'openrouter' | 'lovable' | 'local' = provider;
+    let aiError: string | null = failures.length > 0 ? failures.join(' | ') : null;
+    let resolvedGroups: GradeGroup[] = groups;
 
-    if (!result) {
-      aiError = errors.join(' | ') || 'No AI provider configured';
-      result = buildLocalExtraction(rawText, file_name, aiError);
+    if (resolvedGroups.length === 0) {
+      aiError = aiError || 'The AI returned no curriculum content';
+      const local = buildLocalExtraction(rawText, file_name, aiError) as Record<string, unknown>;
       providerUsed = 'local';
+      aiError = typeof local.ai_error === 'string' ? local.ai_error : aiError;
+      resolvedGroups = [{
+        grade_level: Number(local.detected_grade) || fallbackGrade,
+        subject: typeof local.detected_subject === 'string' ? local.detected_subject : fallbackSubject,
+        chapters: (local.chapters as any[]) || [],
+      }];
+    } else if (failures.length > 0) {
+      aiError = `${failures.length} section(s) could not be read by the AI and were skipped. ${aiError}`;
     }
 
-    // Structuring step: organize the extracted text into clearly headed,
+    // Structuring step: organize each group's chapters into clearly headed,
     // sectioned topic modules that map onto the existing chapter schema.
-    const extracted = (result || {}) as Record<string, unknown>;
-    const structuredChapters = structureChapters(extracted.chapters);
-
-    // Phase 7: attach one matching video per chapter into the existing
-    // video_url reference field (Phase 4). Never fails the import.
+    // Phase 7 video matching then runs per group with that group's own grade.
     let videosMatched = 0;
-    try {
-      const grade = Number(extracted.detected_grade) || 0;
-      const subject = typeof extracted.detected_subject === 'string' ? extracted.detected_subject : '';
-      const res = await attachVideosToChapters(structuredChapters as any[], subject, grade);
-      videosMatched = res.matched;
-    } catch (err) {
-      console.warn('video matching skipped:', getErrorMessage(err));
+    const responseGroups: Array<{ grade_level: number; subject: string; chapters: any[] }> = [];
+
+    for (const group of resolvedGroups) {
+      const structured = structureChapters(group.chapters) as any[];
+      try {
+        const res = await attachVideosToChapters(structured, group.subject, group.grade_level);
+        videosMatched += res.matched;
+      } catch (err) {
+        console.warn('video matching skipped:', getErrorMessage(err));
+      }
+      responseGroups.push({
+        grade_level: group.grade_level,
+        subject: group.subject,
+        chapters: structured,
+      });
     }
+
+    // Flat list kept for backwards compatibility, tagged with its grade/subject.
+    const flatChapters = responseGroups.flatMap((group) =>
+      group.chapters.map((chapter) => ({
+        ...chapter,
+        grade_level: group.grade_level,
+        subject: group.subject,
+      })),
+    );
+
+    const primary = [...responseGroups].sort((a, b) => b.chapters.length - a.chapters.length)[0];
 
     return createJsonResponse({
-      ...extracted,
-      chapters: structuredChapters,
+      detected_grade: primary?.grade_level ?? fallbackGrade,
+      detected_subject: primary?.subject ?? fallbackSubject,
+      confidence: providerUsed === 'local' ? 0.45 : 0.8,
+      groups: responseGroups,
+      chapters: flatChapters,
       provider_used: providerUsed,
       structured: true,
+      sections_processed: batches.length,
       videos_matched: videosMatched,
       openrouter_error: aiError,
       ai_error: aiError,
     });
+
 
   } catch (err) {
     console.error('extract-curriculum-content error:', err);
