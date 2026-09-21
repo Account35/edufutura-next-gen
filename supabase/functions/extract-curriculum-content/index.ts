@@ -546,9 +546,10 @@ async function extractAllBatches(
   return { groups: aggregateItems(items), provider, failures };
 }
 
-async function callLovableAIOnce(apiKey: string, text: string): Promise<unknown> {
+async function callLovableAIOnce(apiKey: string, text: string, signal?: AbortSignal): Promise<unknown> {
   const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
+    signal,
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
