@@ -22,6 +22,13 @@ const MAX_SPREADSHEET_BYTES = 6 * 1024 * 1024;
 const MAX_TEXT_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_PDF_PAGES = 80;
 
+// Page-level extraction: small batches keep each grade visible to the model.
+const PAGES_PER_BATCH = 4;
+const PAGE_CHUNK_CHARS = 12000;
+const MAX_PAGE_BATCHES = 24;
+const BATCH_TIMEOUT_MS = 90000;
+const BATCH_SPACING_MS = 400;
+
 function createJsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
     status,
