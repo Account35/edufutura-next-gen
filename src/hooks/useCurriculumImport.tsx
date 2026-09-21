@@ -13,6 +13,16 @@ export interface ExtractedChapter {
   caps_code?: string;
   key_concepts?: string[];
   video_url?: string | null;
+  /** Grade this chapter was extracted for (multi-grade documents). */
+  grade_level?: number;
+  /** Subject this chapter was extracted for (multi-grade documents). */
+  subject?: string;
+}
+
+export interface ExtractionGroup {
+  grade_level: number;
+  subject: string;
+  chapters: ExtractedChapter[];
 }
 
 export interface ExtractionResult {
@@ -21,6 +31,7 @@ export interface ExtractionResult {
   confidence: number;
   provider_used: 'openrouter' | 'lovable' | 'local';
   chapters: ExtractedChapter[];
+  groups?: ExtractionGroup[];
   ai_error?: string | null;
 }
 
