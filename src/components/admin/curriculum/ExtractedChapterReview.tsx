@@ -13,17 +13,22 @@ import type { ExtractedChapter } from '@/hooks/useCurriculumImport';
 interface Props {
   chapters: ExtractedChapter[];
   selected: boolean[];
+  /** Optional subset of chapter indexes to render (used for grade groups). */
+  indices?: number[];
   onToggle: (idx: number) => void;
   onChange: (idx: number, patch: Partial<ExtractedChapter>) => void;
 }
 
-export const ExtractedChapterReview = ({ chapters, selected, onToggle, onChange }: Props) => {
+export const ExtractedChapterReview = ({ chapters, selected, indices, onToggle, onChange }: Props) => {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  const visible = indices ?? chapters.map((_, i) => i);
 
   return (
     <div className="space-y-3">
-      {chapters.map((c, idx) => {
-        const isOpen = expanded[idx] ?? idx === 0;
+      {visible.map((idx, position) => {
+        const c = chapters[idx];
+        if (!c) return null;
+        const isOpen = expanded[idx] ?? position === 0;
         return (
           <Card key={idx} className={selected[idx] ? '' : 'opacity-60'}>
             <CardHeader className="pb-3">

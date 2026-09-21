@@ -5,6 +5,7 @@ import * as XLSX from 'https://esm.sh/xlsx@0.18.5';
 import { extractText, getDocumentProxy } from 'https://esm.sh/unpdf@0.12.1';
 import { structureChapters } from './structuring.ts';
 import { attachVideosToChapters } from './videoMatching.ts';
+import { aggregateItems, normalizeItems, type ExtractedItem, type GradeGroup } from './multiGrade.ts';
 
 
 const corsHeaders = {
@@ -21,6 +22,13 @@ const MAX_PDF_BYTES = 8 * 1024 * 1024;
 const MAX_SPREADSHEET_BYTES = 6 * 1024 * 1024;
 const MAX_TEXT_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_PDF_PAGES = 80;
+
+// Page-level extraction: small batches keep each grade visible to the model.
+const PAGES_PER_BATCH = 4;
+const PAGE_CHUNK_CHARS = 12000;
+const MAX_PAGE_BATCHES = 24;
+const BATCH_TIMEOUT_MS = 90000;
+const BATCH_SPACING_MS = 400;
 
 function createJsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
@@ -231,52 +239,61 @@ const EXTRACTION_TOOL = {
   type: 'function',
   function: {
     name: 'extract_curriculum',
-    description: 'Extract structured curriculum chapter data from source content.',
+    description: 'Extract every curriculum topic found in this section, one entry per grade level.',
     parameters: {
       type: 'object',
       properties: {
-        detected_grade: { type: 'integer', description: 'Detected grade level (4-12) or 0 if unknown' },
-        detected_subject: { type: 'string', description: 'Detected subject name (e.g., Mathematics, Physical Sciences)' },
-        confidence: { type: 'number', description: '0-1 confidence in the detection' },
-        chapters: {
+        items: {
           type: 'array',
+          description: 'One object per topic per grade level found in this section.',
           items: {
             type: 'object',
             properties: {
-              chapter_number: { type: 'integer' },
-              chapter_title: { type: 'string' },
-              chapter_description: { type: 'string' },
-              content_markdown: { type: 'string', description: 'Full chapter content in Markdown' },
-              difficulty_level: { type: 'string', enum: ['Beginner', 'Intermediate', 'Advanced'] },
-              estimated_duration_minutes: { type: 'integer' },
-              caps_code: { type: 'string' },
+              grade_level: { type: 'integer', description: 'The grade this topic belongs to (1-12)' },
+              subject: { type: 'string', description: 'Subject name, e.g. Mathematics, Natural Sciences' },
+              chapter_title: { type: 'string', description: 'The module / chapter / unit this topic sits under' },
+              topic_title: { type: 'string', description: 'The topic name' },
               key_concepts: { type: 'array', items: { type: 'string' } },
+              content_markdown: { type: 'string', description: "The topic's content in Markdown, taken from this section" },
             },
-            required: ['chapter_number', 'chapter_title', 'chapter_description', 'content_markdown'],
+            required: ['grade_level', 'subject', 'chapter_title', 'topic_title', 'content_markdown'],
           },
         },
       },
-      required: ['detected_grade', 'detected_subject', 'confidence', 'chapters'],
+      required: ['items'],
     },
   },
 };
 
 const SYSTEM_PROMPT = `You are an expert South African CAPS curriculum analyst.
-You receive raw text extracted from a teacher's source document (PDF, spreadsheet, or notes).
-Your job is to:
-1. Detect the school grade level (4-12) and the subject (e.g., Mathematics, Physical Sciences, Life Sciences, English).
-2. Split the material into well-formed chapters.
-3. For each chapter, write a clean title, a 1-2 sentence description, full Markdown content, a difficulty level, an estimated duration in minutes, an optional CAPS code, and 3-8 key concepts.
-4. Return everything via the extract_curriculum tool. Do not respond with prose.`;
+You receive the raw text of a small section (a few pages) of a teacher's source document.
 
-async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Promise<string> {
+Extract EVERY grade level, subject, chapter title, and topic individually.
+If the section mentions multiple grade levels (e.g. Grade 4 and Grade 6), do NOT summarize or
+collapse them into a single entry. Return separate objects for each grade.
+
+Rules:
+- One object per topic per grade. Never merge two grades into one object.
+- Never invent grades, subjects, topics or content that is not in this section.
+- If a grade is not stated for a topic, use the nearest grade stated earlier in this section.
+- chapter_title is the module/unit/term the topic belongs to; topic_title is the topic itself.
+- content_markdown must contain that topic's real content from this section, in Markdown.
+- Return everything via the extract_curriculum tool. Do not respond with prose.
+- If the section contains no curriculum content (cover page, index, blank), return an empty items array.`;
+
+/**
+ * Read the source file as an ordered list of pages (PDF) or small text
+ * sections (everything else). Page boundaries are preserved so multi-grade
+ * documents are never trimmed down to a single "excerpt".
+ */
+async function extractPagesFromFile(fileBytes: Uint8Array, fileName: string): Promise<string[]> {
   const lower = fileName.toLowerCase();
 
   if (lower.endsWith('.txt') || lower.endsWith('.md')) {
     if (fileBytes.byteLength > MAX_TEXT_FILE_BYTES) {
       throw new Error('Text or Markdown files must be 2MB or smaller for AI extraction. Split the document and try again.');
     }
-    return new TextDecoder().decode(fileBytes);
+    return splitTextIntoChunks(new TextDecoder().decode(fileBytes), PAGE_CHUNK_CHARS, MAX_PAGE_BATCHES);
   }
 
   if (lower.endsWith('.csv') || lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
@@ -286,11 +303,12 @@ async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Pro
     const wb = XLSX.read(fileBytes, { type: 'array' });
     const out: string[] = [];
     for (const sheetName of wb.SheetNames) {
-      out.push(`### Sheet: ${sheetName}`);
       const csv = XLSX.utils.sheet_to_csv(wb.Sheets[sheetName]);
-      out.push(csv);
+      for (const part of splitTextIntoChunks(csv, PAGE_CHUNK_CHARS, MAX_PAGE_BATCHES)) {
+        out.push(`### Sheet: ${sheetName}\n\n${part}`);
+      }
     }
-    return out.join('\n\n');
+    return out.filter((part) => part.trim());
   }
 
   if (lower.endsWith('.pdf')) {
@@ -303,8 +321,9 @@ async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Pro
       if (typeof pdf.numPages === 'number' && pdf.numPages > MAX_PDF_PAGES) {
         throw new Error(`PDF has ${pdf.numPages} pages. The extractor supports up to ${MAX_PDF_PAGES} pages per import. Split the PDF and try again.`);
       }
-      const { text } = await extractText(pdf, { mergePages: true });
-      return typeof text === 'string' ? text : (text as string[]).join('\n\n');
+      const { text } = await extractText(pdf, { mergePages: false });
+      const pages = Array.isArray(text) ? (text as string[]) : [String(text ?? '')];
+      return pages.map((page, index) => `[Page ${index + 1}]\n${normalizeExtractedText(page || '')}`);
     } catch (err) {
       console.error('PDF extraction failed:', err);
       throw new Error(`Could not parse PDF: ${err instanceof Error ? err.message : 'unknown error'}`);
@@ -312,6 +331,32 @@ async function extractTextFromFile(fileBytes: Uint8Array, fileName: string): Pro
   }
 
   throw new Error(`Unsupported file type: ${fileName}`);
+}
+
+/** Group pages into small batches so each AI request stays granular but bounded. */
+function buildPageBatches(pages: string[]): string[] {
+  const usable = pages.filter((page) => page.replace(/\[Page \d+\]/g, '').trim().length > 40);
+  const source = usable.length > 0 ? usable : pages.filter((p) => p.trim());
+  const batches: string[] = [];
+
+  let current: string[] = [];
+  let currentChars = 0;
+
+  for (const page of source) {
+    if (
+      current.length > 0 &&
+      (current.length >= PAGES_PER_BATCH || currentChars + page.length > PAGE_CHUNK_CHARS)
+    ) {
+      batches.push(current.join('\n\n'));
+      current = [];
+      currentChars = 0;
+    }
+    current.push(page);
+    currentChars += page.length;
+  }
+  if (current.length > 0) batches.push(current.join('\n\n'));
+
+  return batches.slice(0, MAX_PAGE_BATCHES);
 }
 
 const OPENROUTER_MODELS = [
@@ -421,84 +466,76 @@ async function callOpenRouterWithRetry(text: string, signal: AbortSignal, attemp
   throw lastErr;
 }
 
-function mergeChunkResults(parts: any[]): any {
-  const best = parts.reduce((b, c) => ((c?.confidence ?? 0) > (b?.confidence ?? 0) ? c : b), parts[0]);
-  const seen = new Set<string>();
-  const chapters: any[] = [];
-  for (const part of parts) {
-    for (const ch of (part?.chapters || [])) {
-      const key = (ch.chapter_title || '').trim().toLowerCase();
-      if (key && seen.has(key)) continue;
-      if (key) seen.add(key);
-      chapters.push(ch);
+/**
+ * Extract one page batch. Lovable AI first, OpenRouter second — the same
+ * provider order as before, now applied per batch so a failure on one batch
+ * never loses the rest of the document.
+ */
+async function extractBatch(
+  text: string,
+  fallbackGrade: number,
+  fallbackSubject: string,
+): Promise<{ items: ExtractedItem[]; provider: 'lovable' | 'openrouter'; error?: string }> {
+  const errors: string[] = [];
+  const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+
+  if (lovableKey) {
+    try {
+      const raw = await callLovableAIOnce(lovableKey, text) as Record<string, unknown>;
+      return {
+        items: normalizeItems(raw?.items, fallbackGrade, fallbackSubject),
+        provider: 'lovable',
+      };
+    } catch (err) {
+      errors.push(`Lovable AI: ${getErrorMessage(err)}`);
     }
   }
-  chapters.forEach((ch, i) => { ch.chapter_number = i + 1; });
+
+  if (Deno.env.get('OPENROUTER_API_KEY')) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), BATCH_TIMEOUT_MS);
+    try {
+      const raw = await callOpenRouterWithRetry(text, controller.signal) as Record<string, unknown>;
+      return {
+        items: normalizeItems(raw?.items, fallbackGrade, fallbackSubject),
+        provider: 'openrouter',
+      };
+    } catch (err) {
+      errors.push(`OpenRouter: ${getErrorMessage(err)}`);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
   return {
-    detected_grade: best?.detected_grade ?? 0,
-    detected_subject: best?.detected_subject ?? '',
-    confidence: best?.confidence ?? 0,
-    chapters,
+    items: [],
+    provider: 'lovable',
+    error: errors.join(' | ') || 'No AI provider configured',
   };
 }
 
-async function callOpenRouter(rawText: string, signal: AbortSignal): Promise<unknown> {
-  // Try a single call first using the smart excerpt.
-  const excerpt = buildModelExcerpt(rawText);
-  try {
-    return await callOpenRouterWithRetry(excerpt, signal);
-  } catch (err) {
-    const status = getErrorStatus(err);
-    // If it's a token-limit/transient error, fall back to chunked extraction.
-    const shouldChunk = status === null || TRANSIENT_STATUSES.has(status) || status === 400 || status === 413;
-    if (!shouldChunk) throw err;
+/** Run extraction across every page batch and aggregate into grade groups. */
+async function extractAllBatches(
+  batches: string[],
+  fallbackGrade: number,
+  fallbackSubject: string,
+): Promise<{ groups: GradeGroup[]; provider: 'lovable' | 'openrouter'; failures: string[] }> {
+  const items: ExtractedItem[] = [];
+  const failures: string[] = [];
+  let provider: 'lovable' | 'openrouter' = 'lovable';
 
-    const chunks = splitTextIntoChunks(rawText);
-    if (chunks.length <= 1) throw err;
-
-    const results: any[] = [];
-    const failures: string[] = [];
-    for (let i = 0; i < chunks.length; i += 1) {
-      try {
-        const part = await callOpenRouterWithRetry(chunks[i], signal);
-        results.push(part);
-      } catch (chunkErr) {
-        failures.push(`chunk ${i + 1}: ${getErrorMessage(chunkErr)}`);
-      }
-      // Small spacing between chunks to avoid rate limits.
-      if (i < chunks.length - 1) await sleep(500);
+  for (let i = 0; i < batches.length; i += 1) {
+    const result = await extractBatch(batches[i], fallbackGrade, fallbackSubject);
+    if (result.error) {
+      failures.push(`section ${i + 1}: ${result.error}`);
+    } else {
+      provider = result.provider;
+      items.push(...result.items);
     }
-
-    if (results.length === 0) {
-      throw new Error(`OpenRouter chunked extraction failed. ${failures.join('; ')}`);
-    }
-    return mergeChunkResults(results);
+    if (i < batches.length - 1) await sleep(BATCH_SPACING_MS);
   }
-}
 
-async function callLovableAI(rawText: string): Promise<unknown> {
-  const apiKey = Deno.env.get('LOVABLE_API_KEY');
-  if (!apiKey) throw new Error('LOVABLE_API_KEY missing');
-
-  // Try once with smart excerpt; on failure fall back to chunked.
-  try {
-    return await callLovableAIOnce(apiKey, buildModelExcerpt(rawText));
-  } catch (err) {
-    const chunks = splitTextIntoChunks(rawText);
-    if (chunks.length <= 1) throw err;
-    const results: any[] = [];
-    const failures: string[] = [];
-    for (let i = 0; i < chunks.length; i += 1) {
-      try {
-        results.push(await callLovableAIOnce(apiKey, chunks[i]));
-      } catch (e) {
-        failures.push(`chunk ${i + 1}: ${getErrorMessage(e)}`);
-      }
-      if (i < chunks.length - 1) await sleep(400);
-    }
-    if (results.length === 0) throw new Error(`Lovable AI chunked failed. ${failures.join('; ')}`);
-    return mergeChunkResults(results);
-  }
+  return { groups: aggregateItems(items), provider, failures };
 }
 
 async function callLovableAIOnce(apiKey: string, text: string): Promise<unknown> {
@@ -601,75 +638,86 @@ Deno.serve(async (req) => {
     }
 
     const bytes = new Uint8Array(await fileBlob.arrayBuffer());
-    const rawText = await extractTextFromFile(bytes, file_name);
+    const pages = await extractPagesFromFile(bytes, file_name);
+    const rawText = pages.join('\n\n');
 
     if (!rawText.trim()) {
       return createJsonResponse({ error: 'No text could be extracted from the file' }, 422);
     }
 
-    // Provider order: Lovable AI (reliable, no shared free-tier RPM cap)
-    // -> OpenRouter free models -> local fallback. The free OpenRouter
-    // models are aggressively rate-limited upstream, so we no longer use
-    // them as the primary path.
-    let result: unknown = null;
-    let providerUsed: 'openrouter' | 'lovable' | 'local' = 'lovable';
-    let aiError: string | null = null;
-    const errors: string[] = [];
+    const fallbackGrade = detectGrade(rawText, file_name);
+    const fallbackSubject = detectSubject(rawText, file_name);
 
-    if (Deno.env.get('LOVABLE_API_KEY')) {
-      try {
-        result = await callLovableAI(rawText);
-        providerUsed = 'lovable';
-      } catch (err) {
-        errors.push(`Lovable AI: ${getErrorMessage(err)}`);
-      }
-    }
+    // Page-level extraction: small batches of pages, each sent to the model on
+    // its own so multi-grade documents keep every grade instead of collapsing
+    // into one. Lovable AI first, OpenRouter second, local text fallback last.
+    const batches = buildPageBatches(pages);
+    const { groups, provider, failures } = await extractAllBatches(batches, fallbackGrade, fallbackSubject);
 
-    if (!result && Deno.env.get('OPENROUTER_API_KEY')) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000);
-      try {
-        result = await callOpenRouter(rawText, controller.signal);
-        providerUsed = 'openrouter';
-      } catch (err) {
-        errors.push(`OpenRouter: ${getErrorMessage(err)}`);
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    }
+    let providerUsed: 'openrouter' | 'lovable' | 'local' = provider;
+    let aiError: string | null = failures.length > 0 ? failures.join(' | ') : null;
+    let resolvedGroups: GradeGroup[] = groups;
 
-    if (!result) {
-      aiError = errors.join(' | ') || 'No AI provider configured';
-      result = buildLocalExtraction(rawText, file_name, aiError);
+    if (resolvedGroups.length === 0) {
+      aiError = aiError || 'The AI returned no curriculum content';
+      const local = buildLocalExtraction(rawText, file_name, aiError) as Record<string, unknown>;
       providerUsed = 'local';
+      aiError = typeof local.ai_error === 'string' ? local.ai_error : aiError;
+      resolvedGroups = [{
+        grade_level: Number(local.detected_grade) || fallbackGrade,
+        subject: typeof local.detected_subject === 'string' ? local.detected_subject : fallbackSubject,
+        chapters: (local.chapters as any[]) || [],
+      }];
+    } else if (failures.length > 0) {
+      aiError = `${failures.length} section(s) could not be read by the AI and were skipped. ${aiError}`;
     }
 
-    // Structuring step: organize the extracted text into clearly headed,
+    // Structuring step: organize each group's chapters into clearly headed,
     // sectioned topic modules that map onto the existing chapter schema.
-    const extracted = (result || {}) as Record<string, unknown>;
-    const structuredChapters = structureChapters(extracted.chapters);
-
-    // Phase 7: attach one matching video per chapter into the existing
-    // video_url reference field (Phase 4). Never fails the import.
+    // Phase 7 video matching then runs per group with that group's own grade.
     let videosMatched = 0;
-    try {
-      const grade = Number(extracted.detected_grade) || 0;
-      const subject = typeof extracted.detected_subject === 'string' ? extracted.detected_subject : '';
-      const res = await attachVideosToChapters(structuredChapters as any[], subject, grade);
-      videosMatched = res.matched;
-    } catch (err) {
-      console.warn('video matching skipped:', getErrorMessage(err));
+    const responseGroups: Array<{ grade_level: number; subject: string; chapters: any[] }> = [];
+
+    for (const group of resolvedGroups) {
+      const structured = structureChapters(group.chapters) as any[];
+      try {
+        const res = await attachVideosToChapters(structured, group.subject, group.grade_level);
+        videosMatched += res.matched;
+      } catch (err) {
+        console.warn('video matching skipped:', getErrorMessage(err));
+      }
+      responseGroups.push({
+        grade_level: group.grade_level,
+        subject: group.subject,
+        chapters: structured,
+      });
     }
+
+    // Flat list kept for backwards compatibility, tagged with its grade/subject.
+    const flatChapters = responseGroups.flatMap((group) =>
+      group.chapters.map((chapter) => ({
+        ...chapter,
+        grade_level: group.grade_level,
+        subject: group.subject,
+      })),
+    );
+
+    const primary = [...responseGroups].sort((a, b) => b.chapters.length - a.chapters.length)[0];
 
     return createJsonResponse({
-      ...extracted,
-      chapters: structuredChapters,
+      detected_grade: primary?.grade_level ?? fallbackGrade,
+      detected_subject: primary?.subject ?? fallbackSubject,
+      confidence: providerUsed === 'local' ? 0.45 : 0.8,
+      groups: responseGroups,
+      chapters: flatChapters,
       provider_used: providerUsed,
       structured: true,
+      sections_processed: batches.length,
       videos_matched: videosMatched,
       openrouter_error: aiError,
       ai_error: aiError,
     });
+
 
   } catch (err) {
     console.error('extract-curriculum-content error:', err);
