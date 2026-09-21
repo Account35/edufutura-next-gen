@@ -507,7 +507,9 @@ export function useCurriculumImport() {
         // Non-fatal: counters will resync on next manual edit
       }
 
-      toast.success(`${rows.length} chapter(s) saved as drafts.`);
+      if (!options?.silent) {
+        toast.success(`${rows.length} chapter(s) saved as drafts.`);
+      }
 
       // Phase 8: automatically generate one quiz per newly ingested chapter,
       // reusing the existing generate-quiz function and assessment schema.
