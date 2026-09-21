@@ -442,9 +442,18 @@ export function useCurriculumImport() {
         ? (existing[0].chapter_number || 0)
         : 0) + 1;
 
-      // Deduplicate by title within the incoming batch and renumber
-      // sequentially starting after the highest existing chapter.
-      const seen = new Set<string>();
+      // Deduplicate by title within the incoming batch AND against chapters
+      // that already exist on this subject, then renumber sequentially.
+      const { data: existingTitles } = await supabase
+        .from('curriculum_chapters')
+        .select('chapter_title')
+        .eq('subject_id', subjectId);
+
+      const seen = new Set<string>(
+        (existingTitles || []).map((r: { chapter_title: string | null }) =>
+          (r.chapter_title || '').trim().toLowerCase()
+        )
+      );
       const deduped = chapters.filter((c) => {
         const key = (c.chapter_title || '').trim().toLowerCase();
         if (!key) return true;
