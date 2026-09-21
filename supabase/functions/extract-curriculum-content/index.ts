@@ -696,8 +696,15 @@ Deno.serve(async (req) => {
     // Page-level extraction: small batches of pages, each sent to the model on
     // its own so multi-grade documents keep every grade instead of collapsing
     // into one. Lovable AI first, OpenRouter second, local text fallback last.
+    // Bounded by a wall-clock budget so the request never idles out (504).
+    const deadline = requestStartedAt + AI_PHASE_BUDGET_MS;
     const batches = buildPageBatches(pages);
-    const { groups, provider, failures } = await extractAllBatches(batches, fallbackGrade, fallbackSubject);
+    const { groups, provider, failures, skipped } = await extractAllBatches(
+      batches,
+      fallbackGrade,
+      fallbackSubject,
+      deadline,
+    );
 
     let providerUsed: 'openrouter' | 'lovable' | 'local' = provider;
     let aiError: string | null = failures.length > 0 ? failures.join(' | ') : null;
@@ -715,6 +722,11 @@ Deno.serve(async (req) => {
       }];
     } else if (failures.length > 0) {
       aiError = `${failures.length} section(s) could not be read by the AI and were skipped. ${aiError}`;
+    }
+
+    if (skipped > 0) {
+      const note = `${skipped} section(s) were not processed because the import reached its time limit. Split the file into smaller parts to capture the rest.`;
+      aiError = aiError ? `${note} ${aiError}` : note;
     }
 
     // Structuring step: organize each group's chapters into clearly headed,
