@@ -627,6 +627,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const requestStartedAt = Date.now();
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return createJsonResponse({ error: 'Missing authorization header' }, 401);
