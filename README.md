@@ -1,73 +1,187 @@
-# Welcome to your Lovable project
+# EduFutura
 
-## Project info
+AI-powered education platform for South African students. Master your CAPS curriculum with personalized learning, adaptive quizzes, community forums, career guidance, and real-time analytics — all in one place.
 
-**URL**: https://lovable.dev/projects/c07064f1-33f1-455e-8538-a4a5289fbd4c
+---
 
-## How can I edit this code?
+## Key Features
 
-There are several ways of editing your application.
+- **CAPS Curriculum** — Structured subject content aligned to the South African CAPS syllabus (Grades 10–12)
+- **AI Tutoring** — Floating AI chat assistant powered by OpenAI / Cerebras for instant study help
+- **Adaptive Quizzes** — Auto-generated quizzes with short-answer grading, cooldown timers, and attempt history
+- **Progress Tracking** — Per-chapter reading progress, streaks, badges, and achievement display
+- **Community Forums** — Rich-text posts, replies, reputation system, and resource sharing
+- **Career Guidance** — Career quiz, salary calculator, institution finder, and AI career counselling
+- **Study Buddy Finder** — Match with peers for group study sessions
+- **Leaderboard & Certificates** — Competitive leaderboard and verifiable PDF certificates
+- **Admin Dashboard** — User management, curriculum import, moderation, analytics, audit log, and job monitoring
+- **Subscription Tiers** — Free and Premium (R60/month or R120/year) via Paystack integration
+- **PWA Support** — Installable progressive web app with offline caching and background sync
+- **Real-time Notifications** — Live activity feed and notification bell via Supabase Realtime
+- **Dark Mode** — Full light/dark theme support via `next-themes`
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/c07064f1-33f1-455e-8538-a4a5289fbd4c) and start prompting.
+## Tech Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+| Layer | Technology |
+|---|---|
+| Framework | [React 18](https://react.dev) + [TypeScript 5](https://www.typescriptlang.org) |
+| Build Tool | [Vite 5](https://vitejs.dev) with SWC |
+| Styling | [Tailwind CSS 3](https://tailwindcss.com) + [tailwindcss-animate](https://github.com/jamiebuilds/tailwindcss-animate) |
+| UI Components | [shadcn/ui](https://ui.shadcn.com) (Radix UI primitives) |
+| Backend / DB | [Supabase](https://supabase.com) (Postgres, Auth, Storage, Edge Functions, Realtime) |
+| Data Fetching | [TanStack Query v5](https://tanstack.com/query) |
+| Routing | [React Router v6](https://reactrouter.com) |
+| Forms | [React Hook Form](https://react-hook-form.com) + [Zod](https://zod.dev) |
+| Rich Text | [Tiptap](https://tiptap.dev) |
+| Charts | [Recharts](https://recharts.org) |
+| Animations | [Framer Motion](https://www.framer.com/motion) |
+| Payments | [Paystack](https://paystack.com) |
+| AI Services | OpenAI, Cerebras, ElevenLabs (via Supabase Edge Functions) |
+| PWA | [vite-plugin-pwa](https://vite-pwa-org.netlify.app) + Workbox |
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Prerequisites
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- [Node.js](https://nodejs.org) v18+ (or [Bun](https://bun.sh) v1+)
+- npm, bun, or another Node package manager
+- A [Supabase](https://supabase.com) project
 
-Follow these steps:
+---
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+## Local Development
+
+### 1. Clone the repository
+
+```bash
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+cd edufutura-next-gen
 ```
 
-**Edit a file directly in GitHub**
+### 2. Install dependencies
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+npm install
+# or
+bun install
+```
 
-**Use GitHub Codespaces**
+### 3. Configure environment variables
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Create a `.env` file in the project root:
 
-## What technologies are used for this project?
+```env
+VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<your-supabase-anon-key>
+VITE_SUPABASE_PROJECT_ID=<your-project-ref>
+```
 
-This project is built with:
+You can find these values in your Supabase project under **Settings → API**.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### 4. Start the development server
 
-## How can I deploy this project?
+```bash
+npm run dev
+# or
+bun run dev
+```
 
-Simply open [Lovable](https://lovable.dev/projects/c07064f1-33f1-455e-8538-a4a5289fbd4c) and click on Share -> Publish.
+The app will be available at `http://localhost:8080`.
 
-## Can I connect a custom domain to my Lovable project?
+### Available Scripts
 
-Yes, you can!
+| Command | Description |
+|---|---|
+| `npm run dev` | Start dev server with HMR on port 8080 |
+| `npm run build` | Production build (minified, tree-shaken) |
+| `npm run build:dev` | Development build |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint` | Run ESLint |
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+---
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Project Structure
+
+```
+edufutura-next-gen/
+├── public/                  # Static assets & PWA icons
+├── src/
+│   ├── components/
+│   │   ├── admin/           # Admin dashboard components
+│   │   ├── ai/              # AI chat modal & floating button
+│   │   ├── analytics/       # Score trends, subject performance
+│   │   ├── auth/            # Login, registration, protected routes
+│   │   ├── career/          # Career cards & institution filters
+│   │   ├── community/       # Forums, posts, resources, study groups
+│   │   ├── curriculum/      # Chapter reader, navigation, progress
+│   │   ├── dashboard/       # Student dashboard layout & widgets
+│   │   ├── landing/         # Hero, features, pricing, footer
+│   │   ├── notifications/   # Notification bell & panel
+│   │   ├── onboarding/      # Onboarding flow components
+│   │   ├── profile/         # Profile sections & settings forms
+│   │   ├── pwa/             # PWA install & update prompts
+│   │   ├── quiz/            # Quiz attempt history & cooldown
+│   │   ├── subscription/    # Feature gates & upgrade banners
+│   │   └── ui/              # shadcn/ui base components
+│   ├── config/              # Pricing & feature flag constants
+│   ├── hooks/               # Custom React hooks (auth, quiz, AI, etc.)
+│   ├── integrations/
+│   │   └── supabase/        # Supabase client & generated types
+│   ├── lib/                 # Utilities, error handling, logging
+│   ├── pages/               # Route-level page components
+│   │   ├── admin/           # Admin-only pages
+│   │   ├── auth/            # Password reset & email verify
+│   │   └── onboarding/      # Multi-step onboarding flow
+│   ├── services/            # AI, cache, storage, security services
+│   ├── types/               # Shared TypeScript types
+│   └── utils/               # Quiz grading & toast helpers
+├── supabase/
+│   ├── functions/           # Supabase Edge Functions (AI, payments, jobs)
+│   └── migrations/          # Database migration SQL files
+├── load-tests/              # k6 load test scenarios
+├── .env                     # Environment variables (not committed)
+├── package.json
+├── tailwind.config.ts
+├── vite.config.ts
+└── tsconfig.json
+```
+
+---
+
+## Deployment
+
+### Lovable (recommended)
+
+Open the project at [https://lovable.dev/projects/c07064f1-33f1-455e-8538-a4a5289fbd4c](https://lovable.dev/projects/c07064f1-33f1-455e-8538-a4a5289fbd4c) and click **Share → Publish**. Lovable handles the build and hosting automatically.
+
+To connect a custom domain: **Project → Settings → Domains → Connect Domain**.
+
+### Manual / Netlify
+
+```bash
+npm run build
+```
+
+Deploy the generated `dist/` folder to any static host (Netlify, Vercel, Cloudflare Pages, etc.).
+
+For Netlify, add a `_redirects` file inside `public/`:
+
+```
+/*  /index.html  200
+```
+
+Set the same environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`) in your hosting provider's dashboard.
+
+---
+
+## Environment Variables Reference
+
+| Variable | Description |
+|---|---|
+| `VITE_SUPABASE_URL` | Your Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public API key |
+| `VITE_SUPABASE_PROJECT_ID` | Supabase project reference ID |
+
+> Never commit your `.env` file. It is already listed in `.gitignore`.
